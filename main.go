@@ -29,11 +29,13 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, `<input type="submit" name="submit">`)
 	fmt.Fprintln(w, `</form>`)
 
-	// fmt.Fprintln(w, "<ul>")
+	fmt.Fprintln(w, "<table>")
 	for _, result := range results {
-		fmt.Fprintf(w, "<br>%s</br>\n", result)
+		fmt.Fprintf(w, "<tr>")
+		fmt.Fprintf(w, "<td>%s</td>", result)
+		fmt.Fprintf(w, "</tr>")
 	}
-	// fmt.Fprintln(w, "</ul>")
+	fmt.Fprintln(w, "</table>")
 
 	fmt.Fprintln(w, "</body>")
 	fmt.Fprintln(w, "</html>")
@@ -46,11 +48,8 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 	outstr := string(out)
-	results = strings.Split(outstr, "\n")
+	resultAll := strings.Split(outstr, "\n")
+	results = resultAll[:1000]
 	fmt.Println(results)
-	// outstr := string(out)
-	// for _, o := range outstr {
-	// 	results = append(results, o)
-	// }
 	http.Redirect(w, r, "/results", 303)
 }

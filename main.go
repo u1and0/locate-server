@@ -7,10 +7,14 @@ import (
 	"strings"
 )
 
-var results []string
+var (
+	results   []string
+	resultNum int
+)
 
 func main() {
 	results = make([]string, 0)
+	resultNum = 0
 	http.HandleFunc("/", showResult)
 	http.HandleFunc("/searching", addResult)
 	http.ListenAndServe(":8080", nil)
@@ -26,7 +30,7 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, `<input type="text" name="query">`)
 	fmt.Fprintln(w, `<input type="submit" name="submit" value="検索">`)
 	fmt.Fprintln(w, `</form>`)
-	fmt.Fprintln(w, "<h4>検索結果: {.Name}件</h4>")
+	fmt.Fprintf(w, "<h4>検索結果: %d件中、1000件を表示</h4>", resultNum)
 
 	fmt.Fprintln(w, "<table>")
 	for _, result := range results {
@@ -48,7 +52,8 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	}
 	outstr := string(out)
 	resultAll := strings.Split(outstr, "\n")
+	resultNum = len(resultAll)
 	results = resultAll[:1000]
-	fmt.Println(results)
+	fmt.Println("検索ワード:", receiveValue, "結果件数:", resultNum)
 	http.Redirect(w, r, "/", 303)
 }

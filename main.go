@@ -21,27 +21,30 @@ func main() {
 }
 
 func showResult(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "<html>")
-	fmt.Fprintln(w, "<head><title>Locater</title></head>")
+	fmt.Fprintln(w, `<html>
+                       <head><title>Locate Server</title></head>
+						 <body>
+						   <form method="post" action="/searching">
+							 <input type="text" name="query">
+							 <input type="submit" name="submit" value="検索">
+						   </form>`)
 
-	fmt.Fprintln(w, "<body>")
+	fmt.Fprintf(w, `<form method="post" action="/searching">
+						 <h4>検索結果: %d件中、最大1000件を表示</h4>
+					 </form>`, resultNum)
 
-	fmt.Fprintln(w, `<form method="post" action="/searching">`)
-	fmt.Fprintln(w, `<input type="text" name="query">`)
-	fmt.Fprintln(w, `<input type="submit" name="submit" value="検索">`)
-	fmt.Fprintln(w, `</form>`)
-	fmt.Fprintf(w, "<h4>検索結果: %d件中、1000件を表示</h4>", resultNum)
-
-	fmt.Fprintln(w, "<table>")
+	// 検索結果を行列表示
+	fmt.Fprintln(w, `<table>
+					  <tr>`)
 	for _, result := range results {
-		fmt.Fprintf(w, "<tr>")
-		fmt.Fprintf(w, "<td>%s</td>", result)
-		fmt.Fprintf(w, "</tr>")
+		fmt.Fprintf(w, `<tr>
+						  <td>%s</td>
+						</tr>`, result)
 	}
-	fmt.Fprintln(w, "</table>")
 
-	fmt.Fprintln(w, "</body>")
-	fmt.Fprintln(w, "</html>")
+	fmt.Fprintln(w, `</table>
+				  </body>
+				  </html>`)
 }
 
 func addResult(w http.ResponseWriter, r *http.Request) {

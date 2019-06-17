@@ -65,9 +65,11 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 	outstr := string(out)
-	resultAll := strings.Split(outstr, "\n")
-	resultNum = len(resultAll)
-	results = resultAll[:1000]
+	results = strings.Split(outstr, "\n")
+	resultNum = len(results)
+	if resultNum > 1000 {
+		results = results[:1000]
+	}
 	fmt.Println("検索ワード:", receiveValue, "結果件数:", resultNum)
 	http.Redirect(w, r, "/", 303)
 }

@@ -10,6 +10,7 @@ import (
 var (
 	results   []string
 	resultNum int
+	dbpath    = "/home/vagrant/msys64/var/lib/mlocate/mlocatepersonal.db"
 )
 
 func main() {
@@ -47,9 +48,19 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 				  </html>`)
 }
 
+// スペースを*に入れ替えて、前後に*を付与する
+func patStar(s string) string {
+	// s <= "hoge my name" のとき
+	sn := strings.Split(s, " ") // => [hoge my name]
+	s = strings.Join(sn, "*")   // => hoge*my*name
+	s = "*" + s + "*"           // => *hoge*my*name*
+	return s
+}
+
 func addResult(w http.ResponseWriter, r *http.Request) {
 	receiveValue := r.FormValue("query")
-	out, err := exec.Command("locate", receiveValue).Output()
+	receiveValue = patStar(receiveValue)
+	out, err := exec.Command("locate", "-id", dbpath, receiveValue).Output()
 	if err != nil {
 		fmt.Println(err)
 	}

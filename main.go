@@ -12,7 +12,7 @@ var (
 	results        []string
 	resultNum      int
 	lastUpdateTime string
-	dbpath         = "/home/vagrant/msys64/var/lib/mlocate/mlocatepersonal.db"
+	dbpath         = "/var/lib/mlocate/mlocate.db"
 )
 
 func main() {
@@ -42,8 +42,8 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 					  <tr>`)
 	for _, result := range results {
 		fmt.Fprintf(w, `<tr>
-						  <td>%s</td>
-						</tr>`, result)
+		<td><a href="file://%s">%s</a></td>
+						</tr>`, result, result)
 	}
 
 	fmt.Fprintln(w, `</table>

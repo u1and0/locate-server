@@ -2,22 +2,28 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
+	"time"
 )
+
+const dbroot = "/var/lib/mlocate/"
 
 var (
 	results        []string
 	resultNum      int
 	lastUpdateTime string
-	dbpath         = "/home/vagrant/msys64/var/lib/mlocate/mlocatepersonal.db"
+	dbpath         string
 )
 
 func main() {
 	results = make([]string, 0)
 	resultNum = 0
+	dbpath = ""
 	http.HandleFunc("/", showResult)
 	http.HandleFunc("/searching", addResult)
 	http.ListenAndServe(":8080", nil)
@@ -28,6 +34,21 @@ func showResult(w http.ResponseWriter, r *http.Request) {
                        <head><title>Locate Server</title></head>
 						 <body>
 						   <form method="post" action="/searching">
+						   <table>
+							   <tr>
+								 <td><select name="dbpath-name">`)
+
+	// dbroot以下のファイルを表示し、検索データベースを選択する
+	files, err := filepath.Glob(dbroot + "*")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, f := range files {
+		fmt.Fprintf(w, `<option value="%s" selected>%s</option>`, f, f)
+	}
+	fmt.Fprintln(w, `   		 </select></td>
+							   </tr>
+						   </table>
 							 <input type="text" name="query">
 							 <input type="submit" name="submit" value="検索">
 						   </form>`)
@@ -63,6 +84,7 @@ func patStar(s string) string {
 func addResult(w http.ResponseWriter, r *http.Request) {
 	receiveValue := r.FormValue("query")
 	receiveValue = patStar(receiveValue)
+	dbpath = r.FormValue("dbpath-name")
 	out, err := exec.Command("locate", "-id", dbpath, receiveValue).Output()
 	fileStat, err := os.Stat(dbpath)
 	layout := "2006-01-02 15:05"
@@ -76,6 +98,12 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	if resultNum > 1000 {
 		results = results[:1000]
 	}
-	fmt.Println("検索ワード:", receiveValue, "結果件数:", resultNum)
+
+	// Log
+	fmt.Printf("[%v] ", time.Now().Format(layout))
+	fmt.Println("DB:", dbpath,
+		"検索ワード:", receiveValue,
+		"結果件数:", resultNum)
+
 	http.Redirect(w, r, "/", 303)
 }

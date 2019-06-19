@@ -3,14 +3,16 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 )
 
 var (
-	results   []string
-	resultNum int
-	dbpath    = "/home/vagrant/msys64/var/lib/mlocate/mlocatepersonal.db"
+	results        []string
+	resultNum      int
+	lastUpdateTime string
+	dbpath         = "/home/vagrant/msys64/var/lib/mlocate/mlocatepersonal.db"
 )
 
 func main() {
@@ -31,8 +33,9 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 						   </form>`)
 
 	fmt.Fprintf(w, `<form method="post" action="/searching">
-						 <h4>検索結果: %d件中、最大1000件を表示</h4>
-					 </form>`, resultNum)
+						 <h4>DB last update: %s<br>
+						 検索結果: %d件中、最大1000件を表示</h4>
+					 </form>`, lastUpdateTime, resultNum)
 
 	// 検索結果を行列表示
 	fmt.Fprintln(w, `<table>
@@ -61,12 +64,15 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	receiveValue := r.FormValue("query")
 	receiveValue = patStar(receiveValue)
 	out, err := exec.Command("locate", "-id", dbpath, receiveValue).Output()
+	fileStat, err := os.Stat(dbpath)
+	layout := "2006-01-02 15:05"
+	lastUpdateTime = fileStat.ModTime().Format(layout)
 	if err != nil {
 		fmt.Println(err)
 	}
 	outstr := string(out)
 	results = strings.Split(outstr, "\n")
-	resultNum = len(results)
+	resultNum = len(results) - 1 // \nのため、resultsの最後の要素は"空"になる
 	if resultNum > 1000 {
 		results = results[:1000]
 	}

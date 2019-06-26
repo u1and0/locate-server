@@ -13,6 +13,7 @@ var (
 	results        []string
 	resultNum      int
 	lastUpdateTime string
+	receiveValue   string
 	dbpath         = flag.String("d", "/var/lib/mlocate/mlocate.db", "locate database file")
 	root           = flag.String("r", "", "DB root directory")
 	pathSplitWin   = flag.Bool("s", false, "OS path split windows backslash")
@@ -30,13 +31,13 @@ func main() {
 }
 
 func showResult(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, `<html>
+	fmt.Fprintf(w, `<html>
                        <head><title>Locate Server</title></head>
 						 <body>
 						   <form method="post" action="/searching">
-							 <input type="text" name="query">
+							 <input type="text" name="query" value="%s">
 							 <input type="submit" name="submit" value="検索">
-						   </form>`)
+						   </form>`, receiveValue)
 
 	fmt.Fprintf(w, `<form method="post" action="/searching">
 						 <h4>DB last update: %s<br>
@@ -68,11 +69,11 @@ func patStar(s string) string {
 
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// modify query
-	receiveValue := r.FormValue("query")
-	receiveValue = patStar(receiveValue)
+	receiveValue = r.FormValue("query")
+	searchValue := patStar(receiveValue)
 
 	// searching
-	out, err := exec.Command("locate", "-id", *dbpath, receiveValue).Output()
+	out, err := exec.Command("locate", "-id", *dbpath, searchValue).Output()
 	if err != nil {
 		fmt.Println(err)
 	}

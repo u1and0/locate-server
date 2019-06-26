@@ -88,7 +88,8 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	for i, r := range results {
 		results[i] = *root + r
 	}
-	resultNum = len(results) - 1 // \nのため、resultsの最後の要素は"空"になる
+	results = results[:len(results)-1] // Pop last element cause \\n
+	resultNum = len(results)
 	if resultNum > 1000 {
 		results = results[:1000]
 	}

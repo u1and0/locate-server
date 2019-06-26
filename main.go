@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
@@ -12,12 +13,17 @@ var (
 	results        []string
 	resultNum      int
 	lastUpdateTime string
-	dbpath         = "/home/vagrant/msys64/var/lib/mlocate/mlocatepersonal.db"
+	dbpath         = flag.String("d", "/var/lib/mlocate/mlocate.db", "locate database file")
+	root           = flag.String("r", "", "DB root directory")
+	pathSplitWin   = flag.Bool("s", false, "OS path split windows backslash")
 )
 
 func main() {
 	results = make([]string, 0)
 	resultNum = 0
+
+	flag.Parse()
+
 	http.HandleFunc("/", showResult)
 	http.HandleFunc("/searching", addResult)
 	http.ListenAndServe(":8080", nil)
@@ -54,28 +60,48 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 // スペースを*に入れ替えて、前後に*を付与する
 func patStar(s string) string {
 	// s <= "hoge my name" のとき
-	sn := strings.Split(s, " ") // => [hoge my name]
-	s = strings.Join(sn, "*")   // => hoge*my*name
-	s = "*" + s + "*"           // => *hoge*my*name*
+	sn := strings.Fields(s)   // => [hoge my name]
+	s = strings.Join(sn, "*") // => hoge*my*name
+	s = "*" + s + "*"         // => *hoge*my*name*
 	return s
 }
 
 func addResult(w http.ResponseWriter, r *http.Request) {
+	// modify query
 	receiveValue := r.FormValue("query")
 	receiveValue = patStar(receiveValue)
-	out, err := exec.Command("locate", "-id", dbpath, receiveValue).Output()
-	fileStat, err := os.Stat(dbpath)
+
+	// searching
+	out, err := exec.Command("locate", "-id", *dbpath, receiveValue).Output()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// mod results
+	outstr := string(out)
+	if *pathSplitWin {
+		outstr = strings.ReplaceAll(outstr, "/", "\\") // Windows path
+	}
+	results = strings.Split(outstr, "\n")
+
+	// Add network starge path to each of results
+	for i, r := range results {
+		results[i] = *root + r
+	}
+	results = results[:len(results)-1] // Pop last element cause \\n
+	resultNum = len(results)
+	if resultNum > 1000 {
+		results = results[:1000]
+	}
+	fmt.Println("検索ワード:", receiveValue, "結果件数:", resultNum)
+
+	// update time
+	fileStat, err := os.Stat(*dbpath)
 	layout := "2006-01-02 15:05"
 	lastUpdateTime = fileStat.ModTime().Format(layout)
 	if err != nil {
 		fmt.Println(err)
 	}
-	outstr := string(out)
-	results = strings.Split(outstr, "\n")
-	resultNum = len(results) - 1 // \nのため、resultsの最後の要素は"空"になる
-	if resultNum > 1000 {
-		results = results[:1000]
-	}
-	fmt.Println("検索ワード:", receiveValue, "結果件数:", resultNum)
+
 	http.Redirect(w, r, "/", 303)
 }

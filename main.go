@@ -48,8 +48,8 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 					  <tr>`)
 	for _, result := range results {
 		fmt.Fprintf(w, `<tr>
-						  <td>%s</td>
-						</tr>`, result)
+		<td><a href="file://%s">%s</a></td>
+						</tr>`, result, result)
 	}
 
 	fmt.Fprintln(w, `</table>

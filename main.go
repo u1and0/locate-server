@@ -53,8 +53,11 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 					  <tr>`)
 	for _, result := range results {
 		fmt.Fprintf(w, `<tr>
-		<td><a href="file://%s">%s</a></td>
-						</tr>`, result, result)
+		<td>
+			<a href="file://%s">%s</a>
+			<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
+		</td>
+						</tr>`, result, result, dirpath(result))
 	}
 
 	fmt.Fprintln(w, `</table>
@@ -79,7 +82,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 	// searching
 	st := time.Now()
-	out, err := exec.Command("locate", "-ie", searchValue).Output()
+	out, err := exec.Command("locate", "-i", searchValue).Output()
 	if err != nil {
 		fmt.Println(err)
 	}

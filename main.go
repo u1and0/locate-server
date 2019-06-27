@@ -79,7 +79,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 	// searching
 	st := time.Now()
-	out, err := exec.Command("locate", "-ied", *dbpath, searchValue).Output()
+	out, err := exec.Command("locate", "-id", *dbpath, searchValue).Output()
 	if err != nil {
 		fmt.Println(err)
 	}

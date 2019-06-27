@@ -74,6 +74,7 @@ func patStar(s string) string {
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// modify query
 	receiveValue = r.FormValue("query")
+	fmt.Println("検索ワード:", receiveValue)
 	searchValue := patStar(receiveValue)
 
 	// searching
@@ -101,7 +102,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	if resultNum > 1000 {
 		results = results[:1000]
 	}
-	fmt.Println("検索ワード:", receiveValue, "/", "結果件数:", resultNum, "/", "検索時間:", searchTime)
+	fmt.Println("結果件数:", resultNum, "/", "検索時間:", searchTime)
 
 	// update time
 	fileStat, err := os.Stat("/var/lib/mlocate")

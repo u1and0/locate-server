@@ -7,12 +7,14 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 var (
 	results        []string
 	resultNum      int
 	lastUpdateTime string
+	searchTime     float64
 	receiveValue   string
 	root           = flag.String("r", "", "DB root directory")
 	pathSplitWin   = flag.Bool("s", false, "OS path split windows backslash")
@@ -39,9 +41,12 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 						   </form>`, receiveValue)
 
 	fmt.Fprintf(w, `<form method="post" action="/searching">
-						 <h4>DB last update: %s<br>
-						 検索結果: %d件中、最大1000件を表示</h4>
-					 </form>`, lastUpdateTime, resultNum)
+						 <h4>
+						 DB last update: %s<br>
+						 検索結果          : %d件中、最大1000件を表示<br>
+						 検索にかかった時間: %.3fsec
+						 </h4>
+					 </form>`, lastUpdateTime, resultNum, searchTime)
 
 	// 検索結果を行列表示
 	fmt.Fprintln(w, `<table>
@@ -72,10 +77,13 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	searchValue := patStar(receiveValue)
 
 	// searching
-	out, err := exec.Command("locate", "-i", searchValue).Output()
+	st := time.Now()
+	out, err := exec.Command("locate", "-ie", searchValue).Output()
 	if err != nil {
 		fmt.Println(err)
 	}
+	en := time.Now()
+	searchTime = (en.Sub(st)).Seconds()
 
 	// mod results
 	outstr := string(out)
@@ -93,7 +101,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	if resultNum > 1000 {
 		results = results[:1000]
 	}
-	fmt.Println("検索ワード:", receiveValue, "結果件数:", resultNum)
+	fmt.Println("検索ワード:", receiveValue, "/", "結果件数:", resultNum, "/", "検索時間:", searchTime)
 
 	// update time
 	fileStat, err := os.Stat("/var/lib/mlocate")

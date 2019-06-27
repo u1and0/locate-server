@@ -14,7 +14,6 @@ var (
 	resultNum      int
 	lastUpdateTime string
 	receiveValue   string
-	dbpath         = flag.String("d", "/var/lib/mlocate/mlocate.db", "locate database file")
 	root           = flag.String("r", "", "DB root directory")
 	pathSplitWin   = flag.Bool("s", false, "OS path split windows backslash")
 )
@@ -73,7 +72,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	searchValue := patStar(receiveValue)
 
 	// searching
-	out, err := exec.Command("locate", "-id", *dbpath, searchValue).Output()
+	out, err := exec.Command("locate", "-i", searchValue).Output()
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -97,7 +96,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("検索ワード:", receiveValue, "結果件数:", resultNum)
 
 	// update time
-	fileStat, err := os.Stat(*dbpath)
+	fileStat, err := os.Stat("/var/lib/mlocate")
 	layout := "2006-01-02 15:05"
 	lastUpdateTime = fileStat.ModTime().Format(layout)
 	if err != nil {

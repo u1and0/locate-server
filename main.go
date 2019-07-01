@@ -37,18 +37,16 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `<html>
                        <head><title>Locate Server</title></head>
 						 <body>
-						   <form method="post" action="/searching">
+						   <form method="get" action="/searching">
 							 <input type="text" name="query" value="%s">
 							 <input type="submit" name="submit" value="検索">
 						   </form>`, receiveValue)
 
-	fmt.Fprintf(w, `<form method="post" action="/searching">
-						 <h4>
+	fmt.Fprintf(w, `<h4>
 						 DB last update: %s<br>
 						 検索結果          : %d件中、最大1000件を表示<br>
 						 検索にかかった時間: %.3fsec
-						 </h4>
-					 </form>`, lastUpdateTime, resultNum, searchTime)
+					</h4>`, lastUpdateTime, resultNum, searchTime)
 
 	// 検索結果を行列表示
 	fmt.Fprintln(w, `<table>
@@ -95,15 +93,16 @@ func addPrefix(sr []string) []string {
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// modify query
 	receiveValue = r.FormValue("query")
-
-	// Query encoding
-	params := url.Values{}
-	params.Add("q", receiveValue)
-	que := params.Encode()
-	fmt.Println(que)
+	searchValue := patStar(receiveValue)
 	fmt.Println("検索ワード:", receiveValue)
 
-	searchValue := patStar(receiveValue)
+	// Query encoding
+	u := &url.URL{}
+	u.Path = "/"
+	q := u.Query()
+	q.Set("q", searchValue)
+	u.RawQuery = q.Encode()
+	fmt.Println(u)
 
 	// searching
 	st := time.Now()
@@ -152,5 +151,5 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
-	http.Redirect(w, r, "/", 303)
+	http.Redirect(w, r, u.RawQuery, 303)
 }

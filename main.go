@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 var (
 	results        []string
+	dirs           []string
 	resultNum      int
 	lastUpdateTime string
 	searchTime     float64
@@ -21,7 +23,6 @@ var (
 )
 
 func main() {
-	results = make([]string, 0)
 	resultNum = 0
 
 	flag.Parse()
@@ -51,13 +52,13 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 	// 検索結果を行列表示
 	fmt.Fprintln(w, `<table>
 					  <tr>`)
-	for _, result := range results {
+	for i, r := range results {
 		fmt.Fprintf(w, `<tr>
 		<td>
 			<a href="file://%s">%s</a>
 			<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
 		</td>
-						</tr>`, result, result, dirpath(result))
+						</tr>`, r, r, dirs[i])
 	}
 
 	fmt.Fprintln(w, `</table>
@@ -72,6 +73,22 @@ func patStar(s string) string {
 	s = strings.Join(sn, "*") // => hoge*my*name
 	s = "*" + s + "*"         // => *hoge*my*name*
 	return s
+}
+
+// スライスのすべての要素の/を\に変換
+func changeSepWin(sr []string) []string {
+	for i, s := range sr {
+		sr[i] = strings.ReplaceAll(s, "/", "\\") // Windows path
+	}
+	return sr
+}
+
+// root引数の文字列をスライスのすべての要素に追加
+func addPrefix(sr []string) []string {
+	for i, s := range sr {
+		sr[i] = *root + s
+	}
+	return sr
 }
 
 func addResult(w http.ResponseWriter, r *http.Request) {
@@ -91,16 +108,28 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 	// mod results
 	outstr := string(out)
-	if *pathSplitWin {
-		outstr = strings.ReplaceAll(outstr, "/", "\\") // Windows path
-	}
 	results = strings.Split(outstr, "\n")
+	results = results[:len(results)-1] // Pop last element cause \\n
+
+	// Dir path
+	dirs = make([]string, len(results))
+	for i, dir := range results {
+		dirs[i] = filepath.Dir(dir)
+	}
+
+	// Change sep character / -> \
+	if *pathSplitWin {
+		results = changeSepWin(results)
+		dirs = changeSepWin(dirs)
+	}
 
 	// Add network starge path to each of results
-	for i, r := range results {
-		results[i] = *root + r
+	if *root != "" {
+		results = addPrefix(results)
+		dirs = addPrefix(dirs)
 	}
-	results = results[:len(results)-1] // Pop last element cause \\n
+
+	// Max result 1000
 	resultNum = len(results)
 	if resultNum > 1000 {
 		results = results[:1000]

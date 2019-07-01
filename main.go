@@ -6,23 +6,23 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 var (
 	results        []string
+	dirs           []string
 	resultNum      int
 	lastUpdateTime string
 	searchTime     float64
 	receiveValue   string
-	dbpath         = flag.String("d", "/var/lib/mlocate/mlocate.db", "locate database file")
 	root           = flag.String("r", "", "DB root directory")
 	pathSplitWin   = flag.Bool("s", false, "OS path split windows backslash")
 )
 
 func main() {
-	results = make([]string, 0)
 	resultNum = 0
 
 	flag.Parse()
@@ -52,10 +52,13 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 	// 検索結果を行列表示
 	fmt.Fprintln(w, `<table>
 					  <tr>`)
-	for _, result := range results {
+	for i, r := range results {
 		fmt.Fprintf(w, `<tr>
-		<td><a href="file://%s">%s</a></td>
-						</tr>`, result, result)
+		<td>
+			<a href="file://%s">%s</a>
+			<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
+		</td>
+						</tr>`, r, r, dirs[i])
 	}
 
 	fmt.Fprintln(w, `</table>
@@ -72,14 +75,31 @@ func patStar(s string) string {
 	return s
 }
 
+// スライスのすべての要素の/を\に変換
+func changeSepWin(sr []string) []string {
+	for i, s := range sr {
+		sr[i] = strings.ReplaceAll(s, "/", "\\") // Windows path
+	}
+	return sr
+}
+
+// root引数の文字列をスライスのすべての要素に追加
+func addPrefix(sr []string) []string {
+	for i, s := range sr {
+		sr[i] = *root + s
+	}
+	return sr
+}
+
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// modify query
 	receiveValue = r.FormValue("query")
+	fmt.Println("検索ワード:", receiveValue)
 	searchValue := patStar(receiveValue)
 
 	// searching
 	st := time.Now()
-	out, err := exec.Command("locate", "-id", *dbpath, searchValue).Output()
+	out, err := exec.Command("locate", "-i", searchValue).Output()
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -88,24 +108,36 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 	// mod results
 	outstr := string(out)
-	if *pathSplitWin {
-		outstr = strings.ReplaceAll(outstr, "/", "\\") // Windows path
-	}
 	results = strings.Split(outstr, "\n")
+	results = results[:len(results)-1] // Pop last element cause \\n
+
+	// Dir path
+	dirs = make([]string, len(results))
+	for i, dir := range results {
+		dirs[i] = filepath.Dir(dir)
+	}
+
+	// Change sep character / -> \
+	if *pathSplitWin {
+		results = changeSepWin(results)
+		dirs = changeSepWin(dirs)
+	}
 
 	// Add network starge path to each of results
-	for i, r := range results {
-		results[i] = *root + r
+	if *root != "" {
+		results = addPrefix(results)
+		dirs = addPrefix(dirs)
 	}
-	results = results[:len(results)-1] // Pop last element cause \\n
+
+	// Max result 1000
 	resultNum = len(results)
 	if resultNum > 1000 {
 		results = results[:1000]
 	}
-	fmt.Println("検索ワード:", receiveValue, "/", "結果件数:", resultNum, "/", "検索時間:", searchTime)
+	fmt.Println("結果件数:", resultNum, "/", "検索時間:", searchTime)
 
 	// update time
-	fileStat, err := os.Stat(*dbpath)
+	fileStat, err := os.Stat("/var/lib/mlocate")
 	layout := "2006-01-02 15:05"
 	lastUpdateTime = fileStat.ModTime().Format(layout)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -94,7 +95,14 @@ func addPrefix(sr []string) []string {
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// modify query
 	receiveValue = r.FormValue("query")
+
+	// Query encoding
+	params := url.Values{}
+	params.Add("q", receiveValue)
+	que := params.Encode()
+	fmt.Println(que)
 	fmt.Println("検索ワード:", receiveValue)
+
 	searchValue := patStar(receiveValue)
 
 	// searching

@@ -10,7 +10,7 @@ RUN apk add git &&\
 FROM frolvlad/alpine-glibc
 COPY --from=go_official /go/bin/locate-server /usr/bin/locate-server
 RUN apk add mlocate tzdata
-CMD locate-server
+ENTRYPOINT locate-server
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
       description="Running locate-server"\

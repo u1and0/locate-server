@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -24,8 +23,6 @@ var (
 )
 
 func main() {
-	resultNum = 0
-
 	flag.Parse()
 
 	http.HandleFunc("/", showInit)
@@ -40,7 +37,9 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 						   <form method="get" action="/searching">
 							 <input type="text" name="query" value="%s">
 							 <input type="submit" name="submit" value="検索">
-						   </form>`, receiveValue)
+						   </form>
+						</body>
+					</html>`, receiveValue)
 }
 
 // スペースを*に入れ替えて、前後に*を付与する
@@ -73,14 +72,6 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	receiveValue = r.FormValue("query")
 	searchValue := patStar(receiveValue)
 	fmt.Println("検索ワード:", receiveValue)
-
-	// Query encoding
-	u := &url.URL{}
-	u.Path = "/"
-	q := u.Query()
-	q.Set("q", searchValue)
-	u.RawQuery = q.Encode()
-	fmt.Println(u)
 
 	// searching
 	st := time.Now()

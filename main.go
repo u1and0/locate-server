@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,43 +28,19 @@ func main() {
 
 	flag.Parse()
 
-	http.HandleFunc("/", showResult)
+	http.HandleFunc("/", showInit)
 	http.HandleFunc("/searching", addResult)
 	http.ListenAndServe(":8080", nil)
 }
 
-func showResult(w http.ResponseWriter, r *http.Request) {
+func showInit(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `<html>
                        <head><title>Locate Server</title></head>
 						 <body>
-						   <form method="post" action="/searching">
+						   <form method="get" action="/searching">
 							 <input type="text" name="query" value="%s">
 							 <input type="submit" name="submit" value="検索">
 						   </form>`, receiveValue)
-
-	fmt.Fprintf(w, `<form method="post" action="/searching">
-						 <h4>
-						 DB last update: %s<br>
-						 検索結果          : %d件中、最大1000件を表示<br>
-						 検索にかかった時間: %.3fsec
-						 </h4>
-					 </form>`, lastUpdateTime, resultNum, searchTime)
-
-	// 検索結果を行列表示
-	fmt.Fprintln(w, `<table>
-					  <tr>`)
-	for i, r := range results {
-		fmt.Fprintf(w, `<tr>
-		<td>
-			<a href="file://%s">%s</a>
-			<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
-		</td>
-						</tr>`, r, r, dirs[i])
-	}
-
-	fmt.Fprintln(w, `</table>
-				  </body>
-				  </html>`)
 }
 
 // スペースを*に入れ替えて、前後に*を付与する
@@ -94,8 +71,16 @@ func addPrefix(sr []string) []string {
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// modify query
 	receiveValue = r.FormValue("query")
-	fmt.Println("検索ワード:", receiveValue)
 	searchValue := patStar(receiveValue)
+	fmt.Println("検索ワード:", receiveValue)
+
+	// Query encoding
+	u := &url.URL{}
+	u.Path = "/"
+	q := u.Query()
+	q.Set("q", searchValue)
+	u.RawQuery = q.Encode()
+	fmt.Println(u)
 
 	// searching
 	st := time.Now()
@@ -144,5 +129,35 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
-	http.Redirect(w, r, "/", 303)
+	// Search result page
+	fmt.Fprintf(w, `<html>
+                       <head><title>Locate Server</title></head>
+						 <body>
+						   <form method="get" action="/searching">
+							 <input type="text" name="query" value="%s">
+							 <input type="submit" name="submit" value="検索">
+						   </form>`, receiveValue)
+	receiveValue = "" // Reset form
+
+	fmt.Fprintf(w, `<h4>
+						 DB last update: %s<br>
+						 検索結果          : %d件中、最大1000件を表示<br>
+						 検索にかかった時間: %.3fsec
+					</h4>`, lastUpdateTime, resultNum, searchTime)
+
+	// 検索結果を行列表示
+	fmt.Fprintln(w, `<table>
+					  <tr>`)
+	for i, rs := range results {
+		fmt.Fprintf(w, `<tr>
+		<td>
+			<a href="file://%s">%s</a>
+			<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
+		</td>
+	</tr>`, rs, rs, dirs[i])
+	}
+
+	fmt.Fprintln(w, `</table>
+				  </body>
+				  </html>`)
 }

@@ -28,12 +28,12 @@ func main() {
 
 	flag.Parse()
 
-	http.HandleFunc("/", showResult)
+	http.HandleFunc("/", showInit)
 	http.HandleFunc("/searching", addResult)
 	http.ListenAndServe(":8080", nil)
 }
 
-func showResult(w http.ResponseWriter, r *http.Request) {
+func showInit(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `<html>
                        <head><title>Locate Server</title></head>
 						 <body>
@@ -41,28 +41,6 @@ func showResult(w http.ResponseWriter, r *http.Request) {
 							 <input type="text" name="query" value="%s">
 							 <input type="submit" name="submit" value="検索">
 						   </form>`, receiveValue)
-
-	fmt.Fprintf(w, `<h4>
-						 DB last update: %s<br>
-						 検索結果          : %d件中、最大1000件を表示<br>
-						 検索にかかった時間: %.3fsec
-					</h4>`, lastUpdateTime, resultNum, searchTime)
-
-	// 検索結果を行列表示
-	fmt.Fprintln(w, `<table>
-					  <tr>`)
-	for i, r := range results {
-		fmt.Fprintf(w, `<tr>
-		<td>
-			<a href="file://%s">%s</a>
-			<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
-		</td>
-						</tr>`, r, r, dirs[i])
-	}
-
-	fmt.Fprintln(w, `</table>
-				  </body>
-				  </html>`)
 }
 
 // スペースを*に入れ替えて、前後に*を付与する
@@ -151,5 +129,35 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 
-	http.Redirect(w, r, u.RawQuery, 303)
+	// Search result page
+	fmt.Fprintf(w, `<html>
+                       <head><title>Locate Server</title></head>
+						 <body>
+						   <form method="get" action="/searching">
+							 <input type="text" name="query" value="%s">
+							 <input type="submit" name="submit" value="検索">
+						   </form>`, receiveValue)
+	receiveValue = "" // Reset form
+
+	fmt.Fprintf(w, `<h4>
+						 DB last update: %s<br>
+						 検索結果          : %d件中、最大1000件を表示<br>
+						 検索にかかった時間: %.3fsec
+					</h4>`, lastUpdateTime, resultNum, searchTime)
+
+	// 検索結果を行列表示
+	fmt.Fprintln(w, `<table>
+					  <tr>`)
+	for i, rs := range results {
+		fmt.Fprintf(w, `<tr>
+		<td>
+			<a href="file://%s">%s</a>
+			<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
+		</td>
+	</tr>`, rs, rs, dirs[i])
+	}
+
+	fmt.Fprintln(w, `</table>
+				  </body>
+				  </html>`)
 }

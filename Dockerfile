@@ -14,4 +14,4 @@ CMD locate-server
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
       description="Running locate-server"\
-      version="v0.0.0"
+      version="v0.1.0"

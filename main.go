@@ -45,9 +45,8 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 // スペースを*に入れ替えて、前後に*を付与する
 func patStar(s string) string {
 	// s <= "hoge my name" のとき
-	sn := strings.Fields(s)   // => [hoge my name]
-	s = strings.Join(sn, "*") // => hoge*my*name
-	s = "*" + s + "*"         // => *hoge*my*name*
+	sn := strings.Fields(s)    // => [hoge my name]
+	s = strings.Join(sn, ".*") // => hoge.*my.*name
 	return s
 }
 
@@ -75,7 +74,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 	// searching
 	st := time.Now()
-	out, err := exec.Command("locate", "-i", searchValue).Output()
+	out, err := exec.Command("locate", "-i", "--regex", searchValue).Output()
 	if err != nil {
 		fmt.Println(err)
 	}

@@ -17,19 +17,9 @@
 #
 #
 # ```/etc/crontabs/root
-# # do daily/weekly/monthly maintenance
-# min   hour    day     month   weekday command
-# */15    *       *       *       *       run-parts /etc/periodic/15min
-# 0       *       *       *       *       run-parts /etc/periodic/hourly
-# 0       2       *       *       *       run-parts /etc/periodic/daily
-# 0       3       *       *       6       run-parts /etc/periodic/weekly
-# 0       5       1       *       *       run-parts /etc/periodic/monthly
-#
 # SHELL=/bin/sh
 # PATH=/sbin:/bin:/usr/sbin:/usr/bin
-# * * * * * updatedb -vU /work
-# ```
-# hourly, dailyではスケジュールできない複雑なスケジュールは/etc/crontabs/rootにボリュームをアタッチする
+# 7 * * * * updatedb -vU ${UPDATEDB_PATH:-/} --output=/var/lib/mlocate/${OUTPUT:-mlocate.db}
 #
 # ===========
 #
@@ -70,7 +60,7 @@ RUN apk --update --no-cache add mlocate tzdata
 
 # work 下のディレクトリを毎時データベース化
 ARG TASK="/etc/crontabs/root"
-RUN echo "SHELL=/bin/sh" >> $TASK &&\
+RUN echo "SHELL=/bin/sh" > $TASK &&\
     echo "PATH=/sbin:/bin:/usr/sbin:/usr/bin" >> $TASK &&\
     echo "7 * * * * updatedb -vU \${UPDATEDB_PATH:-/} --output=/var/lib/mlocate/\${OUTPUT:-mlocate.db}" >> $TASK
 # docker runするときに-e UPDATEDB_PATH=/work　とすればwork以下のディレクトリを
@@ -87,4 +77,4 @@ CMD ["crond", "&&", "tail", "-f"]
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
       description="make database regularly by `updatedb` command"\
-      version="u1and0/updatedb:0.0.0"
+      version="u1and0/updatedb:0.1.0"

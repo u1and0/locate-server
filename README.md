@@ -17,7 +17,20 @@
 
 
 # Release Note
-## v0.1.0
+## v0.2.0: Error check and OR search
+検索文字列のエラーチェックで2文字以上のときだけ検索します。
+(aaa|bbb)のようにしてaaaまたはbbbを検索します。
+検索説明文を追加しました。
+
+* [add] error check (search queries are over 2char) @main.go
+* [add] search log file
+* [mod] use --regex opt at locate command @main.go
+
+## v0.1.2: Fix APP container
+* [rm] locate command -v option cause of compress disk space @app/Docker
+* [mod] wipe default run-part command @app/Dockerfile
+
+## v0.1.0: Query search
 * URLをquery表示することで前回の検索履歴を他人から見られなくしました。
 
 ## v0.0.0

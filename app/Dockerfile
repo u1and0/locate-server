@@ -17,19 +17,9 @@
 #
 #
 # ```/etc/crontabs/root
-# # do daily/weekly/monthly maintenance
-# min   hour    day     month   weekday command
-# */15    *       *       *       *       run-parts /etc/periodic/15min
-# 0       *       *       *       *       run-parts /etc/periodic/hourly
-# 0       2       *       *       *       run-parts /etc/periodic/daily
-# 0       3       *       *       6       run-parts /etc/periodic/weekly
-# 0       5       1       *       *       run-parts /etc/periodic/monthly
-#
 # SHELL=/bin/sh
 # PATH=/sbin:/bin:/usr/sbin:/usr/bin
-# * * * * * updatedb -vU /work
-# ```
-# hourly, dailyではスケジュールできない複雑なスケジュールは/etc/crontabs/rootにボリュームをアタッチする
+# 7 * * * * updatedb -vU ${UPDATEDB_PATH:-/} --output=/var/lib/mlocate/${OUTPUT:-mlocate.db}
 #
 # ===========
 #

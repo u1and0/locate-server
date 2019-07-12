@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -18,6 +20,7 @@ var (
 	lastUpdateTime string
 	searchTime     float64
 	receiveValue   string
+	logfile        = "/var/lib/mlocate/locate.log"
 	root           = flag.String("r", "", "DB root directory")
 	pathSplitWin   = flag.Bool("s", false, "OS path split windows backslash")
 )
@@ -25,6 +28,14 @@ var (
 func main() {
 	flag.Parse()
 
+	// Log setting
+	logfile, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		panic("cannot open logfile" + err.Error())
+	}
+	log.SetOutput(io.MultiWriter(logfile, os.Stdout))
+
+	// HTTP pages
 	http.HandleFunc("/", showInit)
 	http.HandleFunc("/searching", addResult)
 	http.ListenAndServe(":8080", nil)
@@ -70,13 +81,13 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	// modify query
 	receiveValue = r.FormValue("query")
 	searchValue := patStar(receiveValue)
-	fmt.Println("検索ワード:", receiveValue)
+	log.Println("検索ワード:", receiveValue)
 
 	// searching
 	st := time.Now()
 	out, err := exec.Command("locate", "-i", "--regex", searchValue).Output()
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	en := time.Now()
 	searchTime = (en.Sub(st)).Seconds()
@@ -109,14 +120,14 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	if resultNum > 1000 {
 		results = results[:1000]
 	}
-	fmt.Println("結果件数:", resultNum, "/", "検索時間:", searchTime)
+	log.Println("結果件数:", resultNum, "/", "検索時間:", searchTime)
 
 	// update time
 	fileStat, err := os.Stat("/var/lib/mlocate")
 	layout := "2006-01-02 15:05"
 	lastUpdateTime = fileStat.ModTime().Format(layout)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 
 	// Search result page

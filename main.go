@@ -42,22 +42,24 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
+func htmlClause(s string) string {
+	return fmt.Sprintf(`<html>
+					<head><title>Locate Server</title></head>
+					<body>
+						<form method="get" action="/searching">
+							<input type="text" name="query" value="%s">
+							<input type="submit" name="submit" value="検索">
+						</form>
+						<p>
+							 * 対象文字列は2文字以上の文字列を指定してください。<br>
+							 * スペース区切りで複数入力できます。(AND検索)<br>
+							 * 半角カッコでくくって|で区切ると|で区切られる前後で検索します。(OR検索)<br>
+							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。
+						</p>`, s)
+}
+
 func showInit(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, `<html>
-                       <head><title>Locate Server</title></head>
-						<body>
-							<form method="get" action="/searching">
-								<input type="text" name="query" value="%s">
-								<input type="submit" name="submit" value="検索">
-							</form>
-							<p>
-								 * 対象文字列は2文字以上の文字列を指定してください。<br>
-								 * スペース区切りで複数入力できます。(AND検索)<br>
-								 * 半角カッコでくくって|で区切ると|で区切られる前後で検索します。(OR検索)<br>
-								 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。
-							</p>
-						</body>
-					</html>`, receiveValue)
+	fmt.Fprintf(w, htmlClause(receiveValue))
 }
 
 // スペースを*に入れ替えて、前後に*を付与する
@@ -96,28 +98,14 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
 	log.Println("検索ワード:", receiveValue)
-
-	searchValue, err := patStar(receiveValue)
-	if err != nil { // 検索文字列が1文字以下のとき
+	if searchValue, err := patStar(receiveValue); err != nil { // 検索文字列が1文字以下のとき
 		log.Println(err)
-		fmt.Fprintf(w, `<html>
-						<head><title>Locate Server</title></head>
-						<body>
-							<form method="get" action="/searching">
-								<input type="text" name="query" value="%s">
-								<input type="submit" name="submit" value="検索">
-							</form>
-							<p>
-								 * 対象文字列は2文字以上の文字列を指定してください。<br>
-								 * スペース区切りで複数入力できます。(AND検索)<br>
-								 * 半角カッコでくくって|で区切ると|で区切られる前後で検索します。(OR検索)<br>
-								 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。
-							</p>
-							<h4>
-								検索文字列が足りません
-							</h4>
-						</body>
-						</html>`, receiveValue)
+		fmt.Fprint(w, htmlClause(receiveValue))
+		fmt.Fprintln(w, `<h4>
+							検索文字列が足りません
+						</h4>
+					</body>
+					</html>`)
 	} else {
 		// Searching
 		st := time.Now()
@@ -167,20 +155,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Search result page
-		fmt.Fprintf(w, `<html>
-							<head><title>Locate Server</title></head>
-							<body>
-								<form method="get" action="/searching">
-								 <input type="text" name="query" value="%s">
-								 <input type="submit" name="submit" value="検索">
-								</form>
-								<p>
-									 * 対象文字列は2文字以上の文字列を指定してください。<br>
-									 * スペース区切りで複数入力できます。(AND検索)<br>
-									 * 半角カッコでくくって|で区切ると|で区切られる前後で検索します。(OR検索)<br>
-									 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。
-								</p>
-							   `, receiveValue)
+		fmt.Fprint(w, htmlClause(receiveValue))
 		receiveValue = "" // Reset form
 
 		fmt.Fprintf(w, `<h4>

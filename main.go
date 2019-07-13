@@ -15,8 +15,7 @@ import (
 )
 
 var (
-	results        []string
-	dirs           []string
+	results        map[string]string
 	resultNum      int
 	lastUpdateTime string
 	searchTime     float64
@@ -78,22 +77,6 @@ func patStar(s string) (string, error) {
 	return s, err
 }
 
-// スライスのすべての要素の/を\に変換
-func changeSepWin(sr []string) []string {
-	for i, s := range sr {
-		sr[i] = strings.ReplaceAll(s, "/", "\\") // Windows path
-	}
-	return sr
-}
-
-// root引数の文字列をスライスのすべての要素に追加
-func addPrefix(sr []string) []string {
-	for i, s := range sr {
-		sr[i] = *root + s
-	}
-	return sr
-}
-
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
@@ -117,33 +100,29 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		searchTime = (en.Sub(st)).Seconds()
 
 		// Mod results
-		outstr := string(out)
-		results = strings.Split(outstr, "\n")
-		results = results[:len(results)-1] // Pop last element cause \\n
-
-		// Dir path
-		dirs = make([]string, len(results))
-		for i, dir := range results {
-			dirs[i] = filepath.Dir(dir)
+		results = make(map[string]string, 1000000)
+		for _, f := range strings.Split(string(out), "\n") {
+			results[f] = filepath.Dir(f)
 		}
+		delete(results, "") // Pop last element cause \\n
 
 		// Change sep character / -> \
-		if *pathSplitWin {
-			results = changeSepWin(results)
-			dirs = changeSepWin(dirs)
+		if *pathSplitWin { // Windows path
+			for k, v := range results {
+				delete(results, k)
+				results[strings.ReplaceAll(k, "/", "\\")] = strings.ReplaceAll(v, "/", "\\")
+			}
 		}
 
 		// Add network starge path to each of results
 		if *root != "" {
-			results = addPrefix(results)
-			dirs = addPrefix(dirs)
+			for k, v := range results {
+				delete(results, k)
+				results[*root+k] = *root + v
+			}
 		}
 
-		// Max result 1000
 		resultNum = len(results)
-		if resultNum > 1000 {
-			results = results[:1000]
-		}
 		log.Println("結果件数:", resultNum, "/", "検索時間:", searchTime)
 
 		// Update time
@@ -157,6 +136,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		// Search result page
 		fmt.Fprint(w, htmlClause(receiveValue))
 		receiveValue = "" // Reset form
+		// これがないと次回アクセス時の最初のページ8080のフォームが最後検索した文字列になる
 
 		fmt.Fprintf(w, `<h4>
 							 DB last update: %s<br>
@@ -167,13 +147,17 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		// 検索結果を行列表示
 		fmt.Fprintln(w, `<table>
 						  <tr>`)
-		for i, rs := range results {
+		i := 1
+		for f, d := range results {
+			if i++; i > 1000 { // Max results 1000
+				break
+			}
 			fmt.Fprintf(w, `<tr>
-			<td>
-				<a href="file://%s">%s</a>
-				<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
-			</td>
-		</tr>`, rs, rs, dirs[i])
+				<td>
+					<a href="file://%s">%s</a>
+					<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
+				</td>
+			</tr>`, f, f, d)
 		}
 
 		fmt.Fprintln(w, `</table>

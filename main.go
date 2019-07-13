@@ -23,6 +23,7 @@ var (
 	logfile        = "/var/lib/mlocate/locate.log"
 	root           = flag.String("r", "", "DB root directory")
 	pathSplitWin   = flag.Bool("s", false, "OS path split windows backslash")
+	dbpath         = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
 )
 
 func main() {
@@ -90,9 +91,16 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					</body>
 					</html>`)
 	} else {
+		// Search options
+		opt := []string{"-i"} // -i: ignore case
+		if *dbpath != "" {
+			opt = append(opt, "-d", *dbpath) // -d: locate db path
+		}
+		opt = append(opt, "--regex", searchValue) // Interpret all PATTERNs as extended regexps.
+
 		// Searching
 		st := time.Now()
-		out, err := exec.Command("locate", "-i", "--regex", searchValue).Output()
+		out, err := exec.Command("locate", opt...).Output()
 		if err != nil {
 			log.Println(err)
 		}
@@ -100,7 +108,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		searchTime = (en.Sub(st)).Seconds()
 
 		// Mod results
-		results = make(map[string]string, 1000000)
+		results = make(map[string]string, 10000)
 		for _, f := range strings.Split(string(out), "\n") {
 			results[f] = filepath.Dir(f)
 		}
@@ -116,10 +124,12 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 		// Add network starge path to each of results
 		if *root != "" {
+			r := make(map[string]string, 10000)
 			for k, v := range results {
 				delete(results, k)
-				results[*root+k] = *root + v
+				r[*root+k] = *root + v
 			}
+			results = r
 		}
 
 		resultNum = len(results)
@@ -147,7 +157,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		// 検索結果を行列表示
 		fmt.Fprintln(w, `<table>
 						  <tr>`)
-		i := 1
+		i := 0
 		for f, d := range results {
 			if i++; i > 1000 { // Max results 1000
 				break

@@ -54,7 +54,7 @@ func htmlClause(s string) string {
 						<p>
 							 * 対象文字列は2文字以上の文字列を指定してください。<br>
 							 * スペース区切りで複数入力できます。(AND検索)<br>
-							 * 半角カッコでくくって|で区切ると|で区切られる前後で検索します。(OR検索)<br>
+							 * 半角カッコでくくって | で区切ると | で区切られる前後で検索します。(OR検索)<br>
 							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。
 						</p>`, s)
 }
@@ -65,16 +65,13 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 
 // スペースを*に入れ替えて、前後に*を付与する
 func patStar(s string) (string, error) {
-	var (
-		sn  []string
-		err error
-	)
-	// s <= "hoge my name" のとき
+	var err error
 	if len([]rune(s)) < 2 {
 		err = errors.New("検索文字列が足りません")
 	} else {
-		sn = strings.Fields(s)     // => [hoge my name]
-		s = strings.Join(sn, ".*") // => hoge.*my.*name
+		// s <- "hoge my name"
+		sn := strings.Fields(s)    // -> [hoge my name]
+		s = strings.Join(sn, ".*") // -> hoge.*my.*name
 	}
 	return s, err
 }
@@ -109,9 +106,9 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					</html>`)
 	} else {
 		// Search options
-		opt := []string{"-i"} // -i: ignore case
+		opt := []string{"-i"} // -i: Ignore case distinctions when matching patterns.
 		if *dbpath != "" {
-			opt = append(opt, "-d", *dbpath) // -d: locate db path
+			opt = append(opt, "-d", *dbpath) // -d: Replace the default database with DBPATH.
 		}
 		opt = append(opt, "--regex", searchValue) // Interpret all PATTERNs as extended regexps.
 

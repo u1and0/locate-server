@@ -95,17 +95,16 @@ func locateStatus(w http.ResponseWriter, r *http.Request) {
 					</html>`, locates)
 }
 
-func highlightString(s string, words []string) string {
+func highlightString(s string, words []string) (i []string) {
 	for _, w := range words {
 		re := regexp.MustCompile(`(?i)` + w)
-		s = re.ReplaceAllString(s, "<span style=\"background-color:#FFCC00;\">"+w+"</span>")
-		// i = append(i, re.FindAllString(s, -1)...)
+		i = append(i, re.FindAllString(s, -1)...)
 		// for _, submatch := range re.FindAllStringSubmatchIndex(s, -1) {
 		// fmt.Println(submatch)
 		// i = re.ExpandString(i, "<span style=\"background-color:#FFCC00;\">$1</span>", s, submatch)
 		// }
 	}
-	return s
+	return
 }
 
 func addResult(w http.ResponseWriter, r *http.Request) {

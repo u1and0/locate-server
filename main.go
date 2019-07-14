@@ -123,6 +123,8 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 		// Mod results
 		results = make(map[string]string, 10000)
+
+		// Map parent directory name
 		for _, f := range strings.Split(string(out), "\n") {
 			results[f] = filepath.Dir(f)
 		}
@@ -130,17 +132,17 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 		// Change sep character / -> \
 		if *pathSplitWin { // Windows path
+			r := make(map[string]string, 10000)
 			for k, v := range results {
-				delete(results, k)
-				results[strings.ReplaceAll(k, "/", "\\")] = strings.ReplaceAll(v, "/", "\\")
+				r[strings.ReplaceAll(k, "/", "\\")] = strings.ReplaceAll(v, "/", "\\")
 			}
+			results = r
 		}
 
 		// Add network starge path to each of results
 		if *root != "" {
 			r := make(map[string]string, 10000)
 			for k, v := range results {
-				delete(results, k)
 				r[*root+k] = *root + v
 			}
 			results = r

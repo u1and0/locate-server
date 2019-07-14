@@ -32,13 +32,14 @@ func main() {
 	// Log setting
 	logfile, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		panic("cannot open logfile" + err.Error())
+		log.Println("[warning] cannot open logfile" + err.Error())
 	}
 	log.SetOutput(io.MultiWriter(logfile, os.Stdout))
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)
 	http.HandleFunc("/searching", addResult)
+	http.HandleFunc("/status", locateStatus)
 	http.ListenAndServe(":8080", nil)
 }
 
@@ -76,6 +77,22 @@ func patStar(s string) (string, error) {
 		s = strings.Join(sn, ".*") // => hoge.*my.*name
 	}
 	return s, err
+}
+
+func locateStatus(w http.ResponseWriter, r *http.Request) {
+	locates, err := exec.Command("locate", "-S").Output()
+	if *dbpath != "" {
+		locates, err = exec.Command("locate", "-S", "-d", *dbpath).Output()
+	}
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Fprintf(w, `<html>
+					<head><title>Locate DB Status</title></head>
+					<body>
+						<pre>%s</pre>
+					</body>
+					</html>`, locates)
 }
 
 func addResult(w http.ResponseWriter, r *http.Request) {
@@ -149,7 +166,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		// これがないと次回アクセス時の最初のページ8080のフォームが最後検索した文字列になる
 
 		fmt.Fprintf(w, `<h4>
-							 DB last update: %s<br>
+							 <a href=/status>DB</a> last update: %s<br>
 							 検索結果          : %d件中、最大1000件を表示<br>
 							 検索にかかった時間: %.3fsec
 						</h4>`, lastUpdateTime, resultNum, searchTime)

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -64,16 +65,18 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 }
 
 // スペースを*に入れ替えて、前後に*を付与する
-func patStar(s string) (string, error) {
-	var err error
+func patStar(s string) (string, []string, error) {
+	var (
+		sn  []string
+		err error
+	)
 	if len([]rune(s)) < 2 {
 		err = errors.New("検索文字列が足りません")
-	} else {
-		// s <- "hoge my name"
-		sn := strings.Fields(s)    // -> [hoge my name]
+	} else { // s <- "hoge my name"
+		sn = strings.Fields(s)     // -> [hoge my name]
 		s = strings.Join(sn, ".*") // -> hoge.*my.*name
 	}
-	return s, err
+	return s, sn, err
 }
 
 func locateStatus(w http.ResponseWriter, r *http.Request) {
@@ -92,11 +95,19 @@ func locateStatus(w http.ResponseWriter, r *http.Request) {
 					</html>`, locates)
 }
 
+func highlightString(s string, words []string) string {
+	for _, w := range words {
+		re := regexp.MustCompile(`(?i)` + w)
+		s = re.ReplaceAllString(s, "<span style=\"background-color:#FFCC00;\">"+w+"</span>")
+	}
+	return s
+}
+
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
 	log.Println("検索ワード:", receiveValue)
-	if searchValue, err := patStar(receiveValue); err != nil { // 検索文字列が1文字以下のとき
+	if searchValue, searchWords, err := patStar(receiveValue); err != nil { // 検索文字列が1文字以下のとき
 		log.Println(err)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintln(w, `<h4>
@@ -121,10 +132,8 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		en := time.Now()
 		searchTime = (en.Sub(st)).Seconds()
 
-		// Mod results
-		results = make(map[string]string, 10000)
-
 		// Map parent directory name
+		results = make(map[string]string, 10000)
 		for _, f := range strings.Split(string(out), "\n") {
 			results[f] = filepath.Dir(f)
 		}
@@ -183,7 +192,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					<a href="file://%s">%s</a>
 					<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
 				</td>
-			</tr>`, f, f, d)
+			</tr>`, f, highlightString(f, searchWords), d)
 		}
 
 		fmt.Fprintln(w, `</table>

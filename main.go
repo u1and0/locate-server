@@ -95,18 +95,16 @@ func locateStatus(w http.ResponseWriter, r *http.Request) {
 					</html>`, locates)
 }
 
-func highlightString(s string, words []string) (i []string) {
+// sの文字列中にあるwordsの背景を黄色にハイライトしたhtmlを返す
+func highlightString(s string, words []string) string {
 	for _, w := range words {
-		re := regexp.MustCompile(`(?i)` + w)
-		i = append(i, re.FindAllString(s, -1)...)
-		// for _, submatch := range re.FindAllStringSubmatchIndex(s, -1) {
-		// fmt.Println(submatch)
-		// i = re.ExpandString(i, "<span style=\"background-color:#FFCC00;\">$1</span>", s, submatch)
-		// }
+		re := regexp.MustCompile(`((?i)` + w + `)`)
+		s = re.ReplaceAllString(s, "<span style=\"background-color:#FFCC00;\">$1</span>")
 	}
-	return
+	return s
 }
 
+// locate検索し、結果をhtmlに書き込む
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")

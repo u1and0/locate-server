@@ -49,6 +49,7 @@ func htmlClause(s string) string {
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server</title></head>
 					<body>
+					<p style="text-align: right"><a href=https://github.com/u1and0/locate-server/blob/master/README.md>help</a></p>
 						<form method="get" action="/searching">
 							<input type="text" name="query" value="%s">
 							<input type="submit" name="submit" value="検索">

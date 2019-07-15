@@ -12,19 +12,20 @@
 [ローカルファイルリンク有効化](https://chrome.google.com/webstore/detail/enable-local-file-links/nikfmfgobenbhmocjaaboihbeocackld)
 
 ## Firefoxでリンクをクリックしてもファイルが開かない現象について
-試したけどうまくいかなかった
-[Firefoxからファイルリソース(file://～)にアクセスする方法](https://plumpliver.com/post-5296/)
+アドオンを追加します。
+[Local Filesystem Links](https://addons.mozilla.org/ja/firefox/addon/local-filesystem-links/?src=search)
 
 
 # Release Note
-## v0.2.0: Error check and OR search
-検索文字列のエラーチェックで2文字以上のときだけ検索します。
-(aaa|bbb)のようにしてaaaまたはbbbを検索します。
-検索説明文を追加しました。
+## v0.3.0: Highlight search words & Show DB status
+* 検索文字の背景を黄色で表示するようにしました。
+* データベース情報を表示するリンクを追加しました。
+* 構文の最適化を行い、パフォーマンスの改善を行いました。
 
-* [add] error check (search queries are over 2char) @main.go
-* [add] search log file
-* [mod] use --regex opt at locate command @main.go
+## v0.2.0: Error check and OR search
+* 検索文字列のエラーチェックで2文字以上のときだけ検索します。
+* (aaa|bbb)のようにしてaaaまたはbbbを検索します。
+* 検索説明文を追加しました。
 
 ## v0.1.2: Fix APP container
 * [rm] locate command -v option cause of compress disk space @app/Docker
@@ -34,7 +35,7 @@
 * URLをquery表示することで前回の検索履歴を他人から見られなくしました。
 
 ## v0.0.0
-* 検索ワードを指定して検索を押すかEnterキーを押すと4～40秒程度で共有フォルダ内のファイルを検索します。
+* 検索ワードを指定して検索を押すかEnterキーを押すと共有フォルダ内のファイルを高速に検索します。
 * 英数字の大文字小文字は無視します。
 * 全角/半角スペースで区切るとは0文字以上の正規表現(\*)に変換して検索されます。(=and検索)
 * 検索結果はリンク付で最大1000件まで表示し、リンクをクリックするとファイルが開きます。

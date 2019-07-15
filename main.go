@@ -44,6 +44,7 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
+// html デフォルトの説明文
 func htmlClause(s string) string {
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server</title></head>
@@ -60,6 +61,7 @@ func htmlClause(s string) string {
 						</p>`, s)
 }
 
+// Top page
 func showInit(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, htmlClause(receiveValue))
 }
@@ -79,11 +81,14 @@ func patStar(s string) (string, []string, error) {
 	return s, sn, err
 }
 
+// Result of `locate -S`
 func locateStatus(w http.ResponseWriter, r *http.Request) {
-	locates, err := exec.Command("locate", "-S").Output()
+	opt := []string{"-S"}
 	if *dbpath != "" {
-		locates, err = exec.Command("locate", "-S", "-d", *dbpath).Output()
+		opt = append(opt, "-d", *dbpath)
 	}
+
+	locates, err := exec.Command("locate", opt...).Output()
 	if err != nil {
 		log.Println(err)
 	}

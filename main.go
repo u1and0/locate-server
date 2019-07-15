@@ -44,10 +44,12 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
+// html デフォルトの説明文
 func htmlClause(s string) string {
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server</title></head>
 					<body>
+					<p style="text-align: right"><a href=https://github.com/u1and0/locate-server/blob/master/README.md>help</a></p>
 						<form method="get" action="/searching">
 							<input type="text" name="query" value="%s">
 							<input type="submit" name="submit" value="検索">
@@ -55,11 +57,12 @@ func htmlClause(s string) string {
 						<p>
 							 * 対象文字列は2文字以上の文字列を指定してください。<br>
 							 * スペース区切りで複数入力できます。(AND検索)<br>
-							 * 半角カッコでくくって | で区切ると | で区切られる前後で検索します。(OR検索)<br>
-							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。
+							 * (aaa|bbb)のグループ化表現が使えます。(OR検索)
+							   * 例: "電(気|機)工業" => **電気工業**と**電機工業**を検索します。
 						</p>`, s)
 }
 
+// Top page
 func showInit(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, htmlClause(receiveValue))
 }
@@ -79,11 +82,14 @@ func patStar(s string) (string, []string, error) {
 	return s, sn, err
 }
 
+// Result of `locate -S`
 func locateStatus(w http.ResponseWriter, r *http.Request) {
-	locates, err := exec.Command("locate", "-S").Output()
+	opt := []string{"-S"}
 	if *dbpath != "" {
-		locates, err = exec.Command("locate", "-S", "-d", *dbpath).Output()
+		opt = append(opt, "-d", *dbpath)
 	}
+
+	locates, err := exec.Command("locate", opt...).Output()
 	if err != nil {
 		log.Println(err)
 	}

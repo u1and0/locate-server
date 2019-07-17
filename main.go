@@ -51,12 +51,12 @@ func htmlClause(s string) string {
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server</title></head>
 					<body>
-					<p style="text-align: right"><a href=https://github.com/u1and0/locate-server/blob/master/README.md>help</a></p>
 						<form method="get" action="/searching">
 							<input type="text" name="query" value="%s">
 							<input type="submit" name="submit" value="検索">
+							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 						</form>
-						<p>
+						<small>
 							 * 検索文字列は2文字以上を指定してください。<br>
 							 * 英字の大文字/小文字は無視します。<br>
 							 * スペース区切りで複数入力できます。(AND検索)<br>
@@ -64,7 +64,7 @@ func htmlClause(s string) string {
 							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。<br>
 							 * 単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)<br>
 							 例: "電気 -工 業"=>"電気"と"業"を含み"工"を含まないファイルを検索します。
-						</p>`, s)
+						</small>`, s)
 }
 
 // Top page
@@ -142,7 +142,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		// Exclude PATTERNs
 		exes := [][]string{cmd} // locate cmd & piped cmd
 		for _, ex := range excludeWords {
-			exes = append(exes, []string{"grep", "-iv", ex})
+			exes = append(exes, []string{"grep", "-ivE", ex})
 		}
 
 		// Searching

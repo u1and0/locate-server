@@ -13,6 +13,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	pipeline "github.com/mattn/go-pipeline"
 )
 
 var (
@@ -56,9 +58,12 @@ func htmlClause(s string) string {
 						</form>
 						<p>
 							 * 対象文字列は2文字以上の文字列を指定してください。<br>
+							 * 英字 大文字/小文字は無視します。<br>
 							 * スペース区切りで複数入力できます。(AND検索)<br>
 							 * 半角カッコでくくって | で区切ると | で区切られる前後で検索します。(OR検索)<br>
-							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。
+							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。<br>
+							 * 単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)<br>
+							 例: "電気 -工 業"=>"電気"と"業"を含み"工"を含まないファイルを検索します。
 						</p>`, s)
 }
 
@@ -68,18 +73,19 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 }
 
 // スペースを*に入れ替えて、前後に*を付与する
-func patStar(s string) (string, []string, error) {
-	var (
-		sn  []string
-		err error
-	)
+func patStar(s string) (sn, en []string, err error) {
 	if len([]rune(s)) < 2 {
 		err = errors.New("検索文字列が足りません")
-	} else { // s <- "hoge my name"
-		sn = strings.Fields(s)     // -> [hoge my name]
-		s = strings.Join(sn, ".*") // -> hoge.*my.*name
+	} else { // s <- "hoge my -your name"
+		for _, n := range strings.Fields(s) { // -> [hoge my -your name]
+			if strings.HasPrefix(n, "-") {
+				en = append(en, strings.TrimPrefix(n, "-")) // ->[your]
+			} else {
+				sn = append(sn, n) // ->[hoge my name]
+			}
+		}
 	}
-	return s, sn, err
+	return
 }
 
 // Result of `locate -S`
@@ -115,7 +121,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
 	log.Println("検索ワード:", receiveValue)
-	if searchValue, searchWords, err := patStar(receiveValue); err != nil { // 検索文字列が1文字以下のとき
+	if searchWords, excludeWords, err := patStar(receiveValue); err != nil { // 検索文字列が1文字以下のとき
 		log.Println(err)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintln(w, `<h4>
@@ -125,15 +131,23 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					</html>`)
 	} else {
 		// Search options
-		opt := []string{"-i"} // -i: Ignore case distinctions when matching patterns.
+		cmd := []string{"locate", "-i"} // -i: Ignore case distinctions when matching patterns.
 		if *dbpath != "" {
-			opt = append(opt, "-d", *dbpath) // -d: Replace the default database with DBPATH.
+			cmd = append(cmd, "-d", *dbpath) // -d: Replace the default database with DBPATH.
 		}
-		opt = append(opt, "--regex", searchValue) // Interpret all PATTERNs as extended regexps.
+		// Interpret all PATTERNs as extended regexps.
+		cmd = append(cmd, "--regex", strings.Join(searchWords, ".*"))
+		// -> hoge.*my.*name
+
+		// Exclude PATTERNs
+		exes := [][]string{cmd} // locate cmd & piped cmd
+		for _, ex := range excludeWords {
+			exes = append(exes, []string{"grep", "-iv", ex})
+		}
 
 		// Searching
 		st := time.Now()
-		out, err := exec.Command("locate", opt...).Output()
+		out, err := pipeline.Output(exes...)
 		if err != nil {
 			log.Println(err)
 		}

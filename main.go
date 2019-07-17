@@ -57,8 +57,8 @@ func htmlClause(s string) string {
 							<input type="submit" name="submit" value="検索">
 						</form>
 						<p>
-							 * 対象文字列は2文字以上の文字列を指定してください。<br>
-							 * 英字 大文字/小文字は無視します。<br>
+							 * 検索文字列は2文字以上を指定してください。<br>
+							 * 英字の大文字/小文字は無視します。<br>
 							 * スペース区切りで複数入力できます。(AND検索)<br>
 							 * 半角カッコでくくって | で区切ると | で区切られる前後で検索します。(OR検索)<br>
 							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。<br>
@@ -74,16 +74,16 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 
 // スペースを*に入れ替えて、前後に*を付与する
 func patStar(s string) (sn, en []string, err error) {
-	if len([]rune(s)) < 2 {
-		err = errors.New("検索文字列が足りません")
-	} else { // s <- "hoge my -your name"
-		for _, n := range strings.Fields(s) { // -> [hoge my -your name]
-			if strings.HasPrefix(n, "-") {
-				en = append(en, strings.TrimPrefix(n, "-")) // ->[your]
-			} else {
-				sn = append(sn, n) // ->[hoge my name]
-			}
+	// s <- "hoge my -your name"
+	for _, n := range strings.Fields(s) { // -> [hoge my -your name]
+		if strings.HasPrefix(n, "-") {
+			en = append(en, strings.TrimPrefix(n, "-")) // ->[your]
+		} else {
+			sn = append(sn, n) // ->[hoge my name]
 		}
+	}
+	if len([]rune(strings.Join(sn, ""))) < 2 {
+		err = errors.New("検索文字数が足りません")
 	}
 	return
 }
@@ -125,7 +125,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintln(w, `<h4>
-							検索文字列が足りません
+							検索文字数が足りません
 						</h4>
 					</body>
 					</html>`)

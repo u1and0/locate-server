@@ -52,7 +52,7 @@ func htmlClause(s string) string {
 					<head><title>Locate Server</title></head>
 					<body>
 						<form method="get" action="/searching">
-							<input type="text" name="query" value="%s">
+							<input type="text" name="query" value="%s" size="50">
 							<input type="submit" name="submit" value="検索">
 							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 						</form>
@@ -120,8 +120,8 @@ func highlightString(s string, words []string) string {
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
-	log.Println("検索ワード:", receiveValue)
-	if searchWords, excludeWords, err := patStar(receiveValue); err != nil { // 検索文字列が1文字以下のとき
+	normalizeWord := strings.Join(strings.Fields(receiveValue), " ")          // normalize spaces
+	if searchWords, excludeWords, err := patStar(normalizeWord); err != nil { // 検索文字列が1文字以下のとき
 		log.Println(err)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintln(w, `<h4>
@@ -180,7 +180,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		}
 
 		resultNum = len(results)
-		log.Println("結果件数:", resultNum, "/", "検索時間:", searchTime)
+		log.Println("検索ワード:", normalizeWord, "/", "結果件数:", resultNum, "/", "検索時間:", searchTime)
 
 		// Update time
 		fileStat, err := os.Stat("/var/lib/mlocate")

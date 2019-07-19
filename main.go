@@ -120,8 +120,7 @@ func highlightString(s string, words []string) string {
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
-	normalizeWord := strings.Join(strings.Fields(receiveValue), " ")          // normalize spaces
-	if searchWords, excludeWords, err := patStar(normalizeWord); err != nil { // 検索文字列が1文字以下のとき
+	if searchWords, excludeWords, err := patStar(receiveValue); err != nil { // 検索文字列が1文字以下のとき
 		log.Println(err)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintln(w, `<h4>
@@ -130,6 +129,9 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					</body>
 					</html>`)
 	} else {
+		// Normlized word for cache
+		normalizeWord := strings.Join(append(searchWords, excludeWords...), " ")
+
 		// Search options
 		cmd := []string{"locate", "-i"} // -i: Ignore case distinctions when matching patterns.
 		if *dbpath != "" {

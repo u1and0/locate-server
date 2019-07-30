@@ -1,4 +1,4 @@
-package cmd
+package locater
 
 import (
 	"testing"

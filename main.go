@@ -14,19 +14,33 @@ import (
 	"strings"
 	"time"
 
+	cmd "locate-server/cmd"
+
 	pipeline "github.com/mattn/go-pipeline"
 )
 
+const (
+	logfile = "/var/lib/mlocate/locate.log"
+)
+
 var (
-	results        map[string]string
+	results        PathMap
+	cache          CacheMap
 	resultNum      int
 	lastUpdateTime string
 	searchTime     float64
 	receiveValue   string
-	logfile        = "/var/lib/mlocate/locate.log"
+	err            error
 	root           = flag.String("r", "", "DB root directory")
 	pathSplitWin   = flag.Bool("s", false, "OS path split windows backslash")
 	dbpath         = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
+)
+
+type (
+	// PathMap is pairs of fullpath:dirpath
+	PathMap map[string]string
+	// CacheMap is normalized queries key and PathMap value pair
+	CacheMap map[string]PathMap
 )
 
 func main() {
@@ -73,7 +87,7 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 }
 
 // スペースを*に入れ替えて、前後に*を付与する
-func patStar(s string) (sn, en []string, err error) {
+func queryParser(s string) (sn, en []string, err error) {
 	// s <- "hoge my -your name"
 	for _, n := range strings.Fields(s) { // -> [hoge my -your name]
 		if strings.HasPrefix(n, "-") {
@@ -120,7 +134,8 @@ func highlightString(s string, words []string) string {
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
-	if searchWords, excludeWords, err := patStar(receiveValue); err != nil { // 検索文字列が1文字以下のとき
+	loc := new(cmd.Locater)
+	if loc.SearchWords, loc.ExcludeWords, err = queryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
 		log.Println(err)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintln(w, `<h4>
@@ -130,7 +145,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					</html>`)
 	} else {
 		// Normlized word for cache
-		normalizeWord := strings.Join(append(searchWords, excludeWords...), " ")
+		normalizeWord := loc.Normalize()
 
 		// Search options
 		cmd := []string{"locate", "-i"} // -i: Ignore case distinctions when matching patterns.
@@ -138,12 +153,12 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 			cmd = append(cmd, "-d", *dbpath) // -d: Replace the default database with DBPATH.
 		}
 		// Interpret all PATTERNs as extended regexps.
-		cmd = append(cmd, "--regex", strings.Join(searchWords, ".*"))
+		cmd = append(cmd, "--regex", strings.Join(loc.SearchWords, ".*"))
 		// -> hoge.*my.*name
 
 		// Exclude PATTERNs
 		exes := [][]string{cmd} // locate cmd & piped cmd
-		for _, ex := range excludeWords {
+		for _, ex := range loc.ExcludeWords {
 			exes = append(exes, []string{"grep", "-ivE", ex})
 		}
 
@@ -157,7 +172,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		searchTime = (en.Sub(st)).Seconds()
 
 		// Map parent directory name
-		results = make(map[string]string, 10000)
+		results = make(PathMap, 10000)
 		for _, f := range strings.Split(string(out), "\n") {
 			results[f] = filepath.Dir(f)
 		}
@@ -216,7 +231,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					<a href="file://%s">%s</a>
 					<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
 				</td>
-			</tr>`, f, highlightString(f, searchWords), d)
+			</tr>`, f, highlightString(f, loc.SearchWords), d)
 		}
 
 		fmt.Fprintln(w, `</table>

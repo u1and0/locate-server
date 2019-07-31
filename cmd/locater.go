@@ -8,9 +8,13 @@ import (
 // Locater : queryから読み取った検索ワードと無視するワード
 type Locater struct {
 	SearchWords, ExcludeWords []string
+	Dbpath string
 }
 
-// Normalize : SearchWordsとExcludeWordsを合わせる。ExcludeWordsに"-"のprefixを入れる
+// Normalize : SearchWordsとExcludeWordsを合わせる
+// SearchWordsは小文字にする
+// ExcludeWordsは小文字にした上で
+// ソートして、頭に-をつける
 func (l *Locater) Normalize() string {
 	se := l.SearchWords
 	ex := l.ExcludeWords

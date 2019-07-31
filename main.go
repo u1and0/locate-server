@@ -9,24 +9,25 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
 	cmd "locate-server/cmd"
-
-	pipeline "github.com/mattn/go-pipeline"
 )
 
 const (
-	logfile = "/var/lib/mlocate/locate.log"
+	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
+	LOGFILE = "/var/lib/mlocate/locate.log"
+	// CAP : 表示する検索結果上限数
+	CAP = 1000
+	// LOCATEPATH : locateのデータベースやログファイルを置く場所
+	LOCATEPATH = "/var/lib/mlocate"
 )
 
 var (
-	results        PathMap
+	results        cmd.PathMap
 	cache          CacheMap
-	resultNum      int
 	lastUpdateTime string
 	searchTime     float64
 	receiveValue   string
@@ -37,17 +38,15 @@ var (
 )
 
 type (
-	// PathMap is pairs of fullpath:dirpath
-	PathMap map[string]string
 	// CacheMap is normalized queries key and PathMap value pair
-	CacheMap map[string]PathMap
+	CacheMap map[string]cmd.PathMap
 )
 
 func main() {
 	flag.Parse()
 
 	// Log setting
-	logfile, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Println("[warning] cannot open logfile" + err.Error())
 	}
@@ -135,6 +134,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
 	loc := new(cmd.Locater)
+	loc.Dbpath = *dbpath
 	if loc.SearchWords, loc.ExcludeWords, err = queryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
 		log.Println(err)
 		fmt.Fprint(w, htmlClause(receiveValue))
@@ -147,36 +147,10 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		// Normlized word for cache
 		normalizeWord := loc.Normalize()
 
-		// Search options
-		cmd := []string{"locate", "-i"} // -i: Ignore case distinctions when matching patterns.
-		if *dbpath != "" {
-			cmd = append(cmd, "-d", *dbpath) // -d: Replace the default database with DBPATH.
-		}
-		// Interpret all PATTERNs as extended regexps.
-		cmd = append(cmd, "--regex", strings.Join(loc.SearchWords, ".*"))
-		// -> hoge.*my.*name
-
-		// Exclude PATTERNs
-		exes := [][]string{cmd} // locate cmd & piped cmd
-		for _, ex := range loc.ExcludeWords {
-			exes = append(exes, []string{"grep", "-ivE", ex})
-		}
-
 		// Searching
-		st := time.Now()
-		out, err := pipeline.Output(exes...)
-		if err != nil {
-			log.Println(err)
-		}
-		en := time.Now()
-		searchTime = (en.Sub(st)).Seconds()
-
-		// Map parent directory name
-		results = make(PathMap, 10000)
-		for _, f := range strings.Split(string(out), "\n") {
-			results[f] = filepath.Dir(f)
-		}
-		delete(results, "") // Pop last element cause \\n
+		startTime := time.Now()
+		results, resultNum, err := loc.Cmd(CAP)
+		searchTime = (time.Since(startTime)).Seconds()
 
 		// Change sep character / -> \
 		if *pathSplitWin { // Windows path
@@ -196,16 +170,16 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 			results = r
 		}
 
-		resultNum = len(results)
-		log.Println("検索ワード:", normalizeWord, "/", "結果件数:", resultNum, "/", "検索時間:", searchTime)
+		log.Printf("検索ワード: %-40s 結果件数:%8d 検索時間: %3.3f\n",
+			normalizeWord, resultNum, searchTime)
 
 		// Update time
-		fileStat, err := os.Stat("/var/lib/mlocate")
-		layout := "2006-01-02 15:05"
-		lastUpdateTime = fileStat.ModTime().Format(layout)
+		filestat, err := os.Stat(LOCATEPATH)
 		if err != nil {
 			log.Println(err)
 		}
+		layout := "2006-01-02 15:05"
+		lastUpdateTime = filestat.ModTime().Format(layout)
 
 		// Search result page
 		fmt.Fprint(w, htmlClause(receiveValue))
@@ -221,11 +195,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		// 検索結果を行列表示
 		fmt.Fprintln(w, `<table>
 						  <tr>`)
-		i := 0
 		for f, d := range results {
-			if i++; i > 1000 { // Max results 1000
-				break
-			}
 			fmt.Fprintf(w, `<tr>
 				<td>
 					<a href="file://%s">%s</a>

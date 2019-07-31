@@ -26,15 +26,12 @@ const (
 )
 
 var (
-	results        cmd.PathMap
-	cache          CacheMap
-	lastUpdateTime string
-	searchTime     float64
-	receiveValue   string
-	err            error
-	root           = flag.String("r", "", "DB root directory")
-	pathSplitWin   = flag.Bool("s", false, "OS path split windows backslash")
-	dbpath         = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
+	cache        CacheMap
+	receiveValue string
+	err          error
+	root         = flag.String("r", "", "DB root directory")
+	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
+	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
 )
 
 type (
@@ -150,7 +147,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		// Searching
 		startTime := time.Now()
 		results, resultNum, err := loc.Cmd(CAP)
-		searchTime = (time.Since(startTime)).Seconds()
+		searchTime := (time.Since(startTime)).Seconds()
 
 		// Change sep character / -> \
 		if *pathSplitWin { // Windows path
@@ -179,7 +176,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 		}
 		layout := "2006-01-02 15:05"
-		lastUpdateTime = filestat.ModTime().Format(layout)
+		lastUpdateTime := filestat.ModTime().Format(layout)
 
 		// Search result page
 		fmt.Fprint(w, htmlClause(receiveValue))

@@ -57,9 +57,7 @@ func (l *Locater) Cmd(capacity int) ([]PathMap, int, error) {
 		if i >= capacity {
 			break
 		}
-		results[i].File = f
-		results[i].Dir = filepath.Dir(f)
-		results[i].Highlight = highlightString(f, l.SearchWords)
+		results = append(results, PathMap{f, filepath.Dir(f), highlightString(f, l.SearchWords)})
 	}
 
 	return results, len(outslice), err // Max 1000 result & number of all result

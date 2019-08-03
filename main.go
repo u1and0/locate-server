@@ -26,24 +26,25 @@ const (
 	LOCATEPATH = "/var/lib/mlocate"
 )
 
-// type pn struct {
-// 	Path cmd.PathMap
-// 	Num  int
-// }
+type (
+	// CacheMap is normalized queries key and PathMap value pair
+	CacheMap map[string]*CacheStruct
+)
 
-// type (
-// 	// CacheMap is normalized queries key and PathMap value pair
-// 	CacheMap map[string]pn
-// )
+// CacheStruct is values of CacheMap key is a string used in searching query
+type CacheStruct struct {
+	Paths []cmd.PathMap
+	Num   int
+}
 
 var (
-	// cache        CacheMap
 	receiveValue string
 	err          error
 	root         = flag.String("r", "", "DB root directory")
 	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
 	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
 	showVersion  bool
+	cache        CacheMap
 )
 
 func main() {
@@ -61,6 +62,10 @@ func main() {
 		log.Println("[warning] cannot open logfile" + err.Error())
 	}
 	log.SetOutput(io.MultiWriter(logfile, os.Stdout))
+
+	// Initialize cache
+	// nil map assignment errorを発生させないために必要
+	cache = map[string]*CacheStruct{}
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)
@@ -132,6 +137,10 @@ func locateStatus(w http.ResponseWriter, r *http.Request) {
 
 // locate検索し、結果をhtmlに書き込む
 func addResult(w http.ResponseWriter, r *http.Request) {
+	var (
+		results   []cmd.PathMap
+		resultNum int
+	)
 	// Modify query
 	receiveValue = r.FormValue("query")
 	loc := new(cmd.Locater)
@@ -148,23 +157,23 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 		// Searching
 		startTime := time.Now()
-		results, resultNum, err := loc.Cmd(CAP)
 
-		/*
-			// Normlized word for cache
-			normalizedWord := loc.Normalize()
-			if cacheElem, ok := cache[normalizedWord]; !ok {
-				results, resultNum, err = loc.Cmd(CAP)
-				ppn := pn{
-					Path: results,
-					Num:  resultNum,
-				}
-				cache[normalizedWord] = ppn
-			} else {
-				results = cacheElem.Path
-				resultNum = cacheElem.Num
+		// Normlized word for cache
+		normalizedWord := loc.Normalize()
+		if cacheElem, ok := cache[normalizedWord]; !ok {
+			// cacheになければresultsとresultNumをcacheに登録
+			results, resultNum, err = loc.Cmd(CAP)
+			cache[normalizedWord] = &CacheStruct{
+				Paths: results,
+				Num:   resultNum,
 			}
-		*/
+			log.Println("Result push to cache")
+		} else {
+			// cacheにあればcacheからresults と　resultNumを取り出す
+			results = cacheElem.Paths
+			resultNum = cacheElem.Num
+			log.Println("Result get from cache")
+		}
 		searchTime := (time.Since(startTime)).Seconds()
 
 		/* あとでメソッド化する
@@ -187,7 +196,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		}
 		*/
 
-		log.Printf("検索ワード: %-40s 結果件数:%8d 検索時間: %3.3f\n",
+		log.Printf("検索ワード: %-40s 結果件数:%8d 検索時間: %3.6f\n",
 			receiveValue, resultNum, searchTime)
 		/* normalizedWordではなく、あえてreceiveValueを
 		表示して生の検索文字列を記録したい*/
@@ -208,7 +217,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `<h4>
 							 <a href=/status>DB</a> last update: %s<br>
 							 検索結果          : %d件中、最大1000件を表示<br>
-							 検索にかかった時間: %.3fsec
+							 検索にかかった時間: %.6fsec
 						</h4>`, lastUpdateTime, resultNum, searchTime)
 
 		// 検索結果を行列表示

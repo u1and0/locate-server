@@ -51,7 +51,7 @@ func (l *Locater) Cmd(capacity int) ([]PathMap, int, error) {
 	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
 
 	// Map parent directory name
-	results := make([]PathMap, capacity)
+	results := make([]PathMap, 0, capacity)
 	for i, f := range outslice {
 		// capacity (default 1000) 件までresultsとして返す
 		if i >= capacity {

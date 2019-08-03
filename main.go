@@ -17,6 +17,8 @@ import (
 )
 
 const (
+	// VERSION : version
+	VERSION = "1.0.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// CAP : 表示する検索結果上限数
@@ -37,10 +39,17 @@ var (
 type (
 	// CacheMap is normalized queries key and PathMap value pair
 	CacheMap map[string]cmd.PathMap
+	showVersion  bool
 )
 
 func main() {
+	flag.BoolVar(&showVersion, "v", false, "show version")
+	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()
+	if showVersion {
+		fmt.Println("version:", VERSION)
+		return // versionを表示して終了
+	}
 
 	// Log setting
 	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)

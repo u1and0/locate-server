@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 	"time"
 
@@ -27,18 +26,23 @@ const (
 	LOCATEPATH = "/var/lib/mlocate"
 )
 
+// type pn struct {
+// 	Path cmd.PathMap
+// 	Num  int
+// }
+
+// type (
+// 	// CacheMap is normalized queries key and PathMap value pair
+// 	CacheMap map[string]pn
+// )
+
 var (
-	cache        CacheMap
+	// cache        CacheMap
 	receiveValue string
 	err          error
 	root         = flag.String("r", "", "DB root directory")
 	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
 	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
-)
-
-type (
-	// CacheMap is normalized queries key and PathMap value pair
-	CacheMap map[string]cmd.PathMap
 	showVersion  bool
 )
 
@@ -126,15 +130,6 @@ func locateStatus(w http.ResponseWriter, r *http.Request) {
 					</html>`, locates)
 }
 
-// sの文字列中にあるwordsの背景を黄色にハイライトしたhtmlを返す
-func highlightString(s string, words []string) string {
-	for _, w := range words {
-		re := regexp.MustCompile(`((?i)` + w + `)`)
-		s = re.ReplaceAllString(s, "<span style=\"background-color:#FFCC00;\">$1</span>")
-	}
-	return s
-}
-
 // locate検索し、結果をhtmlに書き込む
 func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
@@ -150,14 +145,29 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					</body>
 					</html>`)
 	} else {
-		// Normlized word for cache
-		normalizeWord := loc.Normalize()
 
 		// Searching
 		startTime := time.Now()
 		results, resultNum, err := loc.Cmd(CAP)
+
+		/*
+			// Normlized word for cache
+			normalizedWord := loc.Normalize()
+			if cacheElem, ok := cache[normalizedWord]; !ok {
+				results, resultNum, err = loc.Cmd(CAP)
+				ppn := pn{
+					Path: results,
+					Num:  resultNum,
+				}
+				cache[normalizedWord] = ppn
+			} else {
+				results = cacheElem.Path
+				resultNum = cacheElem.Num
+			}
+		*/
 		searchTime := (time.Since(startTime)).Seconds()
 
+		/* あとでメソッド化する
 		// Change sep character / -> \
 		if *pathSplitWin { // Windows path
 			r := make(map[string]string, 10000)
@@ -175,9 +185,12 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 			}
 			results = r
 		}
+		*/
 
 		log.Printf("検索ワード: %-40s 結果件数:%8d 検索時間: %3.3f\n",
-			normalizeWord, resultNum, searchTime)
+			receiveValue, resultNum, searchTime)
+		/* normalizedWordではなく、あえてreceiveValueを
+		表示して生の検索文字列を記録したい*/
 
 		// Update time
 		filestat, err := os.Stat(LOCATEPATH)
@@ -201,13 +214,13 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		// 検索結果を行列表示
 		fmt.Fprintln(w, `<table>
 						  <tr>`)
-		for f, d := range results {
+		for _, e := range results {
 			fmt.Fprintf(w, `<tr>
 				<td>
 					<a href="file://%s">%s</a>
 					<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
 				</td>
-			</tr>`, f, highlightString(f, loc.SearchWords), d)
+			</tr>`, e.File, e.Highlight, e.Dir)
 		}
 
 		fmt.Fprintln(w, `</table>

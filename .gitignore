@@ -1,3 +1,7 @@
 Session.vim
 /log/
 /misc/
+tags
+TODO.md
+go.sum
+*.tar.gz

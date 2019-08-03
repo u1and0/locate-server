@@ -26,25 +26,14 @@ const (
 	LOCATEPATH = "/var/lib/mlocate"
 )
 
-type (
-	// CacheMap is normalized queries key and PathMap value pair
-	CacheMap map[string]*CacheStruct
-)
-
-// CacheStruct is values of CacheMap key is a string used in searching query
-type CacheStruct struct {
-	Paths []cmd.PathMap
-	Num   int
-}
-
 var (
+	showVersion  bool
 	receiveValue string
 	err          error
 	root         = flag.String("r", "", "DB root directory")
 	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
 	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
-	showVersion  bool
-	cache        CacheMap
+	cache        cmd.CacheMap
 )
 
 func main() {
@@ -65,7 +54,7 @@ func main() {
 
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
-	cache = map[string]*CacheStruct{}
+	cache = map[string]*cmd.CacheStruct{}
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)
@@ -144,8 +133,9 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
 	loc := new(cmd.Locater)
-	loc.Dbpath = *dbpath
-	if loc.SearchWords, loc.ExcludeWords, err = queryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
+	loc.Dbpath, loc.Cap = *dbpath, CAP
+	if loc.SearchWords, loc.ExcludeWords, err =
+		queryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
 		log.Println(err)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintln(w, `<h4>
@@ -154,26 +144,9 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					</body>
 					</html>`)
 	} else {
-
 		// Searching
 		startTime := time.Now()
-
-		// Normlized word for cache
-		normalizedWord := loc.Normalize()
-		if cacheElem, ok := cache[normalizedWord]; !ok {
-			// cacheになければresultsとresultNumをcacheに登録
-			results, resultNum, err = loc.Cmd(CAP)
-			cache[normalizedWord] = &CacheStruct{
-				Paths: results,
-				Num:   resultNum,
-			}
-			log.Println("Result push to cache")
-		} else {
-			// cacheにあればcacheからresults と　resultNumを取り出す
-			results = cacheElem.Paths
-			resultNum = cacheElem.Num
-			log.Println("Result get from cache")
-		}
+		results, resultNum, cache, err = loc.ResultsCache(cache)
 		searchTime := (time.Since(startTime)).Seconds()
 
 		/* あとでメソッド化する

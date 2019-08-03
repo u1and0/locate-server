@@ -8,7 +8,8 @@ import (
 // Locater : queryから読み取った検索ワードと無視するワード
 type Locater struct {
 	SearchWords, ExcludeWords []string
-	Dbpath string
+	Dbpath                    string
+	Cap                       int
 }
 
 // Normalize : SearchWordsとExcludeWordsを合わせる

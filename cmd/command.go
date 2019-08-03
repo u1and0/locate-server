@@ -43,18 +43,18 @@ func (l *Locater) CmdGen() [][]string {
 	return exec
 }
 
-// Cmd : locate検索し、結果をfullpath:dirpathのマップ(最大capacity件)にして返す
+// Cmd : locate検索し、結果をPathMapのスライス(最大l.Cap件(capacity = default 1000))にして返す
 // 更に検索結果数、あれば検索時のエラーを返す
-func (l *Locater) Cmd(capacity int) ([]PathMap, int, error) {
+func (l *Locater) Cmd() ([]PathMap, int, error) {
 	out, err := pipeline.Output(l.CmdGen()...)
 	outslice := strings.Split(string(out), "\n")
 	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
 
 	// Map parent directory name
-	results := make([]PathMap, 0, capacity)
+	results := make([]PathMap, 0, l.Cap)
 	for i, f := range outslice {
-		// capacity (default 1000) 件までresultsとして返す
-		if i >= capacity {
+		// l.Cap  件までresultsとして返す
+		if i >= l.Cap {
 			break
 		}
 		results = append(results, PathMap{f, filepath.Dir(f), highlightString(f, l.SearchWords)})

@@ -145,7 +145,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	loc.Cap = CAP        // 検索件数上限
 
 	if loc.SearchWords, loc.ExcludeWords, err = queryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
-		log.Println(receiveValue, err)
+		log.Printf("[ %-50s ] %s\n", receiveValue, err)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintln(w, `<h4>
 							検索文字数が足りません
@@ -166,7 +166,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		results, resultNum, cache, err = loc.ResultsCache(cache)
 		searchTime := float64((time.Since(startTime)).Nanoseconds()) / float64(time.Millisecond)
 		if err != nil {
-			log.Println(receiveValue, err)
+			log.Printf("[ %-50s ] %s\n", receiveValue, err)
 		}
 
 		if *pathSplitWin { // Windows path
@@ -181,7 +181,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		log.Printf("Words: %-40s %8dfiles %3.3fmsec\n",
+		log.Printf("[ %-50s ] %8dfiles %3.3fmsec\n",
 			receiveValue, resultNum, searchTime)
 		/* normalizedWordではなく、あえてreceiveValueを
 		表示して生の検索文字列を記録したい*/

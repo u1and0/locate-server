@@ -171,13 +171,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 		if *pathSplitWin { // Windows path
 			for i, e := range results {
-				f := strings.ReplaceAll(e.File, "/", "\\")
-				d := strings.ReplaceAll(e.Dir, "/", "\\")
-				results[i] = cmd.PathMap{
-					File:      f,
-					Dir:       d,
-					Highlight: cmd.HighlightString(f, loc.SearchWords),
-				}
+				results[i] = e.ChangeSep("\\", loc.SearchWords)
 			}
 		}
 		/*

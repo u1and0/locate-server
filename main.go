@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -9,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	cmd "locate-server/cmd"
@@ -93,22 +91,6 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, htmlClause(receiveValue))
 }
 
-// prefixがあるstringとないstringに分類してそれぞれのスライスで返す
-func queryParser(s string) (sn, en []string, err error) {
-	// s <- "hoge my -your name"
-	for _, n := range strings.Fields(s) { // -> [hoge my -your name]
-		if strings.HasPrefix(n, "-") {
-			en = append(en, strings.TrimPrefix(n, "-")) // ->[your]
-		} else {
-			sn = append(sn, n) // ->[hoge my name]
-		}
-	}
-	if len([]rune(strings.Join(sn, ""))) < 2 {
-		err = errors.New("検索文字数が足りません")
-	}
-	return
-}
-
 // Result of `locate -S`
 func locatestat() (l []byte) {
 	opt := []string{"-S"}
@@ -144,14 +126,15 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	loc.Dbpath = *dbpath // /var/lib/mlocate以外のディレクトリパス
 	loc.Cap = CAP        // 検索件数上限
 
-	if loc.SearchWords, loc.ExcludeWords, err = queryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
+	if loc.SearchWords, loc.ExcludeWords, err =
+		cmd.QueryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
 		log.Printf("[ %-50s ] %s\n", receiveValue, err)
 		fmt.Fprint(w, htmlClause(receiveValue))
-		fmt.Fprintln(w, `<h4>
-							検索文字数が足りません
+		fmt.Fprintf(w, `<h4>
+							%s
 						</h4>
 					</body>
-					</html>`)
+					</html>`, err)
 	} else { // 検索文字数チェックパス
 		/* locatestat()の結果が前と異なっていたら
 		lstatinit更新

@@ -5,9 +5,10 @@ import (
 )
 
 func TestLocater_Normalize(t *testing.T) {
+	// QueryParserによってSearchWordsとExcludeWordsは小文字に正規化されている
 	l := Locater{
-		SearchWords:  []string{"DropBox", "Program", "34"},        // Should be lower
-		ExcludeWords: []string{"543", "PYTHON", "12", "go", "漢字"}, // Should be sort & lower
+		SearchWords:  []string{"dropbox", "program", "34"},        // Should be lower
+		ExcludeWords: []string{"543", "python", "12", "go", "漢字"}, // Should be sort & lower
 	}
 
 	actual := l.Normalize()

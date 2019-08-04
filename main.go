@@ -145,7 +145,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	loc.Cap = CAP        // 検索件数上限
 
 	if loc.SearchWords, loc.ExcludeWords, err = queryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
-		log.Println(err)
+		log.Println(receiveValue, err)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintln(w, `<h4>
 							検索文字数が足りません
@@ -164,9 +164,9 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		// Searching
 		startTime := time.Now()
 		results, resultNum, cache, err = loc.ResultsCache(cache)
-		searchTime := (time.Since(startTime)).Seconds()
+		searchTime := float64((time.Since(startTime)).Nanoseconds()) / float64(time.Millisecond)
 		if err != nil {
-			log.Println(err)
+			log.Println(receiveValue, err)
 		}
 
 		/* あとでメソッド化する
@@ -189,7 +189,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		}
 		*/
 
-		log.Printf("検索ワード: %-40s 結果件数:%8d 検索時間: %3.6f\n",
+		log.Printf("Words: %-40s %8dfiles %3.3fmsec\n",
 			receiveValue, resultNum, searchTime)
 		/* normalizedWordではなく、あえてreceiveValueを
 		表示して生の検索文字列を記録したい*/
@@ -210,7 +210,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `<h4>
 							 <a href=/status>DB</a> last update: %s<br>
 							 検索結果          : %d件中、最大1000件を表示<br>
-							 検索にかかった時間: %.6fsec
+							 検索にかかった時間: %.3fmsec
 						</h4>`, lastUpdateTime, resultNum, searchTime)
 
 		// 検索結果を行列表示

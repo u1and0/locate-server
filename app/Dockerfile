@@ -1,56 +1,7 @@
 # Usage:
-# 1時間ごとにupdatedbによってディレクトリデータベースを更新する
+# n時間ごとにupdatedbによってディレクトリデータベースを更新する
 # docker run --name app -it --rm -v `pwd`:/work u1and0/updatedb
 # app(このファイルで作成したイメージによるコンテナ)はtail -fでcrondの結果を標準出力に出力し続ける
-#
-#
-# appは/var/lib/mlocateディレクトリをさらしているので、
-# --volumes-fromオプションによりappをマウントすると、
-# updatedbによって作られたmlocate.dbファイルが
-# /var/lib/mlocateディレクトリに作成/更新される
-#
-# 以下のコマンドはappの/var/lib/mlocateディレクトリを
-# dbという名前のコンテナにマウントしたものを作成する。
-# ```shell-session
-# $ docker create --name db --volumes-from app busybox
-# ```
-#
-#
-# ```/etc/crontabs/root
-# SHELL=/bin/sh
-# PATH=/sbin:/bin:/usr/sbin:/usr/bin
-# 7 * * * * updatedb -vU ${UPDATEDB_PATH:-/} --output=/var/lib/mlocate/${OUTPUT:-mlocate.db}
-#
-# ===========
-#
-# 1. data volume用のコンテナdbを作る
-# docker create --name db -v /var/lib/mlocate -v /ShareUsers:/ShareUsers:ro busybox
-#
-# このコマンドではdbコンテナの/varlib/mlocateを外部に晒して、
-# ホストのShareUsersをdbコンテナにマウントする
-#
-#
-# 2. updatedb用のコンテナappを作る
-# docker run --name app\
-#     --volumes-from db\
-#     -e UPDATEDB_PATH=/ShareUsers/<path to the db root>\
-#     -e OUTPUT=mlocatepersonal.db\
-#     u1and0/upadtedb
-#
-# このコマンドではdbコンテナのボリュームを参照し、
-# updatedbをかけるパスをUPDATEDB_PATHで指定している
-# dbでマウントしているのでこのコンテナで再度マウントする必要はない
-#
-#
-# 3. locateコマンドでファイル検索するコンテナwebを作る
-# docker run --name web --volumes-from db u1and0/locate-server [OPTIONS]
-# docker run --name web --rm -it\
-#    --volumes-from db -e TZ='Asia/Tokyo'\
-#    -e LOCATE_PATH='/var/lib/mlocate/mlocatepersonal.db:/var/lib/mlocate/mlocatecommon.db'\
-#    -p 8081:8080 u1and0/locate-server\
-#    sh -c "locate-server -s -r '\\DFS'"
-
-
 FROM alpine
 
 # locate, updatedbコマンドを使用可能にする

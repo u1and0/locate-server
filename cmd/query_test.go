@@ -27,6 +27,11 @@ func TestQueryParserError_Test(t *testing.T) {
 		t.Errorf("This test must fail")
 	}
 
+	receiveValue = "a b c"
+	if _, _, err := QueryParser(receiveValue); err == nil {
+		t.Errorf("This test must fail")
+	}
+
 	receiveValue = "dropbox Program VIM -Vim"
 	if _, _, err := QueryParser(receiveValue); err == nil {
 		t.Errorf("This test must fail")

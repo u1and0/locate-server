@@ -69,5 +69,9 @@ func (p *PathMap) ChangeSep(s string, searchwords []string) PathMap {
 	d := strings.ReplaceAll(p.Dir, "/", "\\")
 	h := highlightString(f, searchwords)
 	return PathMap{f, d, h}
+}
 
+// AddPrefix : Change file path separator to arbitrary s
+func (p *PathMap) AddPrefix(r string) PathMap {
+	return PathMap{r + p.File, r + p.Dir, r + p.Highlight}
 }

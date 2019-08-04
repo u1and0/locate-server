@@ -170,20 +170,16 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if *pathSplitWin { // Windows path
-			for i, e := range results {
-				results[i] = e.ChangeSep("\\", loc.SearchWords)
+			for i, p := range results {
+				results[i] = p.ChangeSep("\\", loc.SearchWords)
 			}
 		}
-		/*
-			// Add network starge path to each of results
-			if *root != "" {
-				r := make(map[string]string, 10000)
-				for k, v := range results {
-					r[*root+k] = *root + v
-				}
-				results = r
+		// Add network starge path to each of results
+		if *root != "" {
+			for i, p := range results {
+				results[i] = p.AddPrefix(*root)
 			}
-		*/
+		}
 
 		log.Printf("Words: %-40s %8dfiles %3.3fmsec\n",
 			receiveValue, resultNum, searchTime)

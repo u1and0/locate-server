@@ -55,11 +55,13 @@ func main() {
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
 	cache = map[string]*cmd.CacheStruct{}
+	// cacheの変化
+	// lstat := locatestat()
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)
 	http.HandleFunc("/searching", addResult)
-	http.HandleFunc("/status", locateStatus)
+	http.HandleFunc("/status", locateStatusPage)
 	http.ListenAndServe(":8080", nil)
 }
 
@@ -89,7 +91,7 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, htmlClause(receiveValue))
 }
 
-// スペースを*に入れ替えて、前後に*を付与する
+// prefixがあるstringとないstringに分類してそれぞれのスライスで返す
 func queryParser(s string) (sn, en []string, err error) {
 	// s <- "hoge my -your name"
 	for _, n := range strings.Fields(s) { // -> [hoge my -your name]
@@ -106,22 +108,26 @@ func queryParser(s string) (sn, en []string, err error) {
 }
 
 // Result of `locate -S`
-func locateStatus(w http.ResponseWriter, r *http.Request) {
+func locatestat() (l []byte) {
 	opt := []string{"-S"}
 	if *dbpath != "" {
 		opt = append(opt, "-d", *dbpath)
 	}
-
-	locates, err := exec.Command("locate", opt...).Output()
+	l, err = exec.Command("locate", opt...).Output()
 	if err != nil {
 		log.Println(err)
 	}
+	return
+}
+
+// `locate -S` page
+func locateStatusPage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `<html>
 					<head><title>Locate DB Status</title></head>
 					<body>
 						<pre>%s</pre>
 					</body>
-					</html>`, locates)
+					</html>`, locatestat())
 }
 
 // locate検索し、結果をhtmlに書き込む
@@ -148,6 +154,9 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
 		results, resultNum, cache, err = loc.ResultsCache(cache)
 		searchTime := (time.Since(startTime)).Seconds()
+		if err != nil {
+			log.Println(err)
+		}
 
 		/* あとでメソッド化する
 		// Change sep character / -> \

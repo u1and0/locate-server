@@ -22,7 +22,7 @@ func (l *Locater) ResultsCache(cache CacheMap) ([]PathMap, int, CacheMap, error)
 		err       error
 	)
 	nwrd := l.Normalize() // Normlize for cache
-	if cacheElem, ok := cache[nwrd]; !ok {
+	if ce, ok := cache[nwrd]; !ok {
 		// nwrdがcacheになければresultsとresultNumをcacheに登録
 		results, resultNum, err = l.Cmd()
 		cache[nwrd] = &CacheStruct{
@@ -31,9 +31,9 @@ func (l *Locater) ResultsCache(cache CacheMap) ([]PathMap, int, CacheMap, error)
 		}
 		log.Println("Result push to cache")
 	} else {
-		// cnwrdがacheにあればcacheからresults と　resultNumを取り出す
-		results = cacheElem.Paths
-		resultNum = cacheElem.Num
+		// nwrdがcacheにあればcacheからresultsとresultNumを取り出す
+		results = ce.Paths
+		resultNum = ce.Num
 		log.Println("Result get from cache")
 	}
 	return results, resultNum, cache, err

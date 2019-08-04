@@ -34,6 +34,7 @@ var (
 	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
 	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
 	cache        cmd.CacheMap
+	lstatinit    []byte
 )
 
 func main() {
@@ -55,8 +56,9 @@ func main() {
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
 	cache = map[string]*cmd.CacheStruct{}
-	// cacheの変化
-	// lstat := locatestat()
+	// cacheを廃棄するかの判断に必要
+	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
+	lstatinit = locatestat()
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)
@@ -139,9 +141,10 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
 	loc := new(cmd.Locater)
-	loc.Dbpath, loc.Cap = *dbpath, CAP
-	if loc.SearchWords, loc.ExcludeWords, err =
-		queryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
+	loc.Dbpath = *dbpath // /var/lib/mlocate以外のディレクトリパス
+	loc.Cap = CAP        // 検索件数上限
+
+	if loc.SearchWords, loc.ExcludeWords, err = queryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
 		log.Println(err)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintln(w, `<h4>
@@ -149,7 +152,15 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 						</h4>
 					</body>
 					</html>`)
-	} else {
+	} else { // 検索文字数チェックパス
+		/* locatestat()の結果が前と異なっていたら
+		lstatinit更新
+		cacheを初期化 */
+		if string(locatestat()) != string(lstatinit) {
+			lstatinit = locatestat()
+			cache = map[string]*cmd.CacheStruct{}
+		}
+
 		// Searching
 		startTime := time.Now()
 		results, resultNum, cache, err = loc.ResultsCache(cache)

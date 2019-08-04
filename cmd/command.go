@@ -16,7 +16,7 @@ type PathMap struct {
 }
 
 // sの文字列中にあるwordsの背景を黄色にハイライトしたhtmlを返す
-func highlightString(s string, words []string) string {
+func HighlightString(s string, words []string) string {
 	for _, w := range words {
 		re := regexp.MustCompile(`((?i)` + w + `)`)
 		s = re.ReplaceAllString(s, "<span style=\"background-color:#FFCC00;\">$1</span>")
@@ -57,7 +57,7 @@ func (l *Locater) Cmd() ([]PathMap, int, error) {
 		if i >= l.Cap {
 			break
 		}
-		results = append(results, PathMap{f, filepath.Dir(f), highlightString(f, l.SearchWords)})
+		results = append(results, PathMap{f, filepath.Dir(f), HighlightString(f, l.SearchWords)})
 	}
 
 	return results, len(outslice), err // Max 1000 result & number of all result

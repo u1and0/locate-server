@@ -169,24 +169,26 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 			log.Println(receiveValue, err)
 		}
 
-		/* あとでメソッド化する
-		// Change sep character / -> \
 		if *pathSplitWin { // Windows path
-			r := make(map[string]string, 10000)
-			for k, v := range results {
-				r[strings.ReplaceAll(k, "/", "\\")] = strings.ReplaceAll(v, "/", "\\")
+			for i, e := range results {
+				f := strings.ReplaceAll(e.File, "/", "\\")
+				d := strings.ReplaceAll(e.Dir, "/", "\\")
+				results[i] = cmd.PathMap{
+					File:      f,
+					Dir:       d,
+					Highlight: cmd.HighlightString(f, loc.SearchWords),
+				}
 			}
-			results = r
 		}
-
-		// Add network starge path to each of results
-		if *root != "" {
-			r := make(map[string]string, 10000)
-			for k, v := range results {
-				r[*root+k] = *root + v
+		/*
+			// Add network starge path to each of results
+			if *root != "" {
+				r := make(map[string]string, 10000)
+				for k, v := range results {
+					r[*root+k] = *root + v
+				}
+				results = r
 			}
-			results = r
-		}
 		*/
 
 		log.Printf("Words: %-40s %8dfiles %3.3fmsec\n",

@@ -40,6 +40,11 @@
 
 
 # Release Note
+## v1.0.0: Cache & NOT Search implemented
+* 最大8時間以内に検索したワードはメモリ上にキャッシュされ、再度検索する際はキャッシュから検索結果を取り出します。
+* NOT検索を実装しました。検索後の頭に「-」ハイフンをつけて検索するとその語を含む結果は除外されて表示されます。
+* 構文の最適化を行い、パフォーマンスの改善を行いました。
+
 ## v0.3.0: Highlight search words & Show DB status
 * 検索文字の背景を黄色で表示するようにしました。
 * データベース情報を表示するリンクを追加しました。
@@ -66,5 +71,54 @@
 * 前回の検索履歴がアクセスした人すべてに見られてしまいます。(改善予定)
 * フォルダジャンプ機能に対応しました。
 > リンク右端の"<<"をクリックすると、そのファイルがあるフォルダがファイルエクスプローラーにて開きます。
+
+
+# Dockerコンテナによるシステム構成
+
+## data volume用のコンテナdbを作る
+```
+docker create --name db -v /var/lib/mlocate -v /ShareUsers:/ShareUsers:ro busybox
+```
+
+このコマンドではdbコンテナの`/varlib/mlocate`を外部に晒して、
+ホストのShareUsersをdbコンテナにマウントする。
+ShareUsersが`locate`コマンドをかける対象のディレクトリ。
+
+
+## updatedb用のコンテナappを作る
+
+```
+docker run --name app\
+    --volumes-from db\
+    -e UPDATEDB_PATH=/ShareUsers/<path to the db root>\
+    -e OUTPUT=mlocatepersonal.db\
+    u1and0/upadtedb
+```
+
+このコマンドではdbコンテナのボリュームを参照し、
+`updatedb`をかけるパスを`UPDATEDB_PATH`で指定している。
+dbでマウントしているのでこのコンテナで再度マウントする必要はない。
+環境変数`OUTPUT`は出力するファイル名を指定する。
+ディレクトリは`/var/lib/mlocate`に固定される。
+
+
+## locateコマンドでファイル検索するコンテナwebを作る
+
+`docker run --name web --volumes-from db u1and0/locate-server [OPTIONS]`
+
+```
+docker run --name web --rm -t\
+   --volumes-from db\
+   -e TZ='Asia/Tokyo'\
+   -e LOCATE_PATH='/var/lib/mlocate/mlocatepersonal.db:/var/lib/mlocate/mlocatecommon.db'\
+   -p 8081:8080\
+   u1and0/locate-server -s -r '\\DFS' # オプションのみ
+```
+
+TZを指定しないとDBの更新日時がGMTになってしまう。
+`LOCATE_PATH`はappコンテナで指定したパスの数だけ`:`で区切って記述する。
+u1and0/locate-serverコンテナはENTRYPOINTで動くのでコンテナの指定後はオプションのみを記述する。
+
+
 
 Maintainer u1and0<e01.ando60@gmail.com>

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -9,38 +8,60 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"regexp"
-	"strings"
 	"time"
+
+	cmd "locate-server/cmd"
+)
+
+const (
+	// VERSION : version
+	VERSION = "1.0.0"
+	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
+	LOGFILE = "/var/lib/mlocate/locate.log"
+	// CAP : 表示する検索結果上限数
+	CAP = 1000
+	// LOCATEPATH : locateのデータベースやログファイルを置く場所
+	LOCATEPATH = "/var/lib/mlocate"
 )
 
 var (
-	results        map[string]string
-	resultNum      int
-	lastUpdateTime string
-	searchTime     float64
-	receiveValue   string
-	logfile        = "/var/lib/mlocate/locate.log"
-	root           = flag.String("r", "", "DB root directory")
-	pathSplitWin   = flag.Bool("s", false, "OS path split windows backslash")
-	dbpath         = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
+	showVersion  bool
+	receiveValue string
+	err          error
+	root         = flag.String("r", "", "DB root directory")
+	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
+	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
+	cache        cmd.CacheMap
+	lstatinit    []byte
 )
 
 func main() {
+	flag.BoolVar(&showVersion, "v", false, "show version")
+	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()
+	if showVersion {
+		fmt.Println("version:", VERSION)
+		return // versionを表示して終了
+	}
 
 	// Log setting
-	logfile, err := os.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Println("[warning] cannot open logfile" + err.Error())
 	}
 	log.SetOutput(io.MultiWriter(logfile, os.Stdout))
 
+	// Initialize cache
+	// nil map assignment errorを発生させないために必要
+	cache = map[string]*cmd.CacheStruct{}
+	// cacheを廃棄するかの判断に必要
+	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
+	lstatinit = locatestat()
+
 	// HTTP pages
 	http.HandleFunc("/", showInit)
 	http.HandleFunc("/searching", addResult)
-	http.HandleFunc("/status", locateStatus)
+	http.HandleFunc("/status", locateStatusPage)
 	http.ListenAndServe(":8080", nil)
 }
 
@@ -49,17 +70,20 @@ func htmlClause(s string) string {
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server</title></head>
 					<body>
-					<p style="text-align: right"><a href=https://github.com/u1and0/locate-server/blob/master/README.md>help</a></p>
 						<form method="get" action="/searching">
-							<input type="text" name="query" value="%s">
+							<input type="text" name="query" value="%s" size="50">
 							<input type="submit" name="submit" value="検索">
+							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 						</form>
-						<p>
-							 * 対象文字列は2文字以上の文字列を指定してください。<br>
+						<small>
+							 * 検索文字列は2文字以上を指定してください。<br>
+							 * 英字の大文字/小文字は無視します。<br>
 							 * スペース区切りで複数入力できます。(AND検索)<br>
 							 * 半角カッコでくくって | で区切ると | で区切られる前後で検索します。(OR検索)<br>
-							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。
-						</p>`, s)
+							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。<br>
+							 * 単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)<br>
+							 例: "電気 -工 業"=>"電気"と"業"を含み"工"を含まないファイルを検索します。
+						</small>`, s)
 }
 
 // Top page
@@ -67,114 +91,91 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, htmlClause(receiveValue))
 }
 
-// スペースを*に入れ替えて、前後に*を付与する
-func patStar(s string) (string, []string, error) {
-	var (
-		sn  []string
-		err error
-	)
-	if len([]rune(s)) < 2 {
-		err = errors.New("検索文字列が足りません")
-	} else { // s <- "hoge my name"
-		sn = strings.Fields(s)     // -> [hoge my name]
-		s = strings.Join(sn, ".*") // -> hoge.*my.*name
-	}
-	return s, sn, err
-}
-
 // Result of `locate -S`
-func locateStatus(w http.ResponseWriter, r *http.Request) {
+func locatestat() (l []byte) {
 	opt := []string{"-S"}
 	if *dbpath != "" {
 		opt = append(opt, "-d", *dbpath)
 	}
-
-	locates, err := exec.Command("locate", opt...).Output()
+	l, err = exec.Command("locate", opt...).Output()
 	if err != nil {
 		log.Println(err)
 	}
+	return
+}
+
+// `locate -S` page
+func locateStatusPage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `<html>
 					<head><title>Locate DB Status</title></head>
 					<body>
 						<pre>%s</pre>
 					</body>
-					</html>`, locates)
-}
-
-// sの文字列中にあるwordsの背景を黄色にハイライトしたhtmlを返す
-func highlightString(s string, words []string) string {
-	for _, w := range words {
-		re := regexp.MustCompile(`((?i)` + w + `)`)
-		s = re.ReplaceAllString(s, "<span style=\"background-color:#FFCC00;\">$1</span>")
-	}
-	return s
+					</html>`, locatestat())
 }
 
 // locate検索し、結果をhtmlに書き込む
 func addResult(w http.ResponseWriter, r *http.Request) {
+	var (
+		results   []cmd.PathMap
+		resultNum int
+	)
 	// Modify query
 	receiveValue = r.FormValue("query")
-	log.Println("検索ワード:", receiveValue)
-	if searchValue, searchWords, err := patStar(receiveValue); err != nil { // 検索文字列が1文字以下のとき
-		log.Println(err)
+	loc := new(cmd.Locater)
+	loc.Dbpath = *dbpath // /var/lib/mlocate以外のディレクトリパス
+	loc.Cap = CAP        // 検索件数上限
+
+	if loc.SearchWords, loc.ExcludeWords, err =
+		cmd.QueryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
+		log.Printf("[ %-50s ] %s\n", receiveValue, err)
 		fmt.Fprint(w, htmlClause(receiveValue))
-		fmt.Fprintln(w, `<h4>
-							検索文字列が足りません
+		fmt.Fprintf(w, `<h4>
+							%s
 						</h4>
 					</body>
-					</html>`)
-	} else {
-		// Search options
-		opt := []string{"-i"} // -i: Ignore case distinctions when matching patterns.
-		if *dbpath != "" {
-			opt = append(opt, "-d", *dbpath) // -d: Replace the default database with DBPATH.
+					</html>`, err)
+	} else { // 検索文字数チェックパス
+		/* locatestat()の結果が前と異なっていたら
+		lstatinit更新
+		cacheを初期化 */
+		if string(locatestat()) != string(lstatinit) {
+			lstatinit = locatestat()
+			cache = map[string]*cmd.CacheStruct{}
 		}
-		opt = append(opt, "--regex", searchValue) // Interpret all PATTERNs as extended regexps.
 
 		// Searching
-		st := time.Now()
-		out, err := exec.Command("locate", opt...).Output()
+		startTime := time.Now()
+		results, resultNum, cache, err = loc.ResultsCache(cache)
+		searchTime := float64((time.Since(startTime)).Nanoseconds()) / float64(time.Millisecond)
 		if err != nil {
-			log.Println(err)
+			log.Printf("[ %-50s ] %s\n", receiveValue, err)
 		}
-		en := time.Now()
-		searchTime = (en.Sub(st)).Seconds()
 
-		// Map parent directory name
-		results = make(map[string]string, 10000)
-		for _, f := range strings.Split(string(out), "\n") {
-			results[f] = filepath.Dir(f)
-		}
-		delete(results, "") // Pop last element cause \\n
-
-		// Change sep character / -> \
 		if *pathSplitWin { // Windows path
-			r := make(map[string]string, 10000)
-			for k, v := range results {
-				r[strings.ReplaceAll(k, "/", "\\")] = strings.ReplaceAll(v, "/", "\\")
+			for i, p := range results {
+				results[i] = p.ChangeSep("\\", loc.SearchWords)
 			}
-			results = r
 		}
-
 		// Add network starge path to each of results
 		if *root != "" {
-			r := make(map[string]string, 10000)
-			for k, v := range results {
-				r[*root+k] = *root + v
+			for i, p := range results {
+				results[i] = p.AddPrefix(*root)
 			}
-			results = r
 		}
 
-		resultNum = len(results)
-		log.Println("結果件数:", resultNum, "/", "検索時間:", searchTime)
+		log.Printf("[ %-50s ] %8dfiles %3.3fmsec\n",
+			receiveValue, resultNum, searchTime)
+		/* normalizedWordではなく、あえてreceiveValueを
+		表示して生の検索文字列を記録したい*/
 
 		// Update time
-		fileStat, err := os.Stat("/var/lib/mlocate")
-		layout := "2006-01-02 15:05"
-		lastUpdateTime = fileStat.ModTime().Format(layout)
+		filestat, err := os.Stat(LOCATEPATH)
 		if err != nil {
 			log.Println(err)
 		}
+		layout := "2006-01-02 15:05"
+		lastUpdateTime := filestat.ModTime().Format(layout)
 
 		// Search result page
 		fmt.Fprint(w, htmlClause(receiveValue))
@@ -184,23 +185,19 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `<h4>
 							 <a href=/status>DB</a> last update: %s<br>
 							 検索結果          : %d件中、最大1000件を表示<br>
-							 検索にかかった時間: %.3fsec
+							 検索にかかった時間: %.3fmsec
 						</h4>`, lastUpdateTime, resultNum, searchTime)
 
 		// 検索結果を行列表示
 		fmt.Fprintln(w, `<table>
 						  <tr>`)
-		i := 0
-		for f, d := range results {
-			if i++; i > 1000 { // Max results 1000
-				break
-			}
+		for _, e := range results {
 			fmt.Fprintf(w, `<tr>
 				<td>
 					<a href="file://%s">%s</a>
 					<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
 				</td>
-			</tr>`, f, highlightString(f, searchWords), d)
+			</tr>`, e.File, e.Highlight, e.Dir)
 		}
 
 		fmt.Fprintln(w, `</table>

@@ -123,8 +123,10 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
 	loc := new(cmd.Locater)
-	loc.Dbpath = *dbpath // /var/lib/mlocate以外のディレクトリパス
-	loc.Cap = CAP        // 検索件数上限
+	loc.Dbpath = *dbpath             // /var/lib/mlocate以外のディレクトリパス
+	loc.Cap = CAP                    // 検索件数上限
+	loc.PathSplitWin = *pathSplitWin // path separatorを\にする
+	loc.Root = *root                 // Path prefix
 
 	if loc.SearchWords, loc.ExcludeWords, err =
 		cmd.QueryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
@@ -151,19 +153,6 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("[ %-50s ] %s\n", receiveValue, err)
 		}
-
-		if *pathSplitWin { // Windows path
-			for i, p := range results {
-				results[i] = p.ChangeSep("\\", loc.SearchWords)
-			}
-		}
-		// Add network starge path to each of results
-		if *root != "" {
-			for i, p := range results {
-				results[i] = p.AddPrefix(*root)
-			}
-		}
-
 		log.Printf("[ %-50s ] %8dfiles %3.3fmsec\n",
 			receiveValue, resultNum, searchTime)
 		/* normalizedWordではなく、あえてreceiveValueを

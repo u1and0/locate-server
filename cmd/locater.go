@@ -10,6 +10,8 @@ type Locater struct {
 	SearchWords, ExcludeWords []string
 	Dbpath                    string
 	Cap                       int
+	PathSplitWin              bool
+	Root                      string
 }
 
 // Normalize : SearchWordsとExcludeWordsを合わせる

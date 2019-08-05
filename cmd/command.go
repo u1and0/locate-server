@@ -64,6 +64,19 @@ func (l *Locater) Cmd() ([]PathMap, int, error) {
 		})
 	}
 
+	// Windows path
+	if l.PathSplitWin {
+		for i, p := range results {
+			results[i] = p.ChangeSep("\\", l.SearchWords)
+		}
+	}
+	// Add network starge path to each of results
+	if l.Root != "" {
+		for i, p := range results {
+			results[i] = p.AddPrefix(l.Root)
+		}
+	}
+
 	return results, len(outslice), err // Max 1000 result & number of all result
 }
 

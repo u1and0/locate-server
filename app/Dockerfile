@@ -13,7 +13,7 @@ RUN apk --update --no-cache add mlocate tzdata
 ARG TASK="/etc/crontabs/root"
 RUN echo "SHELL=/bin/sh" > $TASK &&\
     echo "PATH=/sbin:/bin:/usr/sbin:/usr/bin" >> $TASK &&\
-    echo "* */8 * * * updatedb -U \${UPDATEDB_PATH:-/} --output=/var/lib/mlocate/\${OUTPUT:-mlocate.db}" >> $TASK
+    echo "32 8 * * * updatedb -U \${UPDATEDB_PATH:-/} --output=/var/lib/mlocate/\${OUTPUT:-mlocate.db}" >> $TASK
 # docker runするときに-e UPDATEDB_PATH=/work　とすればwork以下のディレクトリを
 # var/lib/mlocate/mlocate.dbにまとめてくれる
 # デフォルトはルート/
@@ -28,4 +28,4 @@ CMD ["crond", "&&", "tail", "-f"]
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
       description="make database regularly by `updatedb` command"\
-      version="u1and0/updatedb:v1.0.0"
+      version="u1and0/updatedb:v1.0.2"

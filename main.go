@@ -141,8 +141,8 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		/* locatestat()の結果が前と異なっていたら
 		lstatinit更新
 		cacheを初期化 */
-		if string(locatestat()) != string(lstatinit) {
-			lstatinit = locatestat()
+		if l := locatestat(); string(l) != string(lstatinit) {
+			lstatinit = l
 			cache = cmd.CacheMap{}
 		}
 

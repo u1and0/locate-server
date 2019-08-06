@@ -29,12 +29,12 @@ func (l *Locater) ResultsCache(cache CacheMap) ([]PathMap, int, CacheMap, error)
 			Paths: results,
 			Num:   resultNum,
 		}
-		log.Printf("[ %-50s ] result PUSH to cache\n", normalized)
+		log.Printf("[ %-50s ] PUSH result to cache\n", normalized)
 	} else {
 		// normalizedがcacheにあればcacheからresultsとresultNumを取り出す
 		results = ce.Paths
 		resultNum = ce.Num
-		log.Printf("[ %-50s ] result GET from cache\n", normalized)
+		log.Printf("[ %-50s ] GET result from cache\n", normalized)
 	}
 	return results, resultNum, cache, err
 }

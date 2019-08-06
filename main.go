@@ -15,7 +15,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "1.0.0"
+	VERSION = "1.0.2"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// CAP : 表示する検索結果上限数
@@ -53,10 +53,13 @@ func main() {
 
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
-	cache = map[string]*cmd.CacheStruct{}
+	cache = cmd.CacheMap{}
 	// cacheを廃棄するかの判断に必要
 	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
-	lstatinit = locatestat()
+	lstatinit, err = locatestat()
+	if err != nil {
+		log.Println(err)
+	}
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)
@@ -92,26 +95,31 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 }
 
 // Result of `locate -S`
-func locatestat() (l []byte) {
+func locatestat() ([]byte, error) {
 	opt := []string{"-S"}
 	if *dbpath != "" {
 		opt = append(opt, "-d", *dbpath)
 	}
-	l, err = exec.Command("locate", opt...).Output()
-	if err != nil {
-		log.Println(err)
-	}
-	return
+	return exec.Command("locate", opt...).Output()
 }
 
 // `locate -S` page
 func locateStatusPage(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, `<html>
+	if l, err := locatestat(); err == nil {
+		fmt.Fprintf(w, `<html>
 					<head><title>Locate DB Status</title></head>
 					<body>
 						<pre>%s</pre>
 					</body>
-					</html>`, locatestat())
+					</html>`, l)
+	} else {
+		fmt.Fprintf(w, `<html>
+						<head><title>Locate DB Status</title></head>
+						<body>
+							<pre>%s</pre>
+						</body>
+						</html>`, err)
+	}
 }
 
 // locate検索し、結果をhtmlに書き込む
@@ -129,7 +137,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	loc.Root = *root                 // Path prefix
 
 	if loc.SearchWords, loc.ExcludeWords, err =
-		cmd.QueryParser(receiveValue); err != nil { // 検索文字列が1文字以下のとき
+		cmd.QueryParser(receiveValue); err != nil {
 		log.Printf("[ %-50s ] %s\n", receiveValue, err)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintf(w, `<h4>
@@ -141,9 +149,13 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		/* locatestat()の結果が前と異なっていたら
 		lstatinit更新
 		cacheを初期化 */
-		if string(locatestat()) != string(lstatinit) {
-			lstatinit = locatestat()
-			cache = map[string]*cmd.CacheStruct{}
+		if l, err := locatestat(); string(l) != string(lstatinit) {
+			if err != nil {
+				log.Println(err)
+			} else {
+				lstatinit = l
+				cache = cmd.CacheMap{}
+			}
 		}
 
 		// Searching

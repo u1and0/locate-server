@@ -43,7 +43,10 @@
 
 
 # Release Note
-## v1.0.2: Cache & NOT Search implemented
+## v1.0.3: Title receive value
+* ページタイトルに検索ワードを追加して、履歴を辿りやすくしました。
+
+## v1.0.2: Structure optimization / Update DB & initialize cache daily
 * `locate -S`の結果にerrorがあった場合の挙動を加えました。
 * cacheの初期化を簡易にしました。
 * errorに関するコメントを削除しました。

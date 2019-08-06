@@ -15,7 +15,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "1.0.2"
+	VERSION = "1.0.3"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// CAP : 表示する検索結果上限数
@@ -71,7 +71,7 @@ func main() {
 // html デフォルトの説明文
 func htmlClause(s string) string {
 	return fmt.Sprintf(`<html>
-					<head><title>Locate Server</title></head>
+					<head><title>Locate Server %s</title></head>
 					<body>
 						<form method="get" action="/searching">
 							<input type="text" name="query" value="%s" size="50">
@@ -86,7 +86,7 @@ func htmlClause(s string) string {
 							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。<br>
 							 * 単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)<br>
 							 例: "電気 -工 業"=>"電気"と"業"を含み"工"を含まないファイルを検索します。
-						</small>`, s)
+						</small>`, s, s)
 }
 
 // Top page

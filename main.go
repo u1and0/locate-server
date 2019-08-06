@@ -53,7 +53,7 @@ func main() {
 
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
-	cache = map[string]*cmd.CacheStruct{}
+	cache = cmd.CacheMap{}
 	// cacheを廃棄するかの判断に必要
 	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
 	lstatinit = locatestat()
@@ -143,7 +143,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		cacheを初期化 */
 		if string(locatestat()) != string(lstatinit) {
 			lstatinit = locatestat()
-			cache = map[string]*cmd.CacheStruct{}
+			cache = cmd.CacheMap{}
 		}
 
 		// Searching

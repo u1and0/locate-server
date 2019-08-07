@@ -32,6 +32,7 @@ var (
 	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
 	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
 	cache        cmd.CacheMap
+	getpushLog   string
 	lstatinit    []byte
 )
 
@@ -138,7 +139,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 	if loc.SearchWords, loc.ExcludeWords, err =
 		cmd.QueryParser(receiveValue); err != nil {
-		log.Printf("[ %-50s ] %s\n", receiveValue, err)
+		log.Printf("%s [ %-50s ] \n", err, receiveValue)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintf(w, `<h4>
 							%s
@@ -160,13 +161,14 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 		// Searching
 		startTime := time.Now()
-		results, resultNum, cache, err = loc.ResultsCache(cache)
+		results, resultNum, cache, getpushLog, err = loc.ResultsCache(cache)
 		searchTime := float64((time.Since(startTime)).Nanoseconds()) / float64(time.Millisecond)
+
 		if err != nil {
-			log.Printf("[ %-50s ] %s\n", receiveValue, err)
+			log.Printf("%s [ %-50s ]\n", err, receiveValue)
 		}
-		log.Printf("[ %-50s ] %8dfiles %3.3fmsec\n",
-			receiveValue, resultNum, searchTime)
+		log.Printf("%8dfiles %3.3fmsec %s [ %-50s ]\n",
+			resultNum, searchTime, getpushLog, receiveValue)
 		/* normalizedWordではなく、あえてreceiveValueを
 		表示して生の検索文字列を記録したい*/
 

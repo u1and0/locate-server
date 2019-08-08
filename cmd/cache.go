@@ -1,7 +1,5 @@
 package locater
 
-import "log"
-
 type (
 	// CacheMap is normalized queries key and PathMap value pair
 	CacheMap map[string]*CacheStruct
@@ -15,11 +13,12 @@ type CacheStruct struct {
 
 // ResultsCache : 検索結果をcacheの中から探し、あれば検索結果と検索数を返し、
 // なければLocater.Cmd()を走らせて検索結果と検索数を得る
-func (l *Locater) ResultsCache(cache CacheMap) ([]PathMap, int, CacheMap, error) {
+func (l *Locater) ResultsCache(cache CacheMap) ([]PathMap, int, CacheMap, string, error) {
 	var (
-		results   []PathMap
-		resultNum int
-		err       error
+		results    []PathMap
+		resultNum  int
+		getpushLog string
+		err        error
 	)
 	normalized := l.Normalize() // Normlize for cache
 	if ce, ok := cache[normalized]; !ok {
@@ -29,12 +28,12 @@ func (l *Locater) ResultsCache(cache CacheMap) ([]PathMap, int, CacheMap, error)
 			Paths: results,
 			Num:   resultNum,
 		}
-		log.Printf("[ %-50s ] PUSH result to cache\n", normalized)
+		getpushLog = "PUSH result to cache"
 	} else {
 		// normalizedがcacheにあればcacheからresultsとresultNumを取り出す
 		results = ce.Paths
 		resultNum = ce.Num
-		log.Printf("[ %-50s ] GET result from cache\n", normalized)
+		getpushLog = "GET result from cache"
 	}
-	return results, resultNum, cache, err
+	return results, resultNum, cache, getpushLog, err
 }

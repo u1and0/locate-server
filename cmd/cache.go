@@ -13,7 +13,7 @@ type CacheStruct struct {
 
 // ResultsCache : 検索結果をcacheの中から探し、あれば検索結果と検索数を返し、
 // なければLocater.Cmd()を走らせて検索結果と検索数を得る
-func (l *Locater) ResultsCache(cache CacheMap) ([]PathMap, int, CacheMap, string, error) {
+func (l *Locater) ResultsCache(cache *CacheMap) ([]PathMap, int, string, error) {
 	var (
 		results    []PathMap
 		resultNum  int
@@ -21,10 +21,10 @@ func (l *Locater) ResultsCache(cache CacheMap) ([]PathMap, int, CacheMap, string
 		err        error
 	)
 	normalized := l.Normalize() // Normlize for cache
-	if ce, ok := cache[normalized]; !ok {
+	if ce, ok := (*cache)[normalized]; !ok {
 		// normalizedがcacheになければresultsとresultNumをcacheに登録
 		results, resultNum, err = l.Cmd()
-		cache[normalized] = &CacheStruct{
+		(*cache)[normalized] = &CacheStruct{
 			Paths: results,
 			Num:   resultNum,
 		}
@@ -35,5 +35,5 @@ func (l *Locater) ResultsCache(cache CacheMap) ([]PathMap, int, CacheMap, string
 		resultNum = ce.Num
 		getpushLog = "GET result from cache"
 	}
-	return results, resultNum, cache, getpushLog, err
+	return results, resultNum, getpushLog, err
 }

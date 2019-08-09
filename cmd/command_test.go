@@ -1,8 +1,6 @@
 package locater
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestLocater_CmdGen(t *testing.T) {
 	l := Locater{

@@ -161,7 +161,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 		// Searching
 		startTime := time.Now()
-		results, resultNum, cache, getpushLog, err = loc.ResultsCache(cache)
+		results, resultNum, getpushLog, err = loc.ResultsCache(&cache)
 		searchTime := float64((time.Since(startTime)).Nanoseconds()) / float64(time.Millisecond)
 
 		if err != nil {

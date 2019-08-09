@@ -92,7 +92,7 @@ func htmlClause(s string) string {
 
 // Top page
 func showInit(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, htmlClause(receiveValue))
+	fmt.Fprintf(w, htmlClause(""))
 }
 
 // Result of `locate -S`
@@ -138,7 +138,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	loc.Root = *root                 // Path prefix
 
 	if loc.SearchWords, loc.ExcludeWords, err =
-		cmd.QueryParser(receiveValue); err != nil {
+		cmd.QueryParser(receiveValue); err != nil { // 検索文字チェックERROR
 		log.Printf("%s [ %-50s ] \n", err, receiveValue)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintf(w, `<h4>
@@ -146,7 +146,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 						</h4>
 					</body>
 					</html>`, err)
-	} else { // 検索文字数チェックパス
+	} else { // 検索文字数チェックOK
 		/* locatestat()の結果が前と異なっていたら
 		lstatinit更新
 		cacheを初期化 */
@@ -182,8 +182,6 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 		// Search result page
 		fmt.Fprint(w, htmlClause(receiveValue))
-		receiveValue = "" // Reset form
-		// これがないと次回アクセス時の最初のページ8080のフォームが最後検索した文字列になる
 
 		fmt.Fprintf(w, `<h4>
 							 <a href=/status>DB</a> last update: %s<br>

@@ -106,6 +106,7 @@ func locatestat() ([]byte, error) {
 
 // `locate -S` page
 func locateStatusPage(w http.ResponseWriter, r *http.Request) {
+	// lとerrはstring型とerr型で異なるのでif-elseが冗長になる
 	if l, err := locatestat(); err == nil {
 		fmt.Fprintf(w, `<html>
 					<head><title>Locate DB Status</title></head>
@@ -162,6 +163,8 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		// Searching
 		startTime := time.Now()
 		results, resultNum, getpushLog, err = loc.ResultsCache(&cache)
+		/* cache は&cacheによりdeep copyされてResultsCache()内で
+		直接書き換えられるので、returnされない*/
 		searchTime := float64((time.Since(startTime)).Nanoseconds()) / float64(time.Millisecond)
 
 		if err != nil {

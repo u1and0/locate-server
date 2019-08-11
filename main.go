@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"time"
 
+	autocache "locate-server/cache"
 	cmd "locate-server/cmd"
 )
 
@@ -61,6 +62,10 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
+
+	// make cache background
+	strs := autocache.AutoCache(LOGFILE)
+	fmt.Println(strs)
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)

@@ -58,14 +58,21 @@ func AutoCacheMaker() {
 	outslice := strings.Split(string(out), "\n")
 	searchWordsFromLog := outslice[:len(outslice)-1] // Pop last element cause \\n
 
+	loc := cmd.Locater{Dbpath: *dbpath, Cap: CAP, PathSplitWin: *pathSplitWin, Root: *root}
 	for _, s := range searchWordsFromLog {
-		fmt.Println(s)
+		// fmt.Printf("%T, %v", s, s)
+		if loc.SearchWords, loc.ExcludeWords, err =
+			cmd.QueryParser(s); err != nil {
+			log.Printf("%s [ %-50s ] \n", err, s)
+		} else {
+			fmt.Println(s)
+			_, _, cache, _, err = loc.ResultsCache(cache)
+		}
+		if err != nil {
+			log.Printf("%s [ %-50s ]\n", err, s)
+		}
+		fmt.Println(cache)
 	}
-	// loc := cmd.Locater{}
-	// _, _, _, _, err = loc.ResultsCache(cache)
-	// if err !=nil{
-	// 	fmt.Println(err)
-	// }
 }
 
 func main() {

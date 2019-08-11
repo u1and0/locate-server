@@ -8,9 +8,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	cmd "locate-server/cmd"
+
+	pipeline "github.com/mattn/go-pipeline"
 )
 
 const (
@@ -35,6 +38,35 @@ var (
 	getpushLog   string
 	lstatinit    []byte
 )
+
+// AutoCacheMaker : 自動キャッシュ生成
+func AutoCacheMaker() {
+	grep := []string{"grep", "-oE", "PUSH.*\\[.*\\]", LOGFILE}
+	tr := []string{"tr", "-d", "[]"}
+	sed := []string{"sed", "-e", "s/^PUSH result to cache //"}
+	/* logファイル内の検索ワードのみを抜き出すshell script
+	```shell
+	grep -oE "PUSH.*\\[.*\\]" /var/lib/mlocate/locate.log |
+		tr -d "[]" |
+		sed -e "s/^PUSH result to cache //"
+	``` */
+	out, err := pipeline.Output(grep, tr, sed)
+	if err != nil {
+		log.Fatalf("[Fail] While auto cache making out: %s, error: %s", out, err)
+	}
+
+	outslice := strings.Split(string(out), "\n")
+	searchWordsFromLog := outslice[:len(outslice)-1] // Pop last element cause \\n
+
+	for _, s := range searchWordsFromLog {
+		fmt.Println(s)
+	}
+	// loc := cmd.Locater{}
+	// _, _, _, _, err = loc.ResultsCache(cache)
+	// if err !=nil{
+	// 	fmt.Println(err)
+	// }
+}
 
 func main() {
 	flag.BoolVar(&showVersion, "v", false, "show version")
@@ -61,6 +93,9 @@ func main() {
 	if err != nil {
 		log.Println(err)
 	}
+
+	/* auto */
+	AutoCacheMaker()
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)

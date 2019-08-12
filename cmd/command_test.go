@@ -23,3 +23,21 @@ func TestLocater_CmdGen(t *testing.T) {
 		}
 	}
 }
+
+func TestSliceOutput(t *testing.T) {
+	s := `this is a test
+my func name
+is SliceOutput
+`
+	actual := SliceOutput([]byte(s))
+	expected := []string{
+		"this is a test",
+		"my func name",
+		"is SliceOutput",
+	}
+	for i, e := range expected {
+		if actual[i] != e {
+			t.Fatalf("got: %v want: %v", actual[i], e)
+		}
+	}
+}

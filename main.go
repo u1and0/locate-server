@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
-	autocache "locate-server/cache"
 	cmd "locate-server/cmd"
+
+	pipeline "github.com/mattn/go-pipeline"
 )
 
 const (
@@ -36,6 +38,41 @@ var (
 	getpushLog   string
 	lstatinit    []byte
 )
+
+// AutoCacheMaker : 自動キャッシュ生成
+func AutoCacheMaker() {
+	pstring := "PUSH result to cache"
+	grep := []string{"grep", "-oE", pstring + ".*\\[\\s.*\\s\\]", LOGFILE}
+	tr := []string{"tr", "-d", "[]"}
+	sed := []string{"sed", "-e", "s/^" + pstring + " //"}
+	/* logファイル内の検索ワードのみを抜き出すshell script
+	```shell
+	grep -oE "PUSH result to cache.*\\[.*\\]" /var/lib/mlocate/locate.log |
+		tr -d "[]" |
+		sed -e "s/^PUSH result to cache //"
+	``` */
+
+	out, err := pipeline.Output(grep, tr, sed)
+	if err != nil {
+		log.Printf("[Fail] While auto cache making out: %s, error: %s", out, err)
+	}
+
+	loc := cmd.Locater{Dbpath: *dbpath, Cap: CAP, PathSplitWin: *pathSplitWin, Root: *root}
+	var success []string
+	for _, s := range cmd.SliceOutput(out) {
+		if loc.SearchWords, loc.ExcludeWords, err =
+			cmd.QueryParser(s); err != nil {
+			log.Printf("[Fail] while cache parsing %s [ %-50s ] \n", err, s)
+		} else {
+			if _, _, _, err = loc.ResultsCache(&cache); err != nil {
+				log.Printf("[Fail] while making cache %s [ %-50s ]\n", err, s)
+			} else {
+				success = append(success, loc.Normalize())
+			}
+		}
+	}
+	fmt.Printf("Cached words [ %s ]\n", strings.Join(success, ", "))
+}
 
 func main() {
 	flag.BoolVar(&showVersion, "v", false, "show version")
@@ -63,9 +100,8 @@ func main() {
 		log.Println(err)
 	}
 
-	// make cache background
-	strs := autocache.AutoCache(LOGFILE)
-	fmt.Println(strs)
+	/* auto */
+	AutoCacheMaker()
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)

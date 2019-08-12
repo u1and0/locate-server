@@ -43,12 +43,17 @@ func (l *Locater) CmdGen() [][]string {
 	return exec
 }
 
+// SliceOutput : byteで受け取ったshell commandのoutputを改行で区切ってsliceにして返す
+func SliceOutput(b []byte) []string {
+	out := strings.Split(string(b), "\n")
+	return out[:len(out)-1] // Pop last element cause \\n
+}
+
 // Cmd : locate検索し、結果をPathMapのスライス(最大l.Cap件(capacity = default 1000))にして返す
 // 更に検索結果数、あれば検索時のエラーを返す
 func (l *Locater) Cmd() ([]PathMap, int, error) {
 	out, err := pipeline.Output(l.CmdGen()...)
-	outslice := strings.Split(string(out), "\n")
-	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
+	outslice := SliceOutput(out)
 
 	// Map parent directory name
 	results := make([]PathMap, 0, l.Cap)

@@ -40,32 +40,35 @@ var (
 )
 
 // AutoCacheMaker : 自動キャッシュ生成
-func AutoCacheMaker() {
+func AutoCacheMaker(c cmd.CacheMap) {
 	pstring := "PUSH result to cache"
-	grep := []string{"grep", "-oE", pstring + ".*\\[\\s.*\\s\\]", LOGFILE}
-	tr := []string{"tr", "-d", "[]"}
-	sed := []string{"sed", "-e", "s/^" + pstring + " //"}
+	grep := []string{"grep", "-oE", pstring + ` \[.*\]`, LOGFILE}
+	sed := []string{"sed", "-e", "s/^" + pstring + ` \[ //`, "-e", `s/\]$//`}
 	/* logファイル内の検索ワードのみを抜き出すshell script
 	```shell
-	grep -oE "PUSH result to cache.*\\[.*\\]" /var/lib/mlocate/locate.log |
-		tr -d "[]" |
-		sed -e "s/^PUSH result to cache //"
+	grep -oE "PUSH result to cache \\[.*\\]" /var/lib/mlocate/locate.log |
+		sed -e "s/^PUSH result to cache [ //" -e "s/]$//"  # PUSH...と 最後の]を消す
 	``` */
 
-	out, err := pipeline.Output(grep, tr, sed)
+	out, err := pipeline.Output(grep, sed)
 	if err != nil {
-		log.Printf("[Fail] While auto cache making out: %s, error: %s", out, err)
+		log.Printf("[Fail] Log file parsing error out: %s, error: %s\n", out, err)
 	}
 
-	loc := cmd.Locater{Dbpath: *dbpath, Cap: CAP, PathSplitWin: *pathSplitWin, Root: *root}
+	loc := cmd.Locater{
+		Dbpath:       *dbpath,
+		Cap:          CAP,
+		PathSplitWin: *pathSplitWin,
+		Root:         *root,
+	}
 	var success []string
 	for _, s := range cmd.SliceOutput(out) {
 		if loc.SearchWords, loc.ExcludeWords, err =
 			cmd.QueryParser(s); err != nil {
-			log.Printf("[Fail] while cache parsing %s [ %-50s ] \n", err, s)
+			log.Printf("[Fail] Cache parsing error %s [ %-50s ] \n", err, s)
 		} else {
-			if _, _, _, err = loc.ResultsCache(&cache); err != nil {
-				log.Printf("[Fail] while making cache %s [ %-50s ]\n", err, s)
+			if _, _, _, err = loc.ResultsCache(&c); err != nil {
+				log.Printf("[Fail] Making cache error %s [ %-50s ]\n", err, s)
 			} else {
 				success = append(success, loc.Normalize())
 			}
@@ -100,8 +103,7 @@ func main() {
 		log.Println(err)
 	}
 
-	/* auto */
-	AutoCacheMaker()
+	go AutoCacheMaker(cache)
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)
@@ -173,11 +175,12 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	)
 	// Modify query
 	receiveValue = r.FormValue("query")
-	loc := new(cmd.Locater)
-	loc.Dbpath = *dbpath             // /var/lib/mlocate以外のディレクトリパス
-	loc.Cap = CAP                    // 検索件数上限
-	loc.PathSplitWin = *pathSplitWin // path separatorを\にする
-	loc.Root = *root                 // Path prefix
+	loc := cmd.Locater{
+		Dbpath:       *dbpath,       // /var/lib/mlocate以外のディレクトリパス
+		Cap:          CAP,           // 検索件数上限
+		PathSplitWin: *pathSplitWin, // path separatorを\にする
+		Root:         *root,         // Path prefix
+	}
 
 	if loc.SearchWords, loc.ExcludeWords, err =
 		cmd.QueryParser(receiveValue); err != nil { // 検索文字チェックERROR

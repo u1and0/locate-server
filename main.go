@@ -25,6 +25,8 @@ const (
 	CAP = 1000
 	// LOCATEPATH : locateのデータベースやログファイルを置く場所
 	LOCATEPATH = "/var/lib/mlocate"
+	//PROCESSES : locateをキャッシュ化するときの並列プロセス数
+	PROCESSES = 4
 )
 
 var (
@@ -35,26 +37,52 @@ var (
 	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
 	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
 	cache        cmd.CacheMap
-	getpushLog   string
 	lstatinit    []byte
 )
 
-// AutoCacheMaker : 自動キャッシュ生成
-func AutoCacheMaker(c cmd.CacheMap) {
+// LogParser : Log解析して検索語をチャネルに登録
+func LogParser(f string) []string {
+	pgstring := "(PUSH|GET) result (to|from) cache"
 	pstring := "PUSH result to cache"
-	grep := []string{"grep", "-oE", pstring + ` \[.*\]`, LOGFILE}
-	sed := []string{"sed", "-e", "s/^" + pstring + ` \[ //`, "-e", `s/\]$//`}
-	/* logファイル内の検索ワードのみを抜き出すshell script
-	```shell
-	grep -oE "PUSH result to cache \\[.*\\]" /var/lib/mlocate/locate.log |
-		sed -e "s/^PUSH result to cache [ //" -e "s/]$//"  # PUSH...と 最後の]を消す
-	``` */
+	gstring := "GET result from cache"
+	grep := []string{"grep", "-oE", pgstring + ` \[.*\]`, f} // LOGから検索文字列抜き出し
+	sed1 := []string{
+		"sed", "-e", "s/^" + pstring + ` \[ //`, // PUSH...削除
+		"-e", "s/^" + gstring + ` \[ //`, // GET...削除
+		"-e", `s/\]$//`, // 最後の]削除
+	}
+	sort1 := []string{"sort"}
+	uniq := []string{"uniq", "-c"}                // 重複カウント
+	sort2 := []string{"sort", "-r"}               // 多い順に出力
+	sed2 := []string{"sed", "-e", `s/^\s*//`}     // 行頭のスペースを削除
+	cut := []string{"cut", "-d", ` `, "-f", "2-"} // カウント数削除
+	/*
+		logファイル内の検索ワードのみを抜き出し
+		検索回数順に並び替えるshell script
 
-	out, err := pipeline.Output(grep, sed)
+		```shell
+		grep -oE "(PUSH|GET).result.(to|from).cache.*\[.*\]" /var/lib/mlocate/locate.log |
+			sed \
+				-e "s/PUSH result to cache \[ //" \
+				-e "s/GET result from cache \[ //" \
+				-e "s/\]$//" |
+			sort |
+			uniq -c |
+			sort -r |
+			sed -e "s/^\s*\/\/" |
+			cut -d " " -f 2-
+		```
+	*/
+
+	out, err := pipeline.Output(grep, sed1, sort1, uniq, sort2, sed2, cut)
 	if err != nil {
 		log.Printf("[Fail] Log file parsing error out: %s, error: %s\n", out, err)
 	}
+	return cmd.SliceOutput(out)
+}
 
+// AutoCacheMaker : 自動キャッシュ生成
+func AutoCacheMaker(c cmd.CacheMap, ch chan string) {
 	loc := cmd.Locater{
 		Dbpath:       *dbpath,
 		Cap:          CAP,
@@ -62,19 +90,21 @@ func AutoCacheMaker(c cmd.CacheMap) {
 		Root:         *root,
 	}
 	var success []string
-	for _, s := range cmd.SliceOutput(out) {
-		if loc.SearchWords, loc.ExcludeWords, err =
-			cmd.QueryParser(s); err != nil {
-			log.Printf("[Fail] Cache parsing error %s [ %-50s ] \n", err, s)
-		} else {
-			if _, _, _, err = loc.ResultsCache(&c); err != nil {
-				log.Printf("[Fail] Making cache error %s [ %-50s ]\n", err, s)
-			} else {
-				success = append(success, loc.Normalize())
-			}
+	for {
+		s, ok := <-ch
+		if !ok {
+			break
 		}
+		loc.SearchWords, loc.ExcludeWords, err = cmd.QueryParser(s)
+		if err != nil {
+			log.Printf("[Fail] Cache parsing error %s [ %-50s ] \n", err, s)
+		}
+		_, _, _, err = loc.ResultsCache(&c)
+		if err != nil {
+			log.Printf("[Fail] Making cache error %s [ %-50s ]\n", err, s)
+		}
+		success = append(success, loc.Normalize())
 	}
-	fmt.Printf("Cached words [ %s ]\n", strings.Join(success, ", "))
 }
 
 func main() {
@@ -103,7 +133,28 @@ func main() {
 		log.Println(err)
 	}
 
-	go AutoCacheMaker(cache)
+	/*auto cache*/
+	ch := make(chan string)
+	// PROCESSES(デフォルト4)並列処理でキャッシュを作成
+	for i := 0; i < PROCESSES; i++ {
+		go AutoCacheMaker(cache, ch)
+	}
+
+	for _, q := range LogParser(LOGFILE) {
+		ch <- q
+		fmt.Printf("[INFO] Try to make chach [ %s ]\n", q)
+	}
+	close(ch)
+	time.Sleep(3 * time.Second) // wait go routine
+
+	log.Printf("Finish! Cached words [ %s ]\n",
+		strings.Join(func() (s []string) {
+			for k := range cache {
+				s = append(s, k)
+			}
+			return
+		}(), ", "))
+	/*channel cache*/
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)
@@ -169,10 +220,6 @@ func locateStatusPage(w http.ResponseWriter, r *http.Request) {
 
 // locate検索し、結果をhtmlに書き込む
 func addResult(w http.ResponseWriter, r *http.Request) {
-	var (
-		results   []cmd.PathMap
-		resultNum int
-	)
 	// Modify query
 	receiveValue = r.FormValue("query")
 	loc := cmd.Locater{
@@ -206,7 +253,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 		// Searching
 		startTime := time.Now()
-		results, resultNum, getpushLog, err = loc.ResultsCache(&cache)
+		results, resultNum, getpushLog, err := loc.ResultsCache(&cache)
 		/* cache は&cacheによりdeep copyされてResultsCache()内で
 		直接書き換えられるので、returnされない*/
 		searchTime := float64((time.Since(startTime)).Nanoseconds()) / float64(time.Millisecond)

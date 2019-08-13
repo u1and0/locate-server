@@ -12,8 +12,6 @@ import (
 	"time"
 
 	cmd "locate-server/cmd"
-
-	pipeline "github.com/mattn/go-pipeline"
 )
 
 const (
@@ -40,73 +38,6 @@ var (
 	lstatinit    []byte
 )
 
-// LogParser : Log解析して検索語をチャネルに登録
-func LogParser(f string) []string {
-	pgstring := "(PUSH|GET) result (to|from) cache"
-	pstring := "PUSH result to cache"
-	gstring := "GET result from cache"
-	grep := []string{"grep", "-oE", pgstring + ` \[.*\]`, f} // LOGから検索文字列抜き出し
-	sed1 := []string{
-		"sed", "-e", "s/^" + pstring + ` \[ //`, // PUSH...削除
-		"-e", "s/^" + gstring + ` \[ //`, // GET...削除
-		"-e", `s/\]$//`, // 最後の]削除
-	}
-	sort1 := []string{"sort"}
-	uniq := []string{"uniq", "-c"}                // 重複カウント
-	sort2 := []string{"sort", "-r"}               // 多い順に出力
-	sed2 := []string{"sed", "-e", `s/^\s*//`}     // 行頭のスペースを削除
-	cut := []string{"cut", "-d", ` `, "-f", "2-"} // カウント数削除
-	/*
-		logファイル内の検索ワードのみを抜き出し
-		検索回数順に並び替えるshell script
-
-		```shell
-		grep -oE "(PUSH|GET).result.(to|from).cache.*\[.*\]" /var/lib/mlocate/locate.log |
-			sed \
-				-e "s/PUSH result to cache \[ //" \
-				-e "s/GET result from cache \[ //" \
-				-e "s/\]$//" |
-			sort |
-			uniq -c |
-			sort -r |
-			sed -e "s/^\s*\/\/" |
-			cut -d " " -f 2-
-		```
-	*/
-
-	out, err := pipeline.Output(grep, sed1, sort1, uniq, sort2, sed2, cut)
-	if err != nil {
-		log.Printf("[Fail] Log file parsing error out: %s, error: %s\n", out, err)
-	}
-	return cmd.SliceOutput(out)
-}
-
-// AutoCacheMaker : 自動キャッシュ生成
-func AutoCacheMaker(c cmd.CacheMap, ch chan string) {
-	loc := cmd.Locater{
-		Dbpath:       *dbpath,
-		Cap:          CAP,
-		PathSplitWin: *pathSplitWin,
-		Root:         *root,
-	}
-	var success []string
-	for {
-		s, ok := <-ch
-		if !ok {
-			break
-		}
-		loc.SearchWords, loc.ExcludeWords, err = cmd.QueryParser(s)
-		if err != nil {
-			log.Printf("[Fail] Cache parsing error %s [ %-50s ] \n", err, s)
-		}
-		_, _, _, err = loc.ResultsCache(&c)
-		if err != nil {
-			log.Printf("[Fail] Making cache error %s [ %-50s ]\n", err, s)
-		}
-		success = append(success, loc.Normalize())
-	}
-}
-
 func main() {
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")
@@ -126,36 +57,13 @@ func main() {
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
 	cache = cmd.CacheMap{}
-	// cacheを廃棄するかの判断に必要
-	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
+	/* cacheを廃棄するかの判断に必要
+	lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする */
 	lstatinit, err = locatestat()
 	if err != nil {
 		log.Println(err)
 	}
-
-	/*auto cache*/
-	ch := make(chan string)
-	// PROCESSES(デフォルト4)並列処理でキャッシュを作成
-	for i := 0; i < PROCESSES; i++ {
-		go AutoCacheMaker(cache, ch)
-	}
-
-	for _, q := range LogParser(LOGFILE) {
-		ch <- q
-		fmt.Printf("[INFO] Try to make chach [ %s ]\n", q)
-	}
-	close(ch)
-	time.Sleep(3 * time.Second) // wait go routine
-
-	log.Printf("Finish! Cached words [ %s ]\n",
-		strings.Join(func() (s []string) {
-			for k := range cache {
-				s = append(s, k)
-			}
-			return
-		}(), ", "))
-	/*channel cache*/
-
+	autocache()
 	// HTTP pages
 	http.HandleFunc("/", showInit)
 	http.HandleFunc("/searching", addResult)
@@ -256,7 +164,9 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		results, resultNum, getpushLog, err := loc.ResultsCache(&cache)
 		/* cache は&cacheによりdeep copyされてResultsCache()内で
 		直接書き換えられるので、returnされない*/
-		searchTime := float64((time.Since(startTime)).Nanoseconds()) / float64(time.Millisecond)
+		elapsed := time.Since(startTime)
+		// nano sec 変換
+		searchTime := float64(elapsed.Nanoseconds()) / float64(time.Millisecond)
 
 		if err != nil {
 			log.Printf("%s [ %-50s ]\n", err, receiveValue)
@@ -299,4 +209,35 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					  </body>
 					  </html>`)
 	}
+}
+
+// autocache : logの解析結果をchannelとしてAutoCacheMakerに引き渡し、
+// Cacheを自動生成する
+func autocache() {
+	ch := make(chan string)
+	// PROCESSES(デフォルト4)並列処理でキャッシュを作成
+	loc := cmd.Locater{
+		Dbpath:       *dbpath,
+		Cap:          CAP,
+		PathSplitWin: *pathSplitWin,
+		Root:         *root,
+	}
+	for i := 0; i < PROCESSES; i++ {
+		go loc.AutoCacheMaker(cache, ch)
+	}
+
+	for _, q := range cmd.LogParser(LOGFILE) {
+		ch <- q
+		fmt.Printf("[INFO] Try to make chach [ %s ]\n", q)
+	}
+	close(ch)
+	time.Sleep(3 * time.Second) // wait go routine
+
+	log.Printf("Finish! Cached words [ %s ]\n",
+		strings.Join(func() (s []string) {
+			for k := range cache { // cache化に成功した語を表示
+				s = append(s, k)
+			}
+			return
+		}(), ", "))
 }

@@ -24,7 +24,7 @@ const (
 	// LOCATEPATH : locateのデータベースやログファイルを置く場所
 	LOCATEPATH = "/var/lib/mlocate"
 	//PROCESSES : locateをキャッシュ化するときの並列プロセス数
-	PROCESSES = 4
+	PROCESSES = 1
 )
 
 var (
@@ -56,7 +56,7 @@ func main() {
 
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
-	cache = cmd.CacheMap{}
+	cache = *cmd.NewCacheMap()
 	/* cacheを廃棄するかの判断に必要
 	lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする */
 	lstatinit, err = locatestat()
@@ -155,7 +155,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 				log.Println(err)
 			} else {
 				lstatinit = l
-				cache = cmd.CacheMap{}
+				cache = *cmd.NewCacheMap()
 			}
 		}
 
@@ -213,17 +213,21 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 // autocache : logの解析結果をchannelとしてAutoCacheMakerに引き渡し、
 // Cacheを自動生成する
+//
+// ! 正しいワードにHighlightが格納されていない
+//
 func autocache() {
-	ch := make(chan string)
-	// PROCESSES(デフォルト4)並列処理でキャッシュを作成
+	ch := make(chan string, PROCESSES)
 	loc := cmd.Locater{
 		Dbpath:       *dbpath,
 		Cap:          CAP,
 		PathSplitWin: *pathSplitWin,
 		Root:         *root,
 	}
+
+	// PROCESSES(デフォルト4)並列処理でキャッシュを作成
 	for i := 0; i < PROCESSES; i++ {
-		go loc.AutoCacheMaker(cache, ch)
+		go loc.AutoCacheMaker(&cache, ch)
 	}
 
 	for _, q := range cmd.LogParser(LOGFILE) {
@@ -235,7 +239,7 @@ func autocache() {
 
 	log.Printf("Finish! Cached words [ %s ]\n",
 		strings.Join(func() (s []string) {
-			for k := range cache { // cache化に成功した語を表示
+			for k := range cache.Store { // cache化に成功した語を表示
 				s = append(s, k)
 			}
 			return

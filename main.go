@@ -56,14 +56,30 @@ func main() {
 
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
-	cache = *cmd.NewCacheMap()
+	// cache = *cmd.NewCacheMap()
 	/* cacheを廃棄するかの判断に必要
 	lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする */
-	lstatinit, err = locatestat()
-	if err != nil {
-		log.Println(err)
-	}
-	autocache()
+
+	/* N秒おきにlocatestat()でdbの状態チェックして、
+	変更あればautocache()でcacheの再構成 */
+	go func() {
+		for {
+			/* locatestat()の結果が前と異なっていたら
+			lstatinit更新
+			cacheを再構成 */
+			l, err := locatestat()
+			if err != nil {
+				log.Println(err)
+			}
+			if string(l) != string(lstatinit) {
+				lstatinit = l
+				cache = *cmd.NewCacheMap()
+				autocache()
+			}
+			time.Sleep(10 * time.Second)
+		}
+	}()
+
 	// HTTP pages
 	http.HandleFunc("/", showInit)
 	http.HandleFunc("/searching", addResult)
@@ -147,18 +163,6 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					</body>
 					</html>`, err)
 	} else { // 検索文字数チェックOK
-		/* locatestat()の結果が前と異なっていたら
-		lstatinit更新
-		cacheを初期化 */
-		if l, err := locatestat(); string(l) != string(lstatinit) {
-			if err != nil {
-				log.Println(err)
-			} else {
-				lstatinit = l
-				cache = *cmd.NewCacheMap()
-			}
-		}
-
 		// Searching
 		startTime := time.Now()
 		results, resultNum, getpushLog, err := loc.ResultsCache(&cache)

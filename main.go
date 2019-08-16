@@ -50,7 +50,7 @@ func main() {
 	if err != nil {
 		log.Println("[warning] cannot open logfile" + err.Error())
 	}
-	defer logfle.Close()
+	defer logfile.Close()
 	log.SetOutput(io.MultiWriter(logfile, os.Stdout))
 
 	// Initialize cache

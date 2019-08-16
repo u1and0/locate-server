@@ -42,7 +42,7 @@ func LogParser(f string) []string {
 
 	out, err := pipeline.Output(grep, sed1, sort1, uniq, sort2, sed2, cut)
 	if err != nil {
-		log.Printf("[Fail] Log file parsing error out: %s, error: %s\n", out, err)
+		log.Printf("[FAIL] Log file parsing error out: %s, error: %s\n", out, err)
 	}
 	return SliceOutput(out)
 }
@@ -59,11 +59,11 @@ func (l *Locater) AutoCacheMaker(c *CacheMap, ch chan string) {
 		// channelから受け取った検索語を解析
 		l.SearchWords, l.ExcludeWords, err = QueryParser(s)
 		if err != nil {
-			log.Printf("[Fail] Cache parsing error %s [ %-50s ] \n", err, s)
+			log.Printf("[FAIL] Cache parsing error %s [ %-50s ] \n", err, s)
 		}
 		_, _, _, err = l.ResultsCache(c) // Cache生成
 		if err != nil {
-			log.Printf("[Fail] Making cache error %s [ %-50s ]\n", err, s)
+			log.Printf("[FAIL] Making cache error %s [ %-50s ]\n", err, s)
 		}
 	}
 }

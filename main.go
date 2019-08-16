@@ -215,13 +215,14 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// autocache : logの解析結果をchannelとしてAutoCacheMakerに引き渡し、
-// Cacheを自動生成する
+// autocache : Cacheを自動生成する
+// logを解析して検索語をchannelに送信し、Cacheを自動生成する
 //
 // ! 正しいワードにHighlightが格納されていない
 //
 func autocache() {
-	ch := make(chan string, PROCESSES)
+	ch := make(chan *cmd.Locater)
+	defer close(ch)
 	loc := cmd.Locater{
 		Dbpath:       *dbpath,
 		Cap:          CAP,
@@ -231,15 +232,39 @@ func autocache() {
 
 	// PROCESSES(デフォルト4)並列処理でキャッシュを作成
 	for i := 0; i < PROCESSES; i++ {
-		go loc.AutoCacheMaker(&cache, ch)
+		go func() {
+			for {
+				loch, ok := <-ch
+				if !ok {
+					break
+				}
+				fmt.Printf("[INFO] Try to make chach [ %s ]\n", loch.Normalize())
+				// なぜか2回表示される
+
+				/* 元のmainで解析
+				// channelから受け取った検索語を解析
+				l.SearchWords, l.ExcludeWords, err = QueryParser(s)
+				if err != nil {
+					log.Printf("[Fail] Cache parsing error %s [ %-50s ] \n", err, s)
+				}
+				*/
+				_, _, _, err = loch.ResultsCache(&cache) // Cache生成
+				if err != nil {
+					log.Printf("[Fail] Making cache error %s [ %-50s ]\n",
+						err, loch.Normalize())
+				}
+			}
+
+		}()
 	}
 
 	for _, q := range cmd.LogParser(LOGFILE) {
-		ch <- q
-		fmt.Printf("[INFO] Try to make chach [ %s ]\n", q)
+		loc.SearchWords, loc.ExcludeWords, err = cmd.QueryParser(q)
+		if err != nil {
+			log.Printf("[Fail] Cache parsing error %s [ %-50s ] \n", err, q)
+		}
+		ch <- &loc
 	}
-	close(ch)
-	time.Sleep(3 * time.Second) // wait go routine
 
 	log.Printf("Finish! Cached words [ %s ]\n",
 		strings.Join(func() (s []string) {

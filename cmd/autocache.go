@@ -46,24 +46,3 @@ func LogParser(f string) []string {
 	}
 	return SliceOutput(out)
 }
-
-// AutoCacheMaker : 自動キャッシュ生成
-// &c のポインタで渡してキャッシュのメモリを直接書き換える(ので戻り値がない)
-func (l *Locater) AutoCacheMaker(c *CacheMap, ch chan string) {
-	var err error
-	for {
-		s, ok := <-ch
-		if !ok {
-			break
-		}
-		// channelから受け取った検索語を解析
-		l.SearchWords, l.ExcludeWords, err = QueryParser(s)
-		if err != nil {
-			log.Printf("[Fail] Cache parsing error %s [ %-50s ] \n", err, s)
-		}
-		_, _, _, err = l.ResultsCache(c) // Cache生成
-		if err != nil {
-			log.Printf("[Fail] Making cache error %s [ %-50s ]\n", err, s)
-		}
-	}
-}

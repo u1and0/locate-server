@@ -45,10 +45,20 @@ func main() {
 		return // versionを表示して終了
 	}
 
+	// Command check
+	if _, err := exec.LookPath("locate"); err != nil {
+		log.Fatal(err)
+	}
+
+	// Directory check
+	if _, err := os.Stat("/var/lib/mlocate"); os.IsNotExist(err) {
+		log.Fatal(err)
+	}
+
 	// Log setting
 	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		log.Println("[warning] cannot open logfile" + err.Error())
+		log.Fatalf("[ERROR] Cannot open logfile " + err.Error())
 	}
 	defer logfile.Close()
 	log.SetOutput(io.MultiWriter(logfile, os.Stdout))

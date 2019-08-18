@@ -39,9 +39,9 @@ func TestToLowerExceptAll(t *testing.T) {
 }
 
 func TestQueryParserError_Test(t *testing.T) {
-	receiveValue := "Dropbox -012 34 Program PYTHON -Go -Joker -99 as\\Wgo -ab\\D\\d"
-	se := []string{"dropbox", "34", "program", "python", "as\\Wgo"} // バックスラッシュ後はlowerしない
-	ex := []string{"012", "go", "joker", "99", "ab\\D\\d"}          // QueryParserはsortしない
+	receiveValue := "Dropbox -012 34 Program PYTHON -Go -Joker -99 \\Tas\\Wgo -ab\\D\\d"
+	se := []string{"dropbox", "34", "program", "python", "\\Tas\\Wgo"} // バックスラッシュ後はlowerしない
+	ex := []string{"012", "go", "joker", "99", "ab\\D\\d"}             // QueryParserはsortしない
 	ase, aex, _ := QueryParser(receiveValue)
 
 	for i, s := range se {

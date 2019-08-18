@@ -50,7 +50,7 @@ func QueryParser(query string) (sn, en []string, err error) {
 	// バックスラッシュの後の1文字以外は小文字化
 	for _, s := range strings.Fields(query) { // -> [hoge my -your name\D]
 		if strings.Contains(s, "\\") {
-			s = ToLowerExcept(s, '\\')
+			s = ToLowerExceptAll(s, '\\')
 		} else {
 			s = strings.ToLower(s)
 		}

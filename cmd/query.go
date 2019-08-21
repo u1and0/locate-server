@@ -6,24 +6,6 @@ import (
 	"unicode"
 )
 
-// RuneIndex : Return index of r included in s
-func RuneIndex(s string, r rune) int {
-	bi := strings.IndexRune(s, r)
-	return len([]rune(s[0:bi]))
-}
-
-// ToLowerExcept : ToLower string Except specific rune
-func ToLowerExcept(s string, r rune) string {
-	bspos := RuneIndex(s, r) + 1 // Next position of `r`
-	runes := []rune(s)
-	for i, r := range runes {
-		if i != bspos { // to LOWER except next position of `r`
-			runes[i] = unicode.ToLower(r)
-		}
-	}
-	return string(runes)
-}
-
 // ToLowerExceptFirst : To lower except first of runes
 func ToLowerExceptFirst(s string) string {
 	runes := []rune(s)

@@ -2,24 +2,6 @@ package locater
 
 import "testing"
 
-func TestRuneIndex(t *testing.T) {
-	s := "あtTの5\\UW"
-	actual := RuneIndex(s, '\\')
-	expect := 5
-	if expect != actual {
-		t.Fatalf("got: %v want: %v", actual, expect)
-	}
-}
-
-func TestToLowerExcept(t *testing.T) {
-	s := "あtTの5\\UW"
-	actual := ToLowerExcept(s, '\\')
-	expect := "あttの5\\Uw"
-	if expect != actual {
-		t.Fatalf("got: %v want: %v", actual, expect)
-	}
-}
-
 func TestToLowerExceptFirst(t *testing.T) {
 	s := "SあtT5\\Uほw\\dHo\\T"
 	actual := ToLowerExceptFirst(s)

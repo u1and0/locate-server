@@ -42,7 +42,7 @@ func LogParser(f string) []string {
 
 	out, err := pipeline.Output(grep, sed1, sort1, uniq, sort2, sed2, cut)
 	if err != nil {
-		log.Printf("[Fail] Log file parsing error out: %s, error: %s\n", out, err)
+		log.Printf("[FAIL] Log file parsing error out: %s, error: %s\n", out, err)
 	}
 	return SliceOutput(out)
 }

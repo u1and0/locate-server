@@ -11,6 +11,8 @@ import (
 	"time"
 
 	cmd "locate-server/cmd"
+
+	cache "github.com/patrickmn/go-cache"
 )
 
 const (
@@ -31,7 +33,7 @@ var (
 	root         = flag.String("r", "", "DB root directory")
 	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
 	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
-	cache        cmd.CacheMap
+	cacheMap     = cache.New(cache.NoExpiration, cache.DefaultExpiration)
 	getpushLog   string
 	lstatinit    []byte
 )
@@ -65,7 +67,7 @@ func main() {
 
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
-	cache = cmd.CacheMap{}
+	cacheMap = cache.New(cache.NoExpiration, cache.DefaultExpiration)
 	// cacheを廃棄するかの判断に必要
 	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
 	lstatinit, err = locatestat()
@@ -167,13 +169,14 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 				log.Println(err)
 			} else {
 				lstatinit = l
-				cache = cmd.CacheMap{}
+				cacheMap.Flush()
+				cacheMap = cache.New(cache.NoExpiration, cache.DefaultExpiration)
 			}
 		}
 
 		// Searching
 		startTime := time.Now()
-		results, resultNum, getpushLog, err = loc.ResultsCache(&cache)
+		results, resultNum, getpushLog, err = loc.ResultsCache(cacheMap)
 		/* cache は&cacheによりdeep copyされてResultsCache()内で
 		直接書き換えられるので、returnされない*/
 		searchTime := float64((time.Since(startTime)).Nanoseconds()) / float64(time.Millisecond)

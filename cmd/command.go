@@ -19,7 +19,12 @@ type PathMap struct {
 func highlightString(s string, words []string) string {
 	for _, w := range words {
 		re := regexp.MustCompile(`((?i)` + w + `)`)
-		s = re.ReplaceAllString(s, "<span style=\"background-color:#FFCC00;\">$1</span>")
+		/* Replace only a word
+		全て変える re.ReplaceAll(s, "<span style=\"background-color:#FFCC00;\">$1</span>")　は削除 */
+		found := re.FindString(s)
+		if found != "" {
+			s = strings.Replace(s, found, "<span style=\"background-color:#FFCC00;\">"+found+"</span>", 1)
+		}
 	}
 	return s
 }

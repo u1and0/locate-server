@@ -1,0 +1,4 @@
+github.com/mattn/go-pipeline v0.0.0-20190323144519-32d779b32768 h1:uZ41sUUU0/vDwBwMVz7O1jtcSyLFn/AeUdMr9MKcDsc=
+github.com/mattn/go-pipeline v0.0.0-20190323144519-32d779b32768/go.mod h1:THCMZVX5asLpinN+6hFlR1xKFcFsaDpAtUltGqZauBM=
+github.com/patrickmn/go-cache v2.1.0+incompatible h1:HRMgzkcYKYpi3C8ajMPV8OFXaaRUnok+kx1WdO15EQc=
+github.com/patrickmn/go-cache v2.1.0+incompatible/go.mod h1:3Qf8kWWT7OJRJbdiICTKqZju1ZixQ/KpMGzzAfe6+WQ=

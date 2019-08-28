@@ -12,6 +12,8 @@ import (
 	"time"
 
 	cmd "locate-server/cmd"
+
+	cache "github.com/patrickmn/go-cache"
 )
 
 const (
@@ -34,7 +36,10 @@ var (
 	root         = flag.String("r", "", "DB root directory")
 	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
 	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
-	cache        cmd.CacheMap
+	cacheMap     = cache.New(cache.NoExpiration, cache.DefaultExpiration)
+	results      []cmd.PathMap
+	resultNum    int
+	getpushLog   string
 	lstatinit    []byte
 )
 
@@ -62,10 +67,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("[ERROR] Cannot open logfile " + err.Error())
 	}
+	defer logfile.Close()
 	log.SetOutput(io.MultiWriter(logfile, os.Stdout))
 
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
+
 	// cache = *cmd.NewCacheMap()
 	/* cacheを廃棄するかの判断に必要
 	lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする */
@@ -83,7 +90,13 @@ func main() {
 			}
 			if string(l) != string(lstatinit) {
 				lstatinit = l
-				cache = *cmd.NewCacheMap()
+				cacheMap = cache.New(cache.NoExpiration, cache.DefaultExpiration)
+				// cacheを廃棄するかの判断に必要
+				// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
+				lstatinit, err = locatestat()
+				if err != nil {
+					log.Println(err)
+				}
 				autocache()
 			}
 			time.Sleep(10 * time.Second)
@@ -173,9 +186,22 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					</body>
 					</html>`, err)
 	} else { // 検索文字数チェックOK
+		/* locatestat()の結果が前と異なっていたら
+		lstatinit更新
+		cacheを初期化 */
+		if l, err := locatestat(); string(l) != string(lstatinit) {
+			if err != nil {
+				log.Println(err)
+			} else {
+				lstatinit = l
+				cacheMap.Flush()
+				cacheMap = cache.New(cache.NoExpiration, cache.DefaultExpiration)
+			}
+		}
+
 		// Searching
 		startTime := time.Now()
-		results, resultNum, getpushLog, err := loc.ResultsCache(&cache)
+		results, resultNum, getpushLog, err = loc.ResultsCache(cacheMap)
 		/* cache は&cacheによりdeep copyされてResultsCache()内で
 		直接書き換えられるので、returnされない*/
 		elapsed := time.Since(startTime)
@@ -258,7 +284,7 @@ func autocache() {
 					log.Printf("[Fail] Cache parsing error %s [ %-50s ] \n", err, s)
 				}
 				*/
-				_, _, _, err = loch.ResultsCache(&cache) // Cache生成
+				_, _, _, err = loch.ResultsCache(cacheMap) // Cache生成
 				if err != nil {
 					log.Printf("[Fail] Making cache error %s [ %-50s ]\n",
 						err, loch.Normalize())
@@ -278,7 +304,7 @@ func autocache() {
 
 	log.Printf("[INFO] Cached words [ %s ]\n",
 		strings.Join(func() (s []string) {
-			for k := range cache.Store { // cache化に成功した語を表示
+			for k := range cacheMap.Items() { // cache化に成功した語を表示
 				s = append(s, k)
 			}
 			return

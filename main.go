@@ -15,7 +15,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "1.0.3"
+	VERSION = "1.0.4"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// CAP : 表示する検索結果上限数

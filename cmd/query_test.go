@@ -1,13 +1,29 @@
 package locater
 
-import (
-	"testing"
-)
+import "testing"
+
+func TestToLowerExceptFirst(t *testing.T) {
+	s := "SあtT5\\Uほw\\dHo\\T"
+	actual := ToLowerExceptFirst(s)
+	expect := "Sあtt5\\uほw\\dho\\t"
+	if expect != actual {
+		t.Fatalf("got: %v want: %v", actual, expect)
+	}
+}
+
+func TestToLowerExceptAll(t *testing.T) {
+	s := "\\SあtT5\\Uほw\\dHo\\T"
+	actual := ToLowerExceptAll(s, '\\')
+	expect := "\\Sあtt5\\Uほw\\dho\\T"
+	if expect != actual {
+		t.Fatalf("got: %v want: %v", actual, expect)
+	}
+}
 
 func TestQueryParserError_Test(t *testing.T) {
-	receiveValue := "Dropbox -012 34 Program PYTHON -Go -Joker -99"
-	se := []string{"dropbox", "34", "program", "python"}
-	ex := []string{"012", "go", "joker", "99"} // QueryParserはsortしない
+	receiveValue := "Dropbox -012 34 Program PYTHON -Go -Joker -99 \\Tas\\Wgo -ab\\D\\d"
+	se := []string{"dropbox", "34", "program", "python", "\\Tas\\Wgo"} // バックスラッシュ後はlowerしない
+	ex := []string{"012", "go", "joker", "99", "ab\\D\\d"}             // QueryParserはsortしない
 	ase, aex, _ := QueryParser(receiveValue)
 
 	for i, s := range se {

@@ -15,7 +15,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "1.0.3"
+	VERSION = "1.0.4"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// CAP : 表示する検索結果上限数
@@ -45,11 +45,22 @@ func main() {
 		return // versionを表示して終了
 	}
 
+	// Command check
+	if _, err := exec.LookPath("locate"); err != nil {
+		log.Fatal(err)
+	}
+
+	// Directory check
+	if _, err := os.Stat("/var/lib/mlocate"); os.IsNotExist(err) {
+		log.Fatal(err)
+	}
+
 	// Log setting
 	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		log.Println("[warning] cannot open logfile" + err.Error())
+		log.Fatalf("[ERROR] Cannot open logfile " + err.Error())
 	}
+	defer logfile.Close()
 	log.SetOutput(io.MultiWriter(logfile, os.Stdout))
 
 	// Initialize cache
@@ -82,6 +93,7 @@ func htmlClause(s string) string {
 						<small>
 							 * 検索文字列は2文字以上を指定してください。<br>
 							 * 英字の大文字/小文字は無視します。<br>
+							 * << マーククリックでフォルダが開きます。<br>
 							 * スペース区切りで複数入力できます。(AND検索)<br>
 							 * 半角カッコでくくって | で区切ると | で区切られる前後で検索します。(OR検索)<br>
 							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。<br>
@@ -92,7 +104,7 @@ func htmlClause(s string) string {
 
 // Top page
 func showInit(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, htmlClause(receiveValue))
+	fmt.Fprintf(w, htmlClause(""))
 }
 
 // Result of `locate -S`
@@ -106,6 +118,7 @@ func locatestat() ([]byte, error) {
 
 // `locate -S` page
 func locateStatusPage(w http.ResponseWriter, r *http.Request) {
+	// lとerrはstring型とerr型で異なるのでif-elseが冗長になる
 	if l, err := locatestat(); err == nil {
 		fmt.Fprintf(w, `<html>
 					<head><title>Locate DB Status</title></head>
@@ -138,7 +151,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	loc.Root = *root                 // Path prefix
 
 	if loc.SearchWords, loc.ExcludeWords, err =
-		cmd.QueryParser(receiveValue); err != nil {
+		cmd.QueryParser(receiveValue); err != nil { // 検索文字チェックERROR
 		log.Printf("%s [ %-50s ] \n", err, receiveValue)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintf(w, `<h4>
@@ -146,7 +159,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 						</h4>
 					</body>
 					</html>`, err)
-	} else { // 検索文字数チェックパス
+	} else { // 検索文字数チェックOK
 		/* locatestat()の結果が前と異なっていたら
 		lstatinit更新
 		cacheを初期化 */
@@ -161,7 +174,9 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 		// Searching
 		startTime := time.Now()
-		results, resultNum, cache, getpushLog, err = loc.ResultsCache(cache)
+		results, resultNum, getpushLog, err = loc.ResultsCache(&cache)
+		/* cache は&cacheによりdeep copyされてResultsCache()内で
+		直接書き換えられるので、returnされない*/
 		searchTime := float64((time.Since(startTime)).Nanoseconds()) / float64(time.Millisecond)
 
 		if err != nil {
@@ -182,8 +197,6 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 		// Search result page
 		fmt.Fprint(w, htmlClause(receiveValue))
-		receiveValue = "" // Reset form
-		// これがないと次回アクセス時の最初のページ8080のフォームが最後検索した文字列になる
 
 		fmt.Fprintf(w, `<h4>
 							 <a href=/status>DB</a> last update: %s<br>

@@ -15,7 +15,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "1.0.3"
+	VERSION = "1.0.4"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// CAP : 表示する検索結果上限数
@@ -93,6 +93,7 @@ func htmlClause(s string) string {
 						<small>
 							 * 検索文字列は2文字以上を指定してください。<br>
 							 * 英字の大文字/小文字は無視します。<br>
+							 * << マーククリックでフォルダが開きます。<br>
 							 * スペース区切りで複数入力できます。(AND検索)<br>
 							 * 半角カッコでくくって | で区切ると | で区切られる前後で検索します。(OR検索)<br>
 							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。<br>

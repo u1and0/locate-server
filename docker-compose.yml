@@ -64,8 +64,13 @@ services:
       #     backup:
       #         build:
       #             context: ./backup
-      #     stalker:
-      #         image: alpine:latest
+      #
+    stalker: # locate-serverのログ監視
+        image: busybox:latest
+        volumes:
+            - "db:/var/lib/mlocate"
+        command: [tail, -f, /var/lib/mlocate/locate.log]
+
       #     observer:
       #         image: busybox:latest
       #         command: 

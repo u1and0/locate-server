@@ -1,0 +1,84 @@
+version: "3"
+services:
+    web:
+        build:
+            context: .
+            # deploy:
+            # replicas: 2
+        ports:
+            - 8082:8080
+        depends_on:
+            - db
+        volumes:
+            - db:/var/lib/mlocate
+            - /home/u1and0:/home/u1and0
+        environment:
+            # - LOCATE_PATH=/var/lib/mlocate/mlocate.db
+            - TZ=Asia/Tokyo
+        entrypoint: /usr/bin/locate-server
+        # command: [-s, -r, \\sampanet.gr.jp\DFS]
+        #
+        # restart_policy:
+        #     condition: on-failure
+        #     delay: 5s
+        #     max_attempts: 3
+        #     window: 120s
+        # resources:
+        #     limits:
+        #         cpus: '0.5'
+        #         memory: 100M
+        #     reservations:
+        #         cpus: '0.25'
+        #         memory: 50M
+
+    db:
+        image: busybox
+        volumes:
+            # - /ShareUsers:/ShareUsers
+            - /var/lib/mlocate:/var/lib/mlocate
+              # - /home/u1and0:/home/u1and0
+
+    app: 
+        build:
+             context: ./app
+        depends_on:
+            - db
+        volumes:
+            - db:/var/lib/mlocate
+            - /home/u1and0:/home/u1and0
+        environment:
+            - UPDATEDB_PATH=/home/u1and0
+            - OUTPUT=mlocate.db
+      ## app関連その他ディレクトリ
+      # personal:
+      #     build:
+      #         context: ./app
+      # common:
+      #     build:
+      #         context: ./app
+      # communication:
+      #     build:
+      #         context: ./app
+
+      ## バックアップ　監視関連
+      #     backup:
+      #         build:
+      #             context: ./backup
+      #
+    stalker: # locate-serverのログ監視
+        image: busybox:latest
+        volumes:
+            - db:/var/lib/mlocate
+        command: [tail, -f, /var/lib/mlocate/locate.log]
+
+    observer:
+        build:
+             context: ./app
+        environment:
+            - TZ=Asia/Tokyo
+        volumes:
+            - db:/var/lib/mlocate
+        command: [watch, -n10, ls, -ltrAh, /var/lib/mlocate]
+
+volumes:
+    db:

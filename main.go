@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	cmd "locate-server/cmd"
@@ -37,6 +39,30 @@ var (
 )
 
 func main() {
+	// feature/frecency
+	file, err := os.Open(LOGFILE)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// buf := make([]byte, 125)
+	reader := bufio.NewReaderSize(file, 125)
+	for {
+		line, _, err := reader.ReadLine()
+		if line == nil {
+			break
+		}
+		s := string(line)
+		st := strings.Index(s, "[")
+		en := strings.Index(s, "]")
+		fmt.Println(s[st+1 : en])
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
+	// feature/frecency
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()

@@ -46,21 +46,28 @@ func main() {
 	}
 	defer file.Close()
 
-	// buf := make([]byte, 125)
 	reader := bufio.NewReaderSize(file, 125)
+	fmap := make(map[string]int)
 	for {
 		line, _, err := reader.ReadLine()
 		if line == nil {
 			break
 		}
-		s := string(line)
-		st := strings.Index(s, "[")
-		en := strings.Index(s, "]")
-		fmt.Println(s[st+1 : en])
 		if err != nil {
 			fmt.Println(err)
 		}
+
+		st := string(line)
+		s := strings.Index(st, "[") + 1
+		e := len(st) - 1
+		key := st[s:e]
+		if f, ok := fmap[key]; ok {
+			fmap[key] = f * 2
+		} else {
+			fmap[key] = 1
+		}
 	}
+	fmt.Println(fmap)
 
 	// feature/frecency
 	flag.BoolVar(&showVersion, "v", false, "show version")

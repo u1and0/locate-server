@@ -61,8 +61,8 @@ func main() {
 		s := strings.Index(st, "[") + 1
 		e := len(st) - 1
 		key := st[s:e]
-		if f, ok := fmap[key]; ok {
-			fmap[key] = f * 2
+		if _, ok := fmap[key]; ok {
+			fmap[key] *= 2
 		} else {
 			fmap[key] = 1
 		}

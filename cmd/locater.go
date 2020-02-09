@@ -12,6 +12,7 @@ type Locater struct {
 	Cap                       int
 	PathSplitWin              bool
 	Root                      string
+	Trim                      string
 }
 
 // Normalize : SearchWordsとExcludeWordsを合わせる

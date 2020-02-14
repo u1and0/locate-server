@@ -57,7 +57,11 @@ func main() {
 			fmt.Println(err)
 		}
 
-		st := string(line)
+		search, ignore, err := cmd.QueryParser(string(line))
+		if err != nil {
+			fmt.Println(err)
+		}
+		st := strings.Join(append(search, ignore...), `,`)
 		s := strings.Index(st, "[") + 1
 		e := len(st) - 1
 		key := st[s:e]

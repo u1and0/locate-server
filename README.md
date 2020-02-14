@@ -152,6 +152,44 @@ TZを指定しないとDBの更新日時がGMTになってしまう。
 `LOCATE_PATH`はappコンテナで指定したパスの数だけ`:`で区切って記述する。
 u1and0/locate-serverコンテナはENTRYPOINTで動くのでコンテナの指定後はオプションのみを記述する。
 
+### コンテナ内で有効になっている検索パス
+#### 環境変数の確認
+
+``` shell-session
+$ docker inspect --format='{{range .Config.Env}}{{println .}}{{end}}' web
+TZ=Asia/Tokyo
+LOCATE_PATH=/var/lib/mlocate/mlocatepersonal.db:/var/lib/mlocate/mlocatecommon.db:/var/lib/mlocate/mlocatecommunication.db
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+LANG=C.UTF-8
+```
+
+#### 検索パスの追加
+
+1. updatedbするコンテナを作成
+```shell-session
+docker run --name personal --volumes-from db\
+  -e TZ='Asia/Tokyo'\
+  -e UPDATEDB_PATH=/ShareUsers/UserTokki/Personal\
+  -e OUTPUT=mlocatepersonal.db\
+  -d u1and0/updatedb
+```
+
+
+2. locate-server実行コンテナに対して、環境変数`LOCATE_PATH`の内容を変更したものを再度作成( run )する
+2.1. `docker stop web`
+2.2. `docker rename web web_old`  # 今まで使っていたコンテナを退避(バックアップ)
+2.3. 新しい環境変数を設定したコンテナをrun `docker run ... -e LOCATE_PATH="..."``
+
+
+以下のように `docker exec export LOCATE_PATH`  で環境変数を書き換えようと思って試したがうまくいかなかった
+
+```shell-session
+docker exec -it web export LOCATE_PATH=\
+  /var/lib/mlocate/mlocatepersonal.db:\
+  /var/lib/mlocate/mlocatecommon.db:\
+  /var/lib/mlocate/mlocatecommunication.db:\
+  /var/lib/mlocate/mlocatetemp.db
+```
 
 
 Maintainer u1and0<e01.ando60@gmail.com>

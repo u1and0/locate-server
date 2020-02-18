@@ -217,8 +217,18 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 			</tr>`, e.File, e.Highlight, e.Dir)
 		}
 
-		fmt.Fprintln(w, `</table>
-					  </body>
-					  </html>`)
+		fmt.Fprintln(w, `</table>`)
+		/* Load jQuery */
+		fmt.Fprintln(w, `<script
+							  src="https://code.jquery.com/jquery-3.4.1.min.js"
+							  integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+							  crossorigin="anonymous">
+						  </script>`)
+		/* jQuery script */
+		fmt.Fprintln(w, `<script>
+							$('small').css('color','#00ff00');
+						</script>`)
+		fmt.Fprintln(w, `</body>
+						 </html>`)
 	}
 }

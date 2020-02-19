@@ -225,10 +225,11 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 							  crossorigin="anonymous">
 						 </script>`)
 		/* jQuery script */
+		// clickしたテーブル要素のtextをpostするjQuery
 		fmt.Fprintln(w, `<script>
-							$(document).on("click", function(){
-							   var clickedBtnID = $(this).attr('id');
-							   alert('you clicked on button #' + clickedBtnID);
+							$('td').on("click", function(){
+							   var clickedText = $(this).text();
+							   alert('you clicked on button #' + clickedText);
 							});
 						 </script>`)
 		fmt.Fprintln(w, `</body>

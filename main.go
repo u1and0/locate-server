@@ -15,7 +15,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "1.1.0"
+	VERSION = "1.1.0r"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEPATH : locateのデータベースやログファイルを置く場所
@@ -26,7 +26,7 @@ var (
 	showVersion  bool
 	receiveValue string
 	err          error
-	caps         = flag.Int("c", 1000, "Maximum number of results")
+	caps         = flag.Int("l", 1000, "Maximum number of results")
 	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
 	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
 	root         = flag.String("r", "", "DB insert prefix for directory path")

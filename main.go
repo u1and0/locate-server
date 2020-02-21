@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -20,6 +21,8 @@ const (
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEPATH : locateのデータベースやログファイルを置く場所
 	LOCATEPATH = "/var/lib/mlocate"
+	// JQUERYFILE : jQueryによる動的な処理を記述したファイル
+	JQUERYFILE = "./static/js/push.js"
 )
 
 var (
@@ -225,13 +228,12 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 							  crossorigin="anonymous">
 						 </script>`)
 		/* jQuery script */
-		// clickしたテーブル要素のtextをpostするjQuery
-		fmt.Fprintln(w, `<script>
-							$('td').on("click", function(){
-							   var clickedText = $(this).text();
-							   alert('you clicked on button #' + clickedText);
-							});
-						 </script>`)
+		b, err := ioutil.ReadFile(JQUERYFILE)
+		if err != nil {
+			panic(err)
+		}
+		// JQUERYFILEに記述のjQueryスクリプト読み込み
+		fmt.Fprintf(w, `<script> %s </script>`, string(b))
 		fmt.Fprintln(w, `</body>
 						 </html>`)
 	}

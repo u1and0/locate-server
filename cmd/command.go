@@ -58,24 +58,24 @@ func (l *Locater) CmdGen() [][]string {
 }
 
 // Cmd : locate検索し、
-// 結果をPathMapのスライス(最大l.Cap件(capacity = default 1000))にして返す
+// 結果をPathMapのスライス(最大l.Limit件(limit = default 1000))にして返す
 // 更に検索結果数、あれば検索時のエラーを返す
 func (l *Locater) Cmd() ([]PathMap, int, error) {
 	out, err := pipeline.Output(l.CmdGen()...)
 	outslice := strings.Split(string(out), "\n")
 	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
 
-	results := make([]PathMap, 0, l.Cap)
+	results := make([]PathMap, 0, l.Limit)
 	/* Why not array but slice?
 	検索結果の数だけ要素を持ったスライスを返したい
 	検索結果がなければ0要素のスライスを返したい
 	そのため、要素数の決まった配列を使えない
 	> 後で空の要素は削除して結果に表示しないようにしないといけない
-	最大の要素数はcaps(デフォルト1000件)になるように表示する
+	最大の要素数はlimit(デフォルト1000件)になるように表示する
 	*/
 	for i, file := range outslice {
-		// l.Cap件までresultsとして返す
-		if i >= l.Cap {
+		// l.Limit件までresultsとして返す
+		if i >= l.Limit {
 			break
 		}
 

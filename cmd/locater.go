@@ -9,7 +9,7 @@ import (
 type Locater struct {
 	SearchWords, ExcludeWords []string
 	Dbpath                    string
-	Cap                       int
+	Limit                     int
 	PathSplitWin              bool
 	Root                      string
 	Trim                      string

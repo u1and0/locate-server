@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"io"
@@ -9,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	cmd "locate-server/cmd"
@@ -17,11 +15,9 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "1.0.4"
+	VERSION = "1.1.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
-	// CAP : 表示する検索結果上限数
-	CAP = 1000
 	// LOCATEPATH : locateのデータベースやログファイルを置く場所
 	LOCATEPATH = "/var/lib/mlocate"
 )
@@ -30,9 +26,11 @@ var (
 	showVersion  bool
 	receiveValue string
 	err          error
-	root         = flag.String("r", "", "DB root directory")
-	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
+	limit        = flag.Int("l", 1000, "Maximum limit for results")
 	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
+	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
+	root         = flag.String("r", "", "DB insert prefix for directory path")
+	trim         = flag.String("t", "", "DB trim prefix for directory path")
 	cache        cmd.CacheMap
 	getpushLog   string
 	lstatinit    []byte
@@ -88,7 +86,7 @@ func main() {
 	}
 
 	// Directory check
-	if _, err := os.Stat("/var/lib/mlocate"); os.IsNotExist(err) {
+	if _, err := os.Stat(LOCATEPATH); os.IsNotExist(err) {
 		log.Fatal(err)
 	}
 
@@ -182,10 +180,11 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
 	loc := new(cmd.Locater)
+	loc.Limit = *limit               // 検索件数上限
 	loc.Dbpath = *dbpath             // /var/lib/mlocate以外のディレクトリパス
-	loc.Cap = CAP                    // 検索件数上限
 	loc.PathSplitWin = *pathSplitWin // path separatorを\にする
-	loc.Root = *root                 // Path prefix
+	loc.Root = *root                 // Path prefix insert
+	loc.Trim = *trim                 // Path prefix trim
 
 	if loc.SearchWords, loc.ExcludeWords, err =
 		cmd.QueryParser(receiveValue); err != nil { // 検索文字チェックERROR
@@ -237,9 +236,9 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Fprintf(w, `<h4>
 							 <a href=/status>DB</a> last update: %s<br>
-							 検索結果          : %d件中、最大1000件を表示<br>
+							 検索結果          : %d件中、最大%d件を表示<br>
 							 検索にかかった時間: %.3fmsec
-						</h4>`, lastUpdateTime, resultNum, searchTime)
+						</h4>`, lastUpdateTime, resultNum, *limit, searchTime)
 
 		// 検索結果を行列表示
 		fmt.Fprintln(w, `<table>

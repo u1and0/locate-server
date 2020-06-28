@@ -26,7 +26,7 @@ var (
 	showVersion  bool
 	receiveValue string
 	err          error
-	caps         = flag.Int("c", 1000, "Maximum number of results")
+	limit        = flag.Int("l", 1000, "Maximum limit for results")
 	dbpath       = flag.String("d", "", "path of locate database file (ex: /var/lib/mlocate/something.db)")
 	pathSplitWin = flag.Bool("s", false, "OS path split windows backslash")
 	root         = flag.String("r", "", "DB insert prefix for directory path")
@@ -145,7 +145,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	// Modify query
 	receiveValue = r.FormValue("query")
 	loc := new(cmd.Locater)
-	loc.Cap = *caps                  // 検索件数上限
+	loc.Limit = *limit               // 検索件数上限
 	loc.Dbpath = *dbpath             // /var/lib/mlocate以外のディレクトリパス
 	loc.PathSplitWin = *pathSplitWin // path separatorを\にする
 	loc.Root = *root                 // Path prefix insert
@@ -203,7 +203,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 							 <a href=/status>DB</a> last update: %s<br>
 							 検索結果          : %d件中、最大%d件を表示<br>
 							 検索にかかった時間: %.3fmsec
-						</h4>`, lastUpdateTime, resultNum, *caps, searchTime)
+						</h4>`, lastUpdateTime, resultNum, *limit, searchTime)
 
 		// 検索結果を行列表示
 		fmt.Fprintln(w, `<table>

@@ -39,7 +39,10 @@ func highlightString(s string, words []string) string {
 // CmdGen : locate 検索語 | grep -v 除外語 | grep -v 除外語...を発行する
 func (l *Locater) CmdGen() [][]string {
 	// -i: Ignore case distinctions when matching patterns.
-	locate := []string{"locate", "-i"}
+	locate := []string{"locate",
+		"--ignore-case",
+		"--quiet", // report no error messages about reading databases
+	}
 	if l.Dbpath != "" {
 		// -d: Replace the default database with DBPATH.
 		locate = append(locate, "-d", l.Dbpath)

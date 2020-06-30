@@ -1,8 +1,10 @@
 package locater
 
 import (
+	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	pipeline "github.com/mattn/go-pipeline"
@@ -15,6 +17,38 @@ type PathMap struct {
 	Highlight string
 }
 
+// Stats : locate検索の統計情報
+type Stats struct {
+	LastUpdateTime string  // 最後のDBアップデート時刻
+	SearchTime     float64 // 検索にかかった時間
+	ResultNum      int     // 検索結果数
+	Items          int     // 検索対象のすべてのファイル数
+}
+
+// LocateStats : Result of `locate -S`
+func LocateStats(path string) ([]byte, error) {
+	opt := []string{"-S"}
+	if path != "" {
+		opt = append(opt, "-d", path)
+	}
+	b, err := exec.Command("locate", opt...).Output()
+	return b, err
+}
+
+// LocateStatsSum : locateされるファイル数をDB情報から合計する
+func LocateStatsSum(b []byte) int {
+	var sum, ni int
+	for i, w := range strings.Split(string(b), "\n") { // 改行区切り => 221,453 ファイル
+		if i%5 == 2 {
+			ns := strings.Fields(w)[0]           // => 221,453
+			ns = strings.ReplaceAll(ns, ",", "") // => 221453
+			ni, _ = strconv.Atoi(ns)
+			sum += ni
+		}
+	}
+	return sum
+}
+
 // sの文字列中にあるwordsの背景を黄色にハイライトしたhtmlを返す
 func highlightString(s string, words []string) string {
 	for _, w := range words {
@@ -24,11 +58,12 @@ func highlightString(s string, words []string) string {
 		re.ReplaceAll(s, "<span style=\"background-color:#FFCC00;\">$1</span>")
 		は削除
 		*/
+		color := "style=\"background-color:#FFCC00;\">"
 		found := re.FindString(s)
 		if found != "" {
 			s = strings.Replace(s,
 				found,
-				"<span style=\"background-color:#FFCC00;\">"+found+"</span>",
+				"<span "+color+found+"</span>",
 				1)
 			// [BUG] キーワード順にハイライトされない
 		}

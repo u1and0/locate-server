@@ -1,8 +1,10 @@
 package locater
 
 import (
+	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	pipeline "github.com/mattn/go-pipeline"
@@ -15,6 +17,58 @@ type PathMap struct {
 	Highlight string
 }
 
+// Stats : locate検索の統計情報
+type Stats struct {
+	LastUpdateTime string  // 最後のDBアップデート時刻
+	SearchTime     float64 // 検索にかかった時間
+	ResultNum      uint64  // 検索結果数
+	Items          string  // 検索対象のすべてのファイル数
+}
+
+// LocateStats : Result of `locate -S`
+func LocateStats(path string) ([]byte, error) {
+	opt := []string{"-S"}
+	if path != "" {
+		opt = append(opt, "-d", path)
+	}
+	b, err := exec.Command("locate", opt...).Output()
+	return b, err
+}
+
+// LocateStatsSum : locateされるファイル数をDB情報から合計する
+func LocateStatsSum(b []byte) (uint64, error) {
+	var (
+		sum, ni uint64
+		err     error
+	)
+	for i, w := range strings.Split(string(b), "\n") { // 改行区切り => 221,453 ファイル
+		if i%5 == 2 {
+			ns := strings.Fields(w)[0]             // => 221,453
+			ns = strings.ReplaceAll(ns, ",", "")   // => 221453
+			ni, err = strconv.ParseUint(ns, 10, 0) // as uint64
+			sum += ni
+		}
+	}
+	return sum, err
+}
+
+// Ambiguous : 数値を切り捨て、おおよその数字をstring型にして返す
+func Ambiguous(n uint64) (s string) {
+	switch {
+	case n >= 1e8:
+		s = strconv.FormatUint(n/1e8, 10) + "億"
+	case n >= 1e6:
+		s = strconv.FormatUint(n/1e6, 10) + "百万"
+	case n >= 1e4:
+		s = strconv.FormatUint(n/1e4, 10) + "万"
+	case n >= 1e3:
+		s = strconv.FormatUint(n/1e3, 10) + "千"
+	default:
+		s = strconv.FormatUint(n, 10)
+	}
+	return
+}
+
 // sの文字列中にあるwordsの背景を黄色にハイライトしたhtmlを返す
 func highlightString(s string, words []string) string {
 	for _, w := range words {
@@ -24,11 +78,12 @@ func highlightString(s string, words []string) string {
 		re.ReplaceAll(s, "<span style=\"background-color:#FFCC00;\">$1</span>")
 		は削除
 		*/
+		color := "style=\"background-color:#FFCC00;\">"
 		found := re.FindString(s)
 		if found != "" {
 			s = strings.Replace(s,
 				found,
-				"<span style=\"background-color:#FFCC00;\">"+found+"</span>",
+				"<span "+color+found+"</span>",
 				1)
 			// [BUG] キーワード順にハイライトされない
 		}
@@ -63,7 +118,7 @@ func (l *Locater) CmdGen() [][]string {
 // Cmd : locate検索し、
 // 結果をPathMapのスライス(最大l.Limit件(limit = default 1000))にして返す
 // 更に検索結果数、あれば検索時のエラーを返す
-func (l *Locater) Cmd() ([]PathMap, int, error) {
+func (l *Locater) Cmd() ([]PathMap, uint64, error) {
 	out, err := pipeline.Output(l.CmdGen()...)
 	outslice := strings.Split(string(out), "\n")
 	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
@@ -114,5 +169,5 @@ func (l *Locater) Cmd() ([]PathMap, int, error) {
 	}
 
 	// Max 1000 result & number of all result
-	return results, len(outslice), err
+	return results, uint64(len(outslice)), err
 }

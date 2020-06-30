@@ -8,15 +8,15 @@ type (
 // CacheStruct : 検索クエリをキーとした検索結果と検索数を保管したキャッシュ
 type CacheStruct struct {
 	Paths []PathMap
-	Num   int
+	Num   uint64
 }
 
 // ResultsCache : 検索結果をcacheの中から探し、あれば検索結果と検索数を返し、
 // なければLocater.Cmd()を走らせて検索結果と検索数を得る
-func (l *Locater) ResultsCache(cache *CacheMap) ([]PathMap, int, string, error) {
+func (l *Locater) ResultsCache(cache *CacheMap) ([]PathMap, uint64, string, error) {
 	var (
 		results    []PathMap
-		resultNum  int
+		resultNum  uint64
 		getpushLog string
 		err        error
 	)

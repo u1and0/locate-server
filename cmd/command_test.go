@@ -1,6 +1,51 @@
 package locater
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
+
+func TestLocateStats(t *testing.T) {
+	b, _ := LocateStats("../test/mlocatetest.db:../test/mlocatetest1.db")
+	actual := strings.Fields(string(b))
+	expected := strings.Fields(`
+	データベース ../test/mlocatetest.db:
+		67 辞書
+		1,155 ファイル
+		ファイル名に 43,839 バイト
+		データベースに保存するのに 23,198 バイト使いました
+	データベース ../test/mlocatetest1.db:
+		5,581 辞書
+		73,710 ファイル
+		ファイル名に 3,294,594 バイト
+		データベースに保存するのに 1,600,378 バイト使いました
+	`)
+	for i := range actual {
+		if actual[i] != expected[i] {
+			t.Fatalf("got: %v want: %v", actual[i], expected[i])
+		}
+	}
+}
+
+func TestLocateStatsSum(t *testing.T) {
+	b, _ := LocateStats("../test/mlocatetest.db:../test/mlocatetest1.db")
+	actual, _ := LocateStatsSum(b)
+	expected := uint64(74865)
+	if actual != expected {
+		t.Fatalf("got: %d want: %d\n$ locate -S\n%v", actual, expected, string(b))
+	}
+}
+
+func Test_Ambiguous(t *testing.T) {
+	actual := []uint64{1000000000, 100000000, 1999999, 2345678, 30001, 4021, 56}
+	expected := []string{"10億", "1億", "1百万", "2百万", "3万", "4千", "56"}
+	for i, a := range actual {
+		ag := Ambiguous(a)
+		if ag != expected[i] {
+			t.Fatalf("got: %s want: %s", ag, expected[i])
+		}
+	}
+}
 
 func TestLocater_highlightString(t *testing.T) {
 	s := "/home/vagrant/Program/hoge3/program_boot.pdf"
@@ -25,7 +70,7 @@ func TestLocater_CmdGen(t *testing.T) {
 	}
 	actual := l.CmdGen()
 	expected := [][]string{
-		[]string{"locate", "-i",
+		[]string{"locate", "--ignore-case", "--quiet",
 			"-d", "/var/lib/mlocate/mlocatetest.db",
 			"--regex", "the.*path.*for.*search"},
 		[]string{"grep", "-ivE", "exclude"},

@@ -21,8 +21,8 @@ type PathMap struct {
 type Stats struct {
 	LastUpdateTime string  // 最後のDBアップデート時刻
 	SearchTime     float64 // 検索にかかった時間
-	ResultNum      int     // 検索結果数
-	Items          int     // 検索対象のすべてのファイル数
+	ResultNum      uint64  // 検索結果数
+	Items          string  // 検索対象のすべてのファイル数
 }
 
 // LocateStats : Result of `locate -S`
@@ -36,17 +36,37 @@ func LocateStats(path string) ([]byte, error) {
 }
 
 // LocateStatsSum : locateされるファイル数をDB情報から合計する
-func LocateStatsSum(b []byte) int {
-	var sum, ni int
+func LocateStatsSum(b []byte) (uint64, error) {
+	var (
+		sum, ni uint64
+		err     error
+	)
 	for i, w := range strings.Split(string(b), "\n") { // 改行区切り => 221,453 ファイル
 		if i%5 == 2 {
-			ns := strings.Fields(w)[0]           // => 221,453
-			ns = strings.ReplaceAll(ns, ",", "") // => 221453
-			ni, _ = strconv.Atoi(ns)
+			ns := strings.Fields(w)[0]             // => 221,453
+			ns = strings.ReplaceAll(ns, ",", "")   // => 221453
+			ni, err = strconv.ParseUint(ns, 10, 0) // as uint64
 			sum += ni
 		}
 	}
-	return sum
+	return sum, err
+}
+
+// Ambiguous : 数値を切り捨て、おおよその数字をstring型にして返す
+func Ambiguous(n uint64) (s string) {
+	switch {
+	case n >= 1e8:
+		s = strconv.FormatUint(n/1e8, 10) + "億"
+	case n >= 1e6:
+		s = strconv.FormatUint(n/1e6, 10) + "百万"
+	case n >= 1e4:
+		s = strconv.FormatUint(n/1e4, 10) + "万"
+	case n >= 1e3:
+		s = strconv.FormatUint(n/1e3, 10) + "千"
+	default:
+		s = strconv.FormatUint(n, 10)
+	}
+	return
 }
 
 // sの文字列中にあるwordsの背景を黄色にハイライトしたhtmlを返す
@@ -98,7 +118,7 @@ func (l *Locater) CmdGen() [][]string {
 // Cmd : locate検索し、
 // 結果をPathMapのスライス(最大l.Limit件(limit = default 1000))にして返す
 // 更に検索結果数、あれば検索時のエラーを返す
-func (l *Locater) Cmd() ([]PathMap, int, error) {
+func (l *Locater) Cmd() ([]PathMap, uint64, error) {
 	out, err := pipeline.Output(l.CmdGen()...)
 	outslice := strings.Split(string(out), "\n")
 	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
@@ -149,5 +169,5 @@ func (l *Locater) Cmd() ([]PathMap, int, error) {
 	}
 
 	// Max 1000 result & number of all result
-	return results, len(outslice), err
+	return results, uint64(len(outslice)), err
 }

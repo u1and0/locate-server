@@ -29,10 +29,21 @@ func TestLocateStats(t *testing.T) {
 
 func TestLocateStatsSum(t *testing.T) {
 	b, _ := LocateStats("../test/mlocatetest.db:../test/mlocatetest1.db")
-	actual := LocateStatsSum(b)
-	expected := 74865
+	actual, _ := LocateStatsSum(b)
+	expected := uint64(74865)
 	if actual != expected {
 		t.Fatalf("got: %d want: %d\n$ locate -S\n%v", actual, expected, string(b))
+	}
+}
+
+func Test_Ambiguous(t *testing.T) {
+	actual := []uint64{1000000000, 100000000, 1999999, 2345678, 30001, 4021, 56}
+	expected := []string{"10億", "1億", "1百万", "2百万", "3万", "4千", "56"}
+	for i, a := range actual {
+		ag := Ambiguous(a)
+		if ag != expected[i] {
+			t.Fatalf("got: %s want: %s", ag, expected[i])
+		}
 	}
 }
 

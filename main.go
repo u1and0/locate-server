@@ -76,7 +76,15 @@ func main() {
 	// cacheを廃棄するかの判断に必要
 	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
 	locateS, err = cmd.LocateStats(dbpath)
-	stats.Items = cmd.LocateStatsSum(locateS)
+	if err != nil {
+		log.Println(err)
+	}
+	var n uint64
+	n, err = cmd.LocateStatsSum(locateS)
+	if err != nil {
+		log.Println(err)
+	}
+	stats.Items = cmd.Ambiguous(n)
 	if err != nil {
 		log.Println(err)
 	}
@@ -168,9 +176,14 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				log.Println(err)
 			}
-			locateS = l                         // 保持するDB情報の更新
-			stats.Items = cmd.LocateStatsSum(l) // 検索ファイル数の更新
-			cache = cmd.CacheMap{}              // キャッシュリセット
+			locateS = l // 保持するDB情報の更新
+			var n uint64
+			n, err = cmd.LocateStatsSum(l) // 検索ファイル数の更新
+			stats.Items = cmd.Ambiguous(n)
+			if err != nil {
+				log.Println(err)
+			}
+			cache = cmd.CacheMap{} // キャッシュリセット
 		}
 
 		// Searching
@@ -205,8 +218,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 			`<h4>
 			 <a href=/status>DB</a> last update: %s<br>
 			 ヒット数: %d件中、最大%d件を表示<br>
-			 検索時間: %.3fmsec<br>
-			 検索数  : %d件<br>
+			 %.3fmsec で約%s件を検索しました。<br>
 			</h4>`,
 			stats.LastUpdateTime,
 			stats.ResultNum,

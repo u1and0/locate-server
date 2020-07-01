@@ -19,6 +19,7 @@ const (
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
+	// LOCATE_PATH=$(find /var/lib/mlocate -name '*.db' | paste -sd: -)
 	LOCATEDIR = "/var/lib/mlocate"
 )
 
@@ -27,7 +28,7 @@ var (
 	receiveValue string
 	err          error
 	limit        int
-	dbpath       string
+	dbpath       string // dbpathオプションはLOCATE_PATHに勝る
 	pathSplitWin bool
 	root         string
 	trim         string
@@ -35,15 +36,25 @@ var (
 	getpushLog   string
 	locateS      []byte
 	stats        cmd.Stats
+	process      int
 )
 
 func main() {
 	flag.IntVar(&limit, "l", 1000, "Maximum limit for results")
-	locatePath := os.Getenv("LOCATE_PATH")
-	flag.StringVar(&dbpath, "d", locatePath, "path of locate database file (ex: /var/lib/mlocate/something.db)")
+	flag.StringVar(&dbpath, // LOCATE_PATHより-dオプション指定のほうが強い
+		"d",
+		os.Getenv("LOCATE_PATH"), // -dが指定されなければLOCATE_PATHをデフォルト値とする
+		"Path of locate database file (ex: /path/something.db:/path/another.db)",
+	)
+	// if locatePath == "" { // -d オプションが与えられたらLOCATE_PATHを上書きする
+	// 	// locate-server -dオプションが与えられて
+	// 	// LOCATE_PATHが空のとき
+	// 	os.Setenv("LOCATE_PATH", dbpath)
+	// }
 	flag.BoolVar(&pathSplitWin, "s", false, "OS path split windows backslash")
 	flag.StringVar(&root, "r", "", "DB insert prefix for directory path")
 	flag.StringVar(&trim, "t", "", "DB trim prefix for directory path")
+	flag.IntVar(&process, "P", 1, "Search in multi process by `xargs -P`")
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()
@@ -150,11 +161,12 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	)
 	// 検索コンフィグ構造体
 	loc := cmd.Locater{
-		Limit:        limit,        // 検索件数上限
-		Dbpath:       dbpath,       // /var/lib/mlocate以外のディレクトリパス
+		Limit: limit, // 検索件数上限
+		// Dbpath:       dbpath,       // /var/lib/mlocate以外のディレクトリパス
 		PathSplitWin: pathSplitWin, // path separatorを\にする
 		Root:         root,         // Path prefix insert
 		Trim:         trim,         // Path prefix trim
+		Process:      process,      // xargsによるマルチプロセス数
 	}
 	// Modify query
 	receiveValue = r.FormValue("query")

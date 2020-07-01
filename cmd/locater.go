@@ -7,12 +7,14 @@ import (
 
 // Locater : queryから読み取った検索ワードと無視するワード
 type Locater struct {
-	SearchWords, ExcludeWords []string
-	Dbpath                    string
-	Limit                     int
-	PathSplitWin              bool
-	Root                      string
-	Trim                      string
+	SearchWords  []string // 検索キーワード
+	ExcludeWords []string // 検索から取り除くキーワード
+	Dbpath       string   // 検索対象DBパス /path/to/database:/path/to/another
+	Limit        int      // 検索結果HTML表示制限数
+	PathSplitWin bool     // TrueでWindowsパスセパレータを使用する
+	Root         string   // 追加するドライブパス名
+	Trim         string   // 削除するドライブパス名
+	Process      int      // xargsによるマルチプロセス数
 }
 
 // Normalize : SearchWordsとExcludeWordsを合わせる

@@ -6,6 +6,7 @@ import (
 )
 
 func TestLocateStats(t *testing.T) {
+	// os.Setenv("LOCATE_PATH", "../test/mlocatetest.db:../test/mlocatetest1.db")
 	b, _ := LocateStats("../test/mlocatetest.db:../test/mlocatetest1.db")
 	actual := strings.Fields(string(b))
 	expected := strings.Fields(`
@@ -28,6 +29,7 @@ func TestLocateStats(t *testing.T) {
 }
 
 func TestLocateStatsSum(t *testing.T) {
+	// os.Setenv("LOCATE_PATH", "../test/mlocatetest.db:../test/mlocatetest1.db")
 	b, _ := LocateStats("../test/mlocatetest.db:../test/mlocatetest1.db")
 	actual, _ := LocateStatsSum(b)
 	expected := uint64(74865)
@@ -63,7 +65,9 @@ func TestLocater_highlightString(t *testing.T) {
 }
 
 func TestLocater_CmdGen(t *testing.T) {
+	// Single process test
 	l := Locater{
+		Process:      1,
 		SearchWords:  []string{"the", "path", "for", "search"},
 		ExcludeWords: []string{"exclude", "paths"},
 		Dbpath:       "/var/lib/mlocate/mlocatetest.db",
@@ -71,18 +75,35 @@ func TestLocater_CmdGen(t *testing.T) {
 	actual := l.CmdGen()
 	expected := [][]string{
 		[]string{"locate", "--ignore-case", "--quiet",
-			"-d", "/var/lib/mlocate/mlocatetest.db",
-			"--regex", "the.*path.*for.*search"},
+			"--regex", "the.*path.*for.*search",
+			"--database", "/var/lib/mlocate/mlocatetest.db"},
 		[]string{"grep", "-ivE", "exclude"},
 		[]string{"grep", "-ivE", "paths"},
 	}
-
+	t.Logf("ex: %v, ac: %v", expected, actual) // Print command
 	for i, e1 := range expected {
 		for j, e2 := range e1 {
 			if actual[i][j] != e2 {
-				t.Fatalf("got: %v want: %v", actual[i][j], e2)
+				t.Fatalf("got: %v want: %v\ncommand: %s", actual[i][j], e2, actual)
 			}
-
 		}
 	}
+
+	// Multi process test
+	l = Locater{
+		Process:      0,
+		SearchWords:  []string{"the", "path", "for", "search"},
+		ExcludeWords: []string{"exclude", "paths"},
+		Dbpath:       "../test/mlocatetest.db:../test/mlocatetest1.db",
+	}
+	actual = l.CmdGen()
+	expected = [][]string{
+		[]string{
+			"locate", "--ignore-case", "--quiet",
+			"--regex", "the.*path.*for.*search",
+			"--database", "/var/lib/mlocate/mlocatetest.db",
+		},
+		[]string{"grep", "-ivE", "exclude"},
+		[]string{"grep", "-ivE", "paths"},
+		}
 }

@@ -29,7 +29,7 @@ type Stats struct {
 func LocateStats(path string) ([]byte, error) {
 	opt := []string{"-S"}
 	if path != "" {
-		opt = append(opt, "-d", path)
+		opt = append(opt, "--database", path)
 	}
 	b, err := exec.Command("locate", opt...).Output()
 	return b, err
@@ -93,23 +93,43 @@ func highlightString(s string, words []string) string {
 
 // CmdGen : locate 検索語 | grep -v 除外語 | grep -v 除外語...を発行する
 func (l *Locater) CmdGen() [][]string {
-	// -i: Ignore case distinctions when matching patterns.
-	locate := []string{"locate",
-		"--ignore-case",
-		"--quiet", // report no error messages about reading databases
-	}
-	if l.Dbpath != "" {
-		// -d: Replace the default database with DBPATH.
-		locate = append(locate, "-d", l.Dbpath)
+	locate := []string{
+		"locate",
+		"--ignore-case", // Ignore case distinctions when matching patterns.
+		"--quiet",       // Report no error messages about reading databases
 	}
 
 	// Include PATTERNs
 	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))
-	// -> hoge.*my.*name
+	// -> locate --ignore-case --quiet --regex hoge.*my.*name
+
+	// Pipeline process
+	exec := [][]string{}
+
+	// Multi processing search
+	if l.Process != 1 {
+		echo := []string{"echo", strings.ReplaceAll(l.Dbpath, ":", " ")}
+		sed := []string{"sed", "-e", "s/:/\\n/g"}
+		// xargs -P 2 -I@
+		xargs := []string{"xargs", "-P", strconv.Itoa(l.Process), "-I@"}
+		// xargs -P 2 -I@ locate --regex hoge.*foo
+		xargs = append(xargs, locate...)
+		// xargs -P 2 -I@ locate --regex hoge.*foo --database @
+		xargs = append(xargs, "--database @")
+		// echo /path/to/some.db:/path/to/another.db |
+		//		sed -e 's/:/\n/g' |
+		//		xargs -P 2 -I@ locate -iq --regex hoge.*foo --database @
+		exec = append(exec, echo, sed, xargs)
+	} else {
+		if l.Dbpath != "" { // Replace the default database to Dbpath
+			locate = append(locate, "--database", l.Dbpath)
+		}
+		exec = append(exec, locate)
+	}
 
 	// Exclude PATTERNs
-	exec := [][]string{locate}
 	for _, ex := range l.ExcludeWords {
+		// COMMAND | grep -ivE EXCLUDE1 | grep -ivE EXCLUDE2
 		exec = append(exec, []string{"grep", "-ivE", ex})
 	}
 	return exec

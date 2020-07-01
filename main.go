@@ -150,11 +150,11 @@ func locateStatusPage(w http.ResponseWriter, r *http.Request) {
 	// lとerrはstring型とerr型で異なるのでif-elseが冗長になる
 	if l, err := cmd.LocateStats(); err == nil {
 		fmt.Fprintf(w, `<html>
-					<head><title>Locate DB Status</title></head>
-					<body>
-						<pre>%s</pre>
-					</body>
-					</html>`, l)
+						<head><title>Locate DB Status</title></head>
+						<body>
+							<pre>%s</pre>
+						</body>
+						</html>`, l)
 	} else {
 		fmt.Fprintf(w, `<html>
 						<head><title>Locate DB Status</title></head>

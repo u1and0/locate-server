@@ -80,7 +80,7 @@ func TestLocater_CmdGen(t *testing.T) {
 		[]string{"grep", "-ivE", "exclude"},
 		[]string{"grep", "-ivE", "paths"},
 	}
-	t.Logf("ex: %v, ac: %v", expected, actual) // Print command
+	t.Logf("expected command: %v, actual command: %v", expected, actual) // Print command
 	for i, e1 := range expected {
 		for j, e2 := range e1 {
 			if actual[i][j] != e2 {
@@ -98,12 +98,20 @@ func TestLocater_CmdGen(t *testing.T) {
 	}
 	actual = l.CmdGen()
 	expected = [][]string{
-		[]string{
-			"locate", "--ignore-case", "--quiet",
+		[]string{"echo", "../test/mlocatetest.db:../test/mlocatetest1.db"},
+		[]string{"sed", "-e", "s/:/\\n/g"},
+		[]string{"xargs", "-P", "0", "-I@", "locate", "--ignore-case", "--quiet",
 			"--regex", "the.*path.*for.*search",
-			"--database", "/var/lib/mlocate/mlocatetest.db",
-		},
+			"--database @"},
 		[]string{"grep", "-ivE", "exclude"},
 		[]string{"grep", "-ivE", "paths"},
+	}
+	t.Logf("expected command: %v, actual command: %v", expected, actual) // Print command
+	for i, e1 := range expected {
+		for j, e2 := range e1 {
+			if actual[i][j] != e2 {
+				t.Fatalf("got: %v want: %v\ncommand: %s", actual[i][j], e2, actual)
+			}
 		}
+	}
 }

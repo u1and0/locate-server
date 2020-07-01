@@ -110,21 +110,20 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 	// -> locate --ignore-case --quiet --regex hoge.*my.*name
 	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))
 
-	// Multi processing search
-	if l.Process != 1 {
-		echo := []string{"echo", strings.ReplaceAll(l.Dbpath, ":", " ")}
+	if l.Process != 1 { // Multi processing search
+		echo := []string{"echo", l.Dbpath}
 		sed := []string{"sed", "-e", "s/:/\\n/g"}
 		// xargs -P 2 -I@
 		xargs := []string{"xargs", "-P", strconv.Itoa(l.Process), "-I@"}
-		// xargs -P 2 -I@ locate --regex hoge.*foo
+		// xargs -P 2 -I@ locate -iq --regex hoge.*foo
 		xargs = append(xargs, locate...)
-		// xargs -P 2 -I@ locate --regex hoge.*foo --database @
+		// xargs -P 2 -I@ locate -iq --regex hoge.*foo --database @
 		xargs = append(xargs, "--database @")
 		// echo /path/to/some.db:/path/to/another.db |
 		//		sed -e 's/:/\n/g' |
 		//		xargs -P 2 -I@ locate -iq --regex hoge.*foo --database @
 		pipeline = append(pipeline, echo, sed, xargs)
-	} else {
+	} else { // Single processing search
 		if l.Dbpath != "" { // Replace the default database to Dbpath
 			locate = append(locate, "--database", l.Dbpath)
 		}

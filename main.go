@@ -19,7 +19,8 @@ const (
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
-	// LOCATE_PATH=$(find /var/lib/mlocate -name '*.db' | paste -sd: -)
+	// /var/lib/mlocate以下すべてを検索対象とするときのLOCATE_PATHの指定方法
+	// LOCATE_PATH=$(paste -sd: <(find /var/lib/mlocate -name '*.db'))
 	LOCATEDIR = "/var/lib/mlocate"
 )
 
@@ -28,7 +29,7 @@ var (
 	receiveValue string
 	err          error
 	limit        int
-	dbpath       string // dbpathオプションはLOCATE_PATHに勝る
+	dbpath       string // dbpathオプションはLOCATE_PATHを上書きする
 	pathSplitWin bool
 	root         string
 	trim         string
@@ -46,15 +47,22 @@ var format = logging.MustStringFormatter(
 
 func main() {
 	flag.IntVar(&limit, "l", 1000, "Maximum limit for results")
-	flag.StringVar(&dbpath, // LOCATE_PATHより-dオプション指定のほうが強い
+	flag.StringVar(&dbpath,
 		"d",
-		os.Getenv("LOCATE_PATH"), // -dが指定されなければLOCATE_PATHをデフォルト値とする
+		func() string {
+			l := os.Getenv("LOCATE_PATH")
+			os.Setenv("LOCATE_PATH", "")
+			defer os.Setenv("LOCATE_PATH", l) // 終了時に環境変数を元に戻す
+			return l
+		}(), // -dが指定されなければLOCATE_PATHをデフォルト値とする
 		"Path of locate database file (ex: /path/something.db:/path/another.db)",
 	)
-	// if locatePath == "" { // -d オプションが与えられたらLOCATE_PATHを上書きする
-	// 	// locate-server -dオプションが与えられて
-	// 	// LOCATE_PATHが空のとき
-	// 	os.Setenv("LOCATE_PATH", dbpath)
+	// -d オプションが与えられなければ、LOCATE_PATHの値を探して置き換える
+	// LOCATE_PATHが指定されていて、-dオプションを使うと２重に検索されるのを回避するため
+	// if dbpath == "" {
+	// 	dbpath = os.Getenv("LOCATE_PATH")
+	// 	os.Setenv("LOCATE_PATH", "")
+	// 	defer os.Setenv("LOCATE_PATH", dbpath) // 終了時に環境変数をもとに戻す
 	// }
 	flag.BoolVar(&pathSplitWin, "s", false, "OS path split windows backslash")
 	flag.StringVar(&root, "r", "", "DB insert prefix for directory path")
@@ -85,6 +93,8 @@ func main() {
 	backend1Formatter := logging.NewBackendFormatter(backend1, format)
 	backend2Formatter := logging.NewBackendFormatter(backend2, format)
 	logging.SetBackend(backend1Formatter, backend2Formatter)
+
+	log.Infof("Set DATABASE as %s", dbpath)
 
 	// Command check
 	if _, err := exec.LookPath("locate"); err != nil {
@@ -171,8 +181,8 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	)
 	// 検索コンフィグ構造体
 	loc := cmd.Locater{
-		Limit: limit, // 検索件数上限
-		// Dbpath:       dbpath,       // /var/lib/mlocate以外のディレクトリパス
+		Limit:        limit,        // 検索件数上限
+		Dbpath:       dbpath,       // /var/lib/mlocate以外のディレクトリパス
 		PathSplitWin: pathSplitWin, // path separatorを\にする
 		Root:         root,         // Path prefix insert
 		Trim:         trim,         // Path prefix trim

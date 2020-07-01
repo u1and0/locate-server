@@ -41,7 +41,7 @@ var (
 
 var log = logging.MustGetLogger("main")
 var format = logging.MustStringFormatter(
-	`%{color}[%{level}] %{time:2006-01-02 15:05.000} %{message} %{color:reset}`,
+	`%{color}[%{level:.6s}] ▶ %{time:2006-01-02 15:05.000} %{message} %{color:reset}`,
 )
 
 func main() {
@@ -68,20 +68,15 @@ func main() {
 		return // versionを表示して終了
 	}
 
-	// Command check
-	if _, err := exec.LookPath("locate"); err != nil {
-		log.Critical(err)
-	}
-
 	// Directory check
 	if _, err := os.Stat(LOCATEDIR); os.IsNotExist(err) {
-		log.Critical(err)
+		log.Panic(err)
 	}
 
 	// Log setting
 	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		log.Criticalf("Cannot open logfile %v", err.Error())
+		log.Panicf("Cannot open logfile %v", err.Error())
 	}
 	defer logfile.Close()
 	// stdoutとlogfileへ出力する
@@ -90,6 +85,11 @@ func main() {
 	backend1Formatter := logging.NewBackendFormatter(backend1, format)
 	backend2Formatter := logging.NewBackendFormatter(backend2, format)
 	logging.SetBackend(backend1Formatter, backend2Formatter)
+
+	// Command check
+	if _, err := exec.LookPath("locate"); err != nil {
+		log.Panic(err)
+	}
 
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要

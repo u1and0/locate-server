@@ -1,13 +1,14 @@
 package locater
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
 
 func TestLocateStats(t *testing.T) {
-	// os.Setenv("LOCATE_PATH", "../test/mlocatetest.db:../test/mlocatetest1.db")
-	b, _ := LocateStats("../test/mlocatetest.db:../test/mlocatetest1.db")
+	os.Setenv("LOCATE_PATH", "../test/mlocatetest.db:../test/mlocatetest1.db")
+	b, _ := LocateStats()
 	actual := strings.Fields(string(b))
 	expected := strings.Fields(`
 	データベース ../test/mlocatetest.db:
@@ -23,18 +24,19 @@ func TestLocateStats(t *testing.T) {
 	`)
 	for i := range actual {
 		if actual[i] != expected[i] {
-			t.Fatalf("got: %v want: %v", actual[i], expected[i])
+			t.Fatalf("got: %v want: %v\n%s",
+				actual[i], expected[i], "このテストは/var/lib/mlocate.dbがあると失敗する")
 		}
 	}
 }
 
 func TestLocateStatsSum(t *testing.T) {
-	// os.Setenv("LOCATE_PATH", "../test/mlocatetest.db:../test/mlocatetest1.db")
-	b, _ := LocateStats("../test/mlocatetest.db:../test/mlocatetest1.db")
+	b, _ := LocateStats()
 	actual, _ := LocateStatsSum(b)
 	expected := uint64(74865)
 	if actual != expected {
-		t.Fatalf("got: %d want: %d\n$ locate -S\n%v", actual, expected, string(b))
+		t.Fatalf("got: %d want: %d\n$ locate -S\n%v\n%s",
+			actual, expected, string(b), "このテストは/var/lib/mlocate.dbがあると失敗する")
 	}
 }
 
@@ -65,18 +67,17 @@ func TestLocater_highlightString(t *testing.T) {
 }
 
 func TestLocater_CmdGen(t *testing.T) {
+	os.Setenv("LOCATE_PATH", "../test/mlocatetest.db:../test/mlocatetest1.db")
 	// Single process test
 	l := Locater{
 		Process:      1,
 		SearchWords:  []string{"the", "path", "for", "search"},
 		ExcludeWords: []string{"exclude", "paths"},
-		Dbpath:       "/var/lib/mlocate/mlocatetest.db",
 	}
 	actual := l.CmdGen()
 	expected := [][]string{
 		[]string{"locate", "--ignore-case", "--quiet",
-			"--regex", "the.*path.*for.*search",
-			"--database", "/var/lib/mlocate/mlocatetest.db"},
+			"--regex", "the.*path.*for.*search"},
 		[]string{"grep", "-ivE", "exclude"},
 		[]string{"grep", "-ivE", "paths"},
 	}
@@ -94,7 +95,6 @@ func TestLocater_CmdGen(t *testing.T) {
 		Process:      0,
 		SearchWords:  []string{"the", "path", "for", "search"},
 		ExcludeWords: []string{"exclude", "paths"},
-		Dbpath:       "../test/mlocatetest.db:../test/mlocatetest1.db",
 	}
 	actual = l.CmdGen()
 	expected = [][]string{

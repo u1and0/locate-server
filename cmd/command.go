@@ -1,6 +1,7 @@
 package locater
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -26,12 +27,8 @@ type Stats struct {
 }
 
 // LocateStats : Result of `locate -S`
-func LocateStats(path string) ([]byte, error) {
-	opt := []string{"-S"}
-	if path != "" {
-		opt = append(opt, "--database", path)
-	}
-	b, err := exec.Command("locate", opt...).Output()
+func LocateStats() ([]byte, error) {
+	b, err := exec.Command("locate", "-S").Output()
 	return b, err
 }
 
@@ -98,7 +95,7 @@ func highlightString(s string, words []string) string {
 //
 // Process = 1以外のとき
 // マルチプロセスlocateを発行する
-// echo DBPATH | sed -e 's/:/\n/g'| xargs -P0 -I@ locate 検索語 | grep -v 除外語 | grep -v 除外語...
+// echo $LOCATE_PATH | sed -e 's/:/\n/g'| xargs -P0 -I@ locate 検索語 | grep -v 除外語 | grep -v 除外語...
 func (l *Locater) CmdGen() (pipeline [][]string) {
 	locate := []string{
 		"locate",
@@ -111,7 +108,7 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))
 
 	if l.Process != 1 { // Multi processing search
-		echo := []string{"echo", l.Dbpath}
+		echo := []string{"echo", os.Getenv("LOCATE_PATH")}
 		sed := []string{"sed", "-e", "s/:/\\n/g"}
 		// xargs -P 2 -I@
 		xargs := []string{"xargs", "-P", strconv.Itoa(l.Process), "-I@"}
@@ -124,9 +121,6 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 		//		xargs -P 2 -I@ locate -iq --regex hoge.*foo --database @
 		pipeline = append(pipeline, echo, sed, xargs)
 	} else { // Single processing search
-		if l.Dbpath != "" { // Replace the default database to Dbpath
-			locate = append(locate, "--database", l.Dbpath)
-		}
 		pipeline = append(pipeline, locate)
 	}
 

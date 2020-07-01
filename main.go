@@ -47,23 +47,8 @@ var format = logging.MustStringFormatter(
 
 func main() {
 	flag.IntVar(&limit, "l", 1000, "Maximum limit for results")
-	flag.StringVar(&dbpath,
-		"d",
-		func() string {
-			l := os.Getenv("LOCATE_PATH")
-			os.Setenv("LOCATE_PATH", "")
-			defer os.Setenv("LOCATE_PATH", l) // 終了時に環境変数を元に戻す
-			return l
-		}(), // -dが指定されなければLOCATE_PATHをデフォルト値とする
-		"Path of locate database file (ex: /path/something.db:/path/another.db)",
-	)
-	// -d オプションが与えられなければ、LOCATE_PATHの値を探して置き換える
-	// LOCATE_PATHが指定されていて、-dオプションを使うと２重に検索されるのを回避するため
-	// if dbpath == "" {
-	// 	dbpath = os.Getenv("LOCATE_PATH")
-	// 	os.Setenv("LOCATE_PATH", "")
-	// 	defer os.Setenv("LOCATE_PATH", dbpath) // 終了時に環境変数をもとに戻す
-	// }
+	flag.StringVar(&dbpath, "d", "",
+		"Path of locate database file (ex: /path/something.db:/path/another.db)")
 	flag.BoolVar(&pathSplitWin, "s", false, "OS path split windows backslash")
 	flag.StringVar(&root, "r", "", "DB insert prefix for directory path")
 	flag.StringVar(&trim, "t", "", "DB trim prefix for directory path")
@@ -94,19 +79,25 @@ func main() {
 	backend2Formatter := logging.NewBackendFormatter(backend2, format)
 	logging.SetBackend(backend1Formatter, backend2Formatter)
 
-	log.Infof("Set DATABASE as %s", dbpath)
-
 	// Command check
 	if _, err := exec.LookPath("locate"); err != nil {
 		log.Panic(err)
 	}
+
+	// Set LOCATE_PATH
+	if dbpath != "" {
+		if err := os.Setenv("LOCATE_PATH", dbpath); err != nil {
+			log.Panic(err)
+		}
+	}
+	log.Infof("Set DATABASE as %s", os.Getenv("LOCATE_PATH"))
 
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
 	cache = cmd.CacheMap{}
 	// cacheを廃棄するかの判断に必要
 	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
-	locateS, err = cmd.LocateStats(dbpath)
+	locateS, err = cmd.LocateStats()
 	if err != nil {
 		log.Error(err)
 	}
@@ -157,7 +148,7 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 // `locate -S` page
 func locateStatusPage(w http.ResponseWriter, r *http.Request) {
 	// lとerrはstring型とerr型で異なるのでif-elseが冗長になる
-	if l, err := cmd.LocateStats(dbpath); err == nil {
+	if l, err := cmd.LocateStats(); err == nil {
 		fmt.Fprintf(w, `<html>
 					<head><title>Locate DB Status</title></head>
 					<body>
@@ -182,7 +173,6 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	// 検索コンフィグ構造体
 	loc := cmd.Locater{
 		Limit:        limit,        // 検索件数上限
-		Dbpath:       dbpath,       // /var/lib/mlocate以外のディレクトリパス
 		PathSplitWin: pathSplitWin, // path separatorを\にする
 		Root:         root,         // Path prefix insert
 		Trim:         trim,         // Path prefix trim
@@ -204,7 +194,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		/* LocateStats()の結果が前と異なっていたら
 		locateS更新
 		cacheを初期化 */
-		if l, err := cmd.LocateStats(dbpath); string(l) != string(locateS) { // DB更新されていたら
+		if l, err := cmd.LocateStats(); string(l) != string(locateS) { // DB更新されていたら
 			if err != nil {
 				log.Error(err)
 			}

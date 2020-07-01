@@ -91,8 +91,15 @@ func highlightString(s string, words []string) string {
 	return s
 }
 
-// CmdGen : locate 検索語 | grep -v 除外語 | grep -v 除外語...を発行する
-func (l *Locater) CmdGen() [][]string {
+// CmdGen : shell実行用パイプラインコマンドを発行する
+//
+// Process = 1のとき
+// locate 検索語 | grep -v 除外語 | grep -v 除外語...
+//
+// Process = 1以外のとき
+// マルチプロセスlocateを発行する
+// echo DBPATH | sed -e 's/:/\n/g'| xargs -P0 -I@ locate 検索語 | grep -v 除外語 | grep -v 除外語...
+func (l *Locater) CmdGen() (pipeline [][]string) {
 	locate := []string{
 		"locate",
 		"--ignore-case", // Ignore case distinctions when matching patterns.
@@ -100,11 +107,8 @@ func (l *Locater) CmdGen() [][]string {
 	}
 
 	// Include PATTERNs
-	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))
 	// -> locate --ignore-case --quiet --regex hoge.*my.*name
-
-	// Pipeline process
-	exec := [][]string{}
+	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))
 
 	// Multi processing search
 	if l.Process != 1 {
@@ -119,20 +123,20 @@ func (l *Locater) CmdGen() [][]string {
 		// echo /path/to/some.db:/path/to/another.db |
 		//		sed -e 's/:/\n/g' |
 		//		xargs -P 2 -I@ locate -iq --regex hoge.*foo --database @
-		exec = append(exec, echo, sed, xargs)
+		pipeline = append(pipeline, echo, sed, xargs)
 	} else {
 		if l.Dbpath != "" { // Replace the default database to Dbpath
 			locate = append(locate, "--database", l.Dbpath)
 		}
-		exec = append(exec, locate)
+		pipeline = append(pipeline, locate)
 	}
 
 	// Exclude PATTERNs
 	for _, ex := range l.ExcludeWords {
 		// COMMAND | grep -ivE EXCLUDE1 | grep -ivE EXCLUDE2
-		exec = append(exec, []string{"grep", "-ivE", ex})
+		pipeline = append(pipeline, []string{"grep", "-ivE", ex})
 	}
-	return exec
+	return
 }
 
 // Cmd : locate検索し、

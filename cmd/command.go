@@ -1,7 +1,6 @@
 package locater
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,7 +9,10 @@ import (
 	"strings"
 
 	pipeline "github.com/mattn/go-pipeline"
+	"github.com/op/go-logging"
 )
+
+var log = logging.MustGetLogger("locater")
 
 // PathMap is pairs of fullpath:dirpath
 type PathMap struct {
@@ -129,7 +131,7 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 		pipeline = append(pipeline, []string{"grep", "-ivE", ex})
 	}
 	if l.Debug {
-		fmt.Printf("Execute command %v\n", pipeline)
+		log.Debugf("Execute command %v", pipeline)
 	}
 	return
 }

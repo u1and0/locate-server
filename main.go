@@ -42,9 +42,6 @@ var (
 )
 
 var log = logging.MustGetLogger("main")
-var format = logging.MustStringFormatter(
-	`%{color}[%{level:.6s}] ▶ %{time:2006-01-02 15:04:09} %{message} %{color:reset}`,
-)
 
 func main() {
 	flag.IntVar(&limit, "l", 1000, "Maximum limit for results")
@@ -70,16 +67,11 @@ func main() {
 
 	// Log setting
 	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		log.Panicf("Cannot open logfile %v", err.Error())
-	}
 	defer logfile.Close()
-	// stdoutとlogfileへ出力する
-	backend1 := logging.NewLogBackend(os.Stdout, "", 0)
-	backend2 := logging.NewLogBackend(logfile, "", 0)
-	backend1Formatter := logging.NewBackendFormatter(backend1, format)
-	backend2Formatter := logging.NewBackendFormatter(backend2, format)
-	logging.SetBackend(backend1Formatter, backend2Formatter)
+	cmd.SetLogger(logfile)
+	if err != nil {
+		log.Panicf("Cannot open logfile %v", err)
+	}
 
 	// Command check
 	if _, err := exec.LookPath("locate"); err != nil {
@@ -103,6 +95,7 @@ func main() {
 	if err != nil {
 		log.Error(err)
 	}
+	// 検索対象ファイル数の合計値を算出
 	var n uint64
 	n, err = cmd.LocateStatsSum(locateS)
 	if err != nil {

@@ -1,6 +1,7 @@
 package locater
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -95,7 +96,7 @@ func highlightString(s string, words []string) string {
 //
 // Process = 1以外のとき
 // マルチプロセスlocateを発行する
-// echo $LOCATE_PATH | sed -e 's/:/\n/g'| xargs -P0 -I@ locate 検索語 | grep -v 除外語 | grep -v 除外語...
+// echo $LOCATE_PATH | tr :, '\n' | xargs -P0 -I@ locate 検索語 | grep -v 除外語 | grep -v 除外語...
 func (l *Locater) CmdGen() (pipeline [][]string) {
 	locate := []string{
 		"locate",
@@ -109,17 +110,15 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 
 	if l.Process != 1 { // Multi processing search
 		echo := []string{"echo", os.Getenv("LOCATE_PATH")}
-		sed := []string{"sed", "-e", "s/:/\\n/g"}
+		tr := []string{"tr", ":", "\\n"}
 		// xargs -P 2 -I@
-		xargs := []string{"xargs", "-P", strconv.Itoa(l.Process), "-I@"}
+		xargs := []string{"xargs", "-P", strconv.Itoa(l.Process)}
 		// xargs -P 2 -I@ locate -iq --regex hoge.*foo
 		xargs = append(xargs, locate...)
-		// xargs -P 2 -I@ locate -iq --regex hoge.*foo --database @
-		xargs = append(xargs, "--database @")
-		// echo /path/to/some.db:/path/to/another.db |
-		//		sed -e 's/:/\n/g' |
-		//		xargs -P 2 -I@ locate -iq --regex hoge.*foo --database @
-		pipeline = append(pipeline, echo, sed, xargs)
+		// xargs -P 2 -I@ locate -iq --regex hoge.*foo --database
+		xargs = append(xargs, "--database")
+		// echo $LOCATE_PATH | tr : '\n' | xargs -P 2 -I@ locate -iq --regex hoge.*foo --database
+		pipeline = append(pipeline, echo, tr, xargs)
 	} else { // Single processing search
 		pipeline = append(pipeline, locate)
 	}
@@ -128,6 +127,9 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 	for _, ex := range l.ExcludeWords {
 		// COMMAND | grep -ivE EXCLUDE1 | grep -ivE EXCLUDE2
 		pipeline = append(pipeline, []string{"grep", "-ivE", ex})
+	}
+	if l.Debug {
+		fmt.Printf("Execute command %v\n", pipeline)
 	}
 	return
 }

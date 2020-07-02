@@ -38,11 +38,12 @@ var (
 	locateS      []byte
 	stats        cmd.Stats
 	process      int
+	debug        bool
 )
 
 var log = logging.MustGetLogger("main")
 var format = logging.MustStringFormatter(
-	`%{color}[%{level:.6s}] ▶ %{time:2006-01-02 15:05.000} %{message} %{color:reset}`,
+	`%{color}[%{level:.6s}] ▶ %{time:2006-01-02 15:04:09} %{message} %{color:reset}`,
 )
 
 func main() {
@@ -53,6 +54,7 @@ func main() {
 	flag.StringVar(&root, "r", "", "DB insert prefix for directory path")
 	flag.StringVar(&trim, "t", "", "DB trim prefix for directory path")
 	flag.IntVar(&process, "P", 1, "Search in multi process by `xargs -P`")
+	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()
@@ -176,6 +178,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		Root:         root,         // Path prefix insert
 		Trim:         trim,         // Path prefix trim
 		Process:      process,      // xargsによるマルチプロセス数
+		Debug:        debug,        //Debugフラグ
 	}
 	// Modify query
 	receiveValue = r.FormValue("query")

@@ -147,22 +147,21 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 
 // `locate -S` page
 func locateStatusPage(w http.ResponseWriter, r *http.Request) {
-	// lとerrはstring型とerr型で異なるのでif-elseが冗長になる
-	if l, err := cmd.LocateStats(); err == nil {
-		fmt.Fprintf(w, `<html>
-						<head><title>Locate DB Status</title></head>
-						<body>
-							<pre>%s</pre>
-						</body>
-						</html>`, l)
-	} else {
-		fmt.Fprintf(w, `<html>
-						<head><title>Locate DB Status</title></head>
-						<body>
-							<pre>%s</pre>
-						</body>
-						</html>`, err)
-	}
+	fmt.Fprintf(w, `<html>
+					<head><title>Locate DB Status</title></head>
+					<body>
+						<pre>%s</pre>
+					</body>
+					</html>`,
+		func() (s interface{}) {
+			if l, err := cmd.LocateStats(); err == nil {
+				s = l
+			} else {
+				s = err.Error()
+			}
+			return
+		}(),
+	)
 }
 
 // locate検索し、結果をhtmlに書き込む

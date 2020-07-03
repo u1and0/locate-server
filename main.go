@@ -15,13 +15,15 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "1.1.0"
+	VERSION = "2.0.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
 	// /var/lib/mlocate以下すべてを検索対象とするときのLOCATE_PATHの指定方法
 	// LOCATE_PATH=$(paste -sd: <(find /var/lib/mlocate -name '*.db'))
 	LOCATEDIR = "/var/lib/mlocate"
+	// DEFAULTDB : locateがデフォルトで検索するdbpath
+	DEFAULTDB = "/var/lib/mlocate/mlocate.db"
 )
 
 var (
@@ -46,27 +48,8 @@ var (
 var log = logging.MustGetLogger("main")
 
 func main() {
-	// Log setting
-	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	defer logfile.Close()
-	setLogger(logfile)
-	if err != nil {
-		log.Panicf("Cannot open logfile %v", err)
-	}
-
-	// Flag parse
-	if d := os.Getenv("LOCATE_PATH"); d != "" {
-		dbpath = d // $LOCATE_PATHが空でなければdbpathを上書きする
-		if err := os.Setenv("LOCATE_PATH", ""); err != nil {
-			log.Panicf("Cannot set env variable %s", err)
-		}
-		log.Info("Set $LOCATE_PATH None")
-		defer log.Infof("Set $LOCATE_PATH %s", d)
-		defer os.Setenv("LOCATE_PATH", d)
-	}
-	flag.StringVar(&dbpath, "d", dbpath, // -dが指定されていなければ$LOCATE_PATHを参照する
+	flag.StringVar(&dbpath, "d", DEFAULTDB,
 		"Path of locate database file (ex: /path/something.db:/path/another.db)")
-	log.Infof("Set dbpath: %s", dbpath)
 
 	flag.IntVar(&limit, "l", 1000, "Maximum limit for results")
 	flag.BoolVar(&pathSplitWin, "s", false, "OS path split windows backslash")
@@ -78,19 +61,39 @@ func main() {
 	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()
 
+	// Version info
+	// フラグ解析以降はここより後に書く
 	if showVersion {
 		fmt.Println("version:", VERSION)
 		return // versionを表示して終了
 	}
 
+	// Log setting
+	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	defer logfile.Close()
+	setLogger(logfile) // log.XXX()を使うものはここより後に書く
+	if err != nil {
+		log.Panicf("Cannot open logfile %v", err)
+	}
+
+	// DB path flag parse
+	// dbpathがデフォルトであり かつ $LOCATE_PATHが指定されていれば(=空でなければ)
+	if d := os.Getenv("LOCATE_PATH"); dbpath == DEFAULTDB && d != "" {
+		dbpath = d // dbpathを上書きする
+		if err := os.Setenv("LOCATE_PATH", ""); err != nil {
+			log.Panicf("Cannot set env variable %s", err)
+		}
+	}
+	log.Infof("Set dbpath: %s", dbpath)
+
 	// Directory check
 	if _, err := os.Stat(LOCATEDIR); os.IsNotExist(err) {
-		log.Panic(err)
+		log.Panic(err) // /var/lib/mlocateがなければ終了
 	}
 
 	// Command check
 	if _, err := exec.LookPath("locate"); err != nil {
-		log.Panic(err)
+		log.Panic(err) // locateコマンドがなければ終了
 	}
 
 	// Initialize cache

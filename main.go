@@ -29,7 +29,9 @@ var (
 	receiveValue string
 	err          error
 	limit        int
-	dbpath       string // dbpathオプションはLOCATE_PATHを上書きする
+	// dbpathオプションがなければ$LOCATE_PATHを参照する
+	// $LOCATE_PATHも空のときはデフォルト値"/var/lib/mlocate/mlocate.db"を使用する
+	dbpath       = "/var/lib/mlocate/mlocate.db"
 	pathSplitWin bool
 	root         string
 	trim         string
@@ -44,9 +46,29 @@ var (
 var log = logging.MustGetLogger("main")
 
 func main() {
-	flag.IntVar(&limit, "l", 1000, "Maximum limit for results")
-	flag.StringVar(&dbpath, "d", "",
+	// Log setting
+	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	defer logfile.Close()
+	setLogger(logfile)
+	if err != nil {
+		log.Panicf("Cannot open logfile %v", err)
+	}
+
+	// Flag parse
+	if d := os.Getenv("LOCATE_PATH"); d != "" {
+		dbpath = d // $LOCATE_PATHが空でなければdbpathを上書きする
+		if err := os.Setenv("LOCATE_PATH", ""); err != nil {
+			log.Panicf("Cannot set env variable %s", err)
+		}
+		log.Info("Set $LOCATE_PATH None")
+		defer log.Infof("Set $LOCATE_PATH %s", d)
+		defer os.Setenv("LOCATE_PATH", d)
+	}
+	flag.StringVar(&dbpath, "d", dbpath, // -dが指定されていなければ$LOCATE_PATHを参照する
 		"Path of locate database file (ex: /path/something.db:/path/another.db)")
+	log.Infof("Set dbpath: %s", dbpath)
+
+	flag.IntVar(&limit, "l", 1000, "Maximum limit for results")
 	flag.BoolVar(&pathSplitWin, "s", false, "OS path split windows backslash")
 	flag.StringVar(&root, "r", "", "DB insert prefix for directory path")
 	flag.StringVar(&trim, "t", "", "DB trim prefix for directory path")
@@ -55,6 +77,7 @@ func main() {
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()
+
 	if showVersion {
 		fmt.Println("version:", VERSION)
 		return // versionを表示して終了
@@ -65,33 +88,17 @@ func main() {
 		log.Panic(err)
 	}
 
-	// Log setting
-	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	defer logfile.Close()
-	cmd.SetLogger(logfile)
-	if err != nil {
-		log.Panicf("Cannot open logfile %v", err)
-	}
-
 	// Command check
 	if _, err := exec.LookPath("locate"); err != nil {
 		log.Panic(err)
 	}
-
-	// Set LOCATE_PATH
-	if dbpath != "" {
-		if err := os.Setenv("LOCATE_PATH", dbpath); err != nil {
-			log.Panic(err)
-		}
-	}
-	log.Infof("Set DATABASE as %s", os.Getenv("LOCATE_PATH"))
 
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
 	cache = cmd.CacheMap{}
 	// cacheを廃棄するかの判断に必要
 	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
-	locateS, err = cmd.LocateStats()
+	locateS, err = cmd.LocateStats(dbpath)
 	if err != nil {
 		log.Error(err)
 	}
@@ -111,6 +118,18 @@ func main() {
 	http.HandleFunc("/searching", addResult)
 	http.HandleFunc("/status", locateStatusPage)
 	http.ListenAndServe(":8080", nil)
+}
+
+// setLogger is printing out log message to STDOUT and LOGFILE
+func setLogger(f *os.File) {
+	var format = logging.MustStringFormatter(
+		`%{color}[%{level:.6s}] ▶ %{time:2006/01/02 15:04:05.000} %{shortfile} %{message} %{color:reset}`,
+	)
+	backend1 := logging.NewLogBackend(os.Stdout, "", 0)
+	backend2 := logging.NewLogBackend(f, "", 0)
+	backend1Formatter := logging.NewBackendFormatter(backend1, format)
+	backend2Formatter := logging.NewBackendFormatter(backend2, format)
+	logging.SetBackend(backend1Formatter, backend2Formatter)
 }
 
 // html デフォルトの説明文
@@ -149,7 +168,7 @@ func locateStatusPage(w http.ResponseWriter, r *http.Request) {
 					</body>
 					</html>`,
 		func() (s interface{}) {
-			if l, err := cmd.LocateStats(); err == nil {
+			if l, err := cmd.LocateStats(dbpath); err == nil {
 				s = l
 			} else {
 				s = err.Error()
@@ -167,6 +186,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	// 検索コンフィグ構造体
 	loc := cmd.Locater{
 		Limit:        limit,        // 検索件数上限
+		Dbpath:       dbpath,       // 検索対象パス
 		PathSplitWin: pathSplitWin, // path separatorを\にする
 		Root:         root,         // Path prefix insert
 		Trim:         trim,         // Path prefix trim
@@ -189,7 +209,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		/* LocateStats()の結果が前と異なっていたら
 		locateS更新
 		cacheを初期化 */
-		if l, err := cmd.LocateStats(); string(l) != string(locateS) { // DB更新されていたら
+		if l, err := cmd.LocateStats(dbpath); string(l) != string(locateS) { // DB更新されていたら
 			if err != nil {
 				log.Error(err)
 			}

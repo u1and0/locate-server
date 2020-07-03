@@ -7,16 +7,21 @@ import (
 )
 
 func TestLocateStats(t *testing.T) {
-	os.Setenv("LOCATE_PATH", "../test/mlocatetest.db:../test/mlocatetest1.db")
-	b, _ := LocateStats()
+	dbpath := "../test/etc.db:../test/root.db:../test/usr.db"
+	b, _ := LocateStats(dbpath)
 	actual := strings.Fields(string(b))
 	expected := strings.Fields(`
-	データベース ../test/mlocatetest.db:
+		データベース ../test/etc.db:
 		67 辞書
 		1,155 ファイル
 		ファイル名に 43,839 バイト
 		データベースに保存するのに 23,198 バイト使いました
-	データベース ../test/mlocatetest1.db:
+		データベース ../test/root.db:
+		316 辞書
+		1,772 ファイル
+		ファイル名に 140,093 バイト
+		データベースに保存するのに 111,148 バイト使いました
+		データベース ../test/usr.db:
 		5,581 辞書
 		73,710 ファイル
 		ファイル名に 3,294,594 バイト
@@ -31,12 +36,22 @@ func TestLocateStats(t *testing.T) {
 }
 
 func TestLocateStatsSum(t *testing.T) {
-	b, _ := LocateStats()
-	actual, _ := LocateStatsSum(b)
-	expected := uint64(74865)
+	if _, err := os.Stat("/var/lib/mlocate/mlocate.db"); err == nil {
+		t.Fatal("このテストは/var/lib/mlocate/mlocate.dbがあると失敗する")
+	}
+	dbpath := "../test/etc.db:../test/root.db:../test/usr.db"
+	b, err := LocateStats(dbpath)
+	if err != nil {
+		t.Fatalf("LocateStats error occur %s", err)
+	}
+	actual, err := LocateStatsSum(b)
+	if err != nil {
+		t.Fatalf("LocateStatsSum error occur %s", err)
+	}
+	expected := uint64(76637)
 	if actual != expected {
-		t.Fatalf("got: %d want: %d\n$ locate -S\n%v\n%s",
-			actual, expected, string(b), "このテストは/var/lib/mlocate.dbがあると失敗する")
+		t.Fatalf("got: %v want: %v\n$ locate -S\n%v\n",
+			actual, expected, string(b))
 	}
 }
 
@@ -67,17 +82,18 @@ func TestLocater_highlightString(t *testing.T) {
 }
 
 func TestLocater_CmdGen(t *testing.T) {
-	os.Setenv("LOCATE_PATH", "../test/mlocatetest.db:../test/mlocatetest1.db")
 	// Single process test
 	l := Locater{
 		Process:      1,
 		SearchWords:  []string{"the", "path", "for", "search"},
 		ExcludeWords: []string{"exclude", "paths"},
+		Dbpath:       "../test/mlocatetest.db:../test/mlocatetest1.db",
 	}
 	actual := l.CmdGen()
 	expected := [][]string{
 		[]string{"locate", "--ignore-case", "--quiet",
-			"--regex", "the.*path.*for.*search"},
+			"--regex", "the.*path.*for.*search",
+			"--database", "../test/mlocatetest.db:../test/mlocatetest1.db"},
 		[]string{"grep", "-ivE", "exclude"},
 		[]string{"grep", "-ivE", "paths"},
 	}
@@ -95,6 +111,7 @@ func TestLocater_CmdGen(t *testing.T) {
 		Process:      0,
 		SearchWords:  []string{"the", "path", "for", "search"},
 		ExcludeWords: []string{"exclude", "paths"},
+		Dbpath:       "../test/mlocatetest.db:../test/mlocatetest1.db",
 	}
 	actual = l.CmdGen()
 	expected = [][]string{

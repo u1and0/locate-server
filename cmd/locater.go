@@ -9,6 +9,7 @@ import (
 type Locater struct {
 	SearchWords  []string // 検索キーワード
 	ExcludeWords []string // 検索から取り除くキーワード
+	Dbpath       string   // 検索対象DBパス /path/to/database:/path/to/another
 	Limit        int      // 検索結果HTML表示制限数
 	PathSplitWin bool     // TrueでWindowsパスセパレータを使用する
 	Root         string   // 追加するドライブパス名

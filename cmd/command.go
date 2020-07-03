@@ -1,6 +1,7 @@
 package locater
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -8,7 +9,10 @@ import (
 	"strings"
 
 	pipeline "github.com/mattn/go-pipeline"
+	"github.com/op/go-logging"
 )
+
+var log = logging.MustGetLogger("locater")
 
 // PathMap is pairs of fullpath:dirpath
 type PathMap struct {
@@ -27,12 +31,7 @@ type Stats struct {
 
 // LocateStats : Result of `locate -S`
 func LocateStats(path string) ([]byte, error) {
-	opt := []string{"-S"}
-	if path != "" {
-		opt = append(opt, "-d", path)
-	}
-	b, err := exec.Command("locate", opt...).Output()
-	return b, err
+	return exec.Command("locate", "-Sd", path).Output()
 }
 
 // LocateStatsSum : locateされるファイル数をDB情報から合計する
@@ -91,39 +90,78 @@ func highlightString(s string, words []string) string {
 	return s
 }
 
-// CmdGen : locate 検索語 | grep -v 除外語 | grep -v 除外語...を発行する
-func (l *Locater) CmdGen() [][]string {
-	// -i: Ignore case distinctions when matching patterns.
-	locate := []string{"locate",
-		"--ignore-case",
-		"--quiet", // report no error messages about reading databases
-	}
-	if l.Dbpath != "" {
-		// -d: Replace the default database with DBPATH.
-		locate = append(locate, "-d", l.Dbpath)
+// CmdGen : shell実行用パイプラインコマンドを発行する
+//
+// Process = 1のとき
+// locate 検索語 | grep -v 除外語 | grep -v 除外語...
+//
+// Process = 1以外のとき
+// マルチプロセスlocateを発行する
+// echo $LOCATE_PATH | tr :, '\n' | xargs -P0 -I@ locate 検索語 | grep -v 除外語 | grep -v 除外語...
+func (l *Locater) CmdGen() (pipeline [][]string) {
+	locate := []string{
+		"locate",
+		"--ignore-case", // Ignore case distinctions when matching patterns.
+		"--quiet",       // Report no error messages about reading databases
 	}
 
 	// Include PATTERNs
+	// -> locate --ignore-case --quiet --regex hoge.*my.*name
 	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))
-	// -> hoge.*my.*name
+
+	// Add database option
+	// -> locate --ignore-case --quiet --regex hoge.*my.*name --database
+	locate = append(locate, "--database")
+
+	if l.Process != 1 { // Multi processing search
+		echo := []string{"echo", l.Dbpath}
+		tr := []string{"tr", ":", "\\n"}
+		// xargs -P 2 -I@
+		xargs := []string{"xargs", "-P", strconv.Itoa(l.Process)}
+		// xargs -P 2 -I@ locate -iq --regex hoge.*foo --database
+		xargs = append(xargs, locate...)
+		// echo $LOCATE_PATH | tr : '\n' | xargs -P 2 -I@ locate -iq --regex hoge.*foo --database
+		pipeline = append(pipeline, echo, tr, xargs)
+	} else { // Single processing search
+		locate = append(locate, l.Dbpath)
+		pipeline = append(pipeline, locate)
+	}
 
 	// Exclude PATTERNs
-	exec := [][]string{locate}
 	for _, ex := range l.ExcludeWords {
-		exec = append(exec, []string{"grep", "-ivE", ex})
+		// COMMAND | grep -ivE EXCLUDE1 | grep -ivE EXCLUDE2
+		pipeline = append(pipeline, []string{"grep", "-ivE", ex})
 	}
-	return exec
+	if l.Debug {
+		log.Debugf("Execute command %v", pipeline)
+	}
+	return
 }
 
 // Cmd : locate検索し、
 // 結果をPathMapのスライス(最大l.Limit件(limit = default 1000))にして返す
 // 更に検索結果数、あれば検索時のエラーを返す
 func (l *Locater) Cmd() ([]PathMap, uint64, error) {
+	results := make([]PathMap, 0, l.Limit)
+	var resultsNum uint64
+
+	// LOCATE_PATH と--databaseオプション両方使うと二重に検索されるため
+	// LOCATE_PATHの中身を空にしておく
+	if l.Process != 1 {
+		lp := os.Getenv("LOCATE_PATH")
+		defer os.Setenv("LOCATE_PATH", lp) // 関数終了時にLOCATE_PATHを元に戻す
+		if err := os.Setenv("LOCATE_PATH", ""); err != nil {
+			log.Panicf("Cannot set env variable %v", err)
+		}
+	}
 	out, err := pipeline.Output(l.CmdGen()...)
+	if err != nil {
+		return results, resultsNum, err
+	}
 	outslice := strings.Split(string(out), "\n")
 	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
+	resultsNum = uint64(len(outslice))
 
-	results := make([]PathMap, 0, l.Limit)
 	/* Why not array but slice?
 	検索結果の数だけ要素を持ったスライスを返したい
 	検索結果がなければ0要素のスライスを返したい
@@ -169,5 +207,5 @@ func (l *Locater) Cmd() ([]PathMap, uint64, error) {
 	}
 
 	// Max 1000 result & number of all result
-	return results, uint64(len(outslice)), err
+	return results, resultsNum, err
 }

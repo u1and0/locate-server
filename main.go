@@ -3,14 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"time"
 
 	cmd "locate-server/cmd"
+
+	"github.com/op/go-logging"
 )
 
 const (
@@ -19,6 +19,8 @@ const (
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
+	// /var/lib/mlocate以下すべてを検索対象とするときのLOCATE_PATHの指定方法
+	// LOCATE_PATH=$(paste -sd: <(find /var/lib/mlocate -name '*.db'))
 	LOCATEDIR = "/var/lib/mlocate"
 )
 
@@ -27,7 +29,9 @@ var (
 	receiveValue string
 	err          error
 	limit        int
-	dbpath       string
+	// dbpathオプションがなければ$LOCATE_PATHを参照する
+	// $LOCATE_PATHも空のときはデフォルト値"/var/lib/mlocate/mlocate.db"を使用する
+	dbpath       = "/var/lib/mlocate/mlocate.db"
 	pathSplitWin bool
 	root         string
 	trim         string
@@ -35,40 +39,59 @@ var (
 	getpushLog   string
 	locateS      []byte
 	stats        cmd.Stats
+	process      int
+	debug        bool
 )
 
+var log = logging.MustGetLogger("main")
+
 func main() {
+	// Log setting
+	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	defer logfile.Close()
+	setLogger(logfile)
+	if err != nil {
+		log.Panicf("Cannot open logfile %v", err)
+	}
+
+	// Flag parse
+	if d := os.Getenv("LOCATE_PATH"); d != "" {
+		dbpath = d // $LOCATE_PATHが空でなければdbpathを上書きする
+		if err := os.Setenv("LOCATE_PATH", ""); err != nil {
+			log.Panicf("Cannot set env variable %s", err)
+		}
+		log.Info("Set $LOCATE_PATH None")
+		defer log.Infof("Set $LOCATE_PATH %s", d)
+		defer os.Setenv("LOCATE_PATH", d)
+	}
+	flag.StringVar(&dbpath, "d", dbpath, // -dが指定されていなければ$LOCATE_PATHを参照する
+		"Path of locate database file (ex: /path/something.db:/path/another.db)")
+	log.Infof("Set dbpath: %s", dbpath)
+
 	flag.IntVar(&limit, "l", 1000, "Maximum limit for results")
-	locatePath := os.Getenv("LOCATE_PATH")
-	flag.StringVar(&dbpath, "d", locatePath, "path of locate database file (ex: /var/lib/mlocate/something.db)")
 	flag.BoolVar(&pathSplitWin, "s", false, "OS path split windows backslash")
 	flag.StringVar(&root, "r", "", "DB insert prefix for directory path")
 	flag.StringVar(&trim, "t", "", "DB trim prefix for directory path")
+	flag.IntVar(&process, "P", 1, "Search in multi process by `xargs -P`")
+	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()
+
 	if showVersion {
 		fmt.Println("version:", VERSION)
 		return // versionを表示して終了
 	}
 
-	// Command check
-	if _, err := exec.LookPath("locate"); err != nil {
-		log.Fatal(err)
-	}
-
 	// Directory check
 	if _, err := os.Stat(LOCATEDIR); os.IsNotExist(err) {
-		log.Fatal(err)
+		log.Panic(err)
 	}
 
-	// Log setting
-	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	if err != nil {
-		log.Fatalf("[ERROR] Cannot open logfile " + err.Error())
+	// Command check
+	if _, err := exec.LookPath("locate"); err != nil {
+		log.Panic(err)
 	}
-	defer logfile.Close()
-	log.SetOutput(io.MultiWriter(logfile, os.Stdout))
 
 	// Initialize cache
 	// nil map assignment errorを発生させないために必要
@@ -77,16 +100,17 @@ func main() {
 	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
 	locateS, err = cmd.LocateStats(dbpath)
 	if err != nil {
-		log.Println(err)
+		log.Error(err)
 	}
+	// 検索対象ファイル数の合計値を算出
 	var n uint64
 	n, err = cmd.LocateStatsSum(locateS)
 	if err != nil {
-		log.Println(err)
+		log.Error(err)
 	}
 	stats.Items = cmd.Ambiguous(n)
 	if err != nil {
-		log.Println(err)
+		log.Error(err)
 	}
 
 	// HTTP pages
@@ -94,6 +118,18 @@ func main() {
 	http.HandleFunc("/searching", addResult)
 	http.HandleFunc("/status", locateStatusPage)
 	http.ListenAndServe(":8080", nil)
+}
+
+// setLogger is printing out log message to STDOUT and LOGFILE
+func setLogger(f *os.File) {
+	var format = logging.MustStringFormatter(
+		`%{color}[%{level:.6s}] ▶ %{time:2006/01/02 15:04:05.000} %{shortfile} %{message} %{color:reset}`,
+	)
+	backend1 := logging.NewLogBackend(os.Stdout, "", 0)
+	backend2 := logging.NewLogBackend(f, "", 0)
+	backend1Formatter := logging.NewBackendFormatter(backend1, format)
+	backend2Formatter := logging.NewBackendFormatter(backend2, format)
+	logging.SetBackend(backend1Formatter, backend2Formatter)
 }
 
 // html デフォルトの説明文
@@ -125,22 +161,21 @@ func showInit(w http.ResponseWriter, r *http.Request) {
 
 // `locate -S` page
 func locateStatusPage(w http.ResponseWriter, r *http.Request) {
-	// lとerrはstring型とerr型で異なるのでif-elseが冗長になる
-	if l, err := cmd.LocateStats(dbpath); err == nil {
-		fmt.Fprintf(w, `<html>
+	fmt.Fprintf(w, `<html>
 					<head><title>Locate DB Status</title></head>
 					<body>
 						<pre>%s</pre>
 					</body>
-					</html>`, l)
-	} else {
-		fmt.Fprintf(w, `<html>
-						<head><title>Locate DB Status</title></head>
-						<body>
-							<pre>%s</pre>
-						</body>
-						</html>`, err)
-	}
+					</html>`,
+		func() (s interface{}) {
+			if l, err := cmd.LocateStats(dbpath); err == nil {
+				s = l
+			} else {
+				s = err.Error()
+			}
+			return
+		}(),
+	)
 }
 
 // locate検索し、結果をhtmlに書き込む
@@ -151,17 +186,19 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	// 検索コンフィグ構造体
 	loc := cmd.Locater{
 		Limit:        limit,        // 検索件数上限
-		Dbpath:       dbpath,       // /var/lib/mlocate以外のディレクトリパス
+		Dbpath:       dbpath,       // 検索対象パス
 		PathSplitWin: pathSplitWin, // path separatorを\にする
 		Root:         root,         // Path prefix insert
 		Trim:         trim,         // Path prefix trim
+		Process:      process,      // xargsによるマルチプロセス数
+		Debug:        debug,        //Debugフラグ
 	}
 	// Modify query
 	receiveValue = r.FormValue("query")
 
 	if loc.SearchWords, loc.ExcludeWords, err =
 		cmd.QueryParser(receiveValue); err != nil { // 検索文字チェックERROR
-		log.Printf("%s [ %-50s ] \n", err, receiveValue)
+		log.Errorf("%s [ %-50s ]", err, receiveValue)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintf(w, `<h4>
 							%s
@@ -174,14 +211,14 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		cacheを初期化 */
 		if l, err := cmd.LocateStats(dbpath); string(l) != string(locateS) { // DB更新されていたら
 			if err != nil {
-				log.Println(err)
+				log.Error(err)
 			}
 			locateS = l // 保持するDB情報の更新
 			var n uint64
 			n, err = cmd.LocateStatsSum(l) // 検索ファイル数の更新
 			stats.Items = cmd.Ambiguous(n)
 			if err != nil {
-				log.Println(err)
+				log.Error(err)
 			}
 			cache = cmd.CacheMap{} // キャッシュリセット
 		}
@@ -194,9 +231,9 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		stats.SearchTime = float64((time.Since(st)).Nanoseconds()) / float64(time.Millisecond)
 
 		if err != nil {
-			log.Printf("%s [ %-50s ]\n", err, receiveValue)
+			log.Errorf("%s [ %-50s ]", err, receiveValue)
 		}
-		log.Printf("%8dfiles %3.3fmsec %s [ %-50s ]\n",
+		log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]",
 			stats.ResultNum, stats.SearchTime, getpushLog, receiveValue)
 		/* normalizedWordではなく、あえてreceiveValueを
 		表示して生の検索文字列を記録したい*/
@@ -204,7 +241,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		// Update time
 		filestat, err := os.Stat(LOCATEDIR)
 		if err != nil {
-			log.Println(err)
+			log.Error(err)
 		}
 		layout := "2006-01-02 15:05"
 		stats.LastUpdateTime = filestat.ModTime().Format(layout)

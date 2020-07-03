@@ -45,6 +45,9 @@ func LocateStatsSum(b []byte) (uint64, error) {
 			ns := strings.Fields(w)[0]             // => 221,453
 			ns = strings.ReplaceAll(ns, ",", "")   // => 221453
 			ni, err = strconv.ParseUint(ns, 10, 0) // as uint64
+			if err != nil {
+				return sum, err
+			}
 			sum += ni
 		}
 	}

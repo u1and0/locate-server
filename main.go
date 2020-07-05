@@ -112,9 +112,6 @@ func main() {
 		log.Error(err)
 	}
 	stats.Items = cmd.Ambiguous(n)
-	if err != nil {
-		log.Error(err)
-	}
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)
@@ -220,9 +217,6 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 			var n uint64
 			n, err = cmd.LocateStatsSum(l) // 検索ファイル数の更新
 			stats.Items = cmd.Ambiguous(n)
-			if err != nil {
-				log.Error(err)
-			}
 			cache = cmd.CacheMap{} // キャッシュリセット
 		}
 

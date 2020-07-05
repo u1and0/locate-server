@@ -117,11 +117,13 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 
 	if l.Process != 1 { // Multi processing search
 		echo := []string{"echo", l.Dbpath}
-		tr := []string{"tr", ":", "\\n"}
+		tr := []string{"tr", ":", "'\\n'"}
 		// xargs -P 2 -I@
-		xargs := []string{"xargs", "-P", strconv.Itoa(l.Process)}
+		// xargs := []string{"xargs", "-P", strconv.Itoa(l.Process)}
+		xargs := []string{"xargs", "-P", strconv.Itoa(l.Process), "-I@"}
 		// xargs -P 2 -I@ locate -iq --regex hoge.*foo --database
 		xargs = append(xargs, locate...)
+		xargs = append(xargs, "@")
 		// echo $LOCATE_PATH | tr : '\n' | xargs -P 2 -I@ locate -iq --regex hoge.*foo --database
 		pipeline = append(pipeline, echo, tr, xargs)
 	} else { // Single processing search

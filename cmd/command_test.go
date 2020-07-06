@@ -56,8 +56,8 @@ func TestLocateStatsSum(t *testing.T) {
 }
 
 func Test_Ambiguous(t *testing.T) {
-	actual := []uint64{1000000000, 100000000, 1999999, 2345678, 30001, 4021, 56}
-	expected := []string{"10億", "1億", "1百万", "2百万", "3万", "4千", "56"}
+	actual := []uint64{1000000000, 100000000, 2345678, 30001, 4021, 56}
+	expected := []string{"10億", "1億", "234万", "3万", "4千", "56"}
 	for i, a := range actual {
 		ag := Ambiguous(a)
 		if ag != expected[i] {

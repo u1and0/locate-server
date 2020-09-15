@@ -59,8 +59,6 @@ func Ambiguous(n uint64) (s string) {
 	switch {
 	case n >= 1e8:
 		s = strconv.FormatUint(n/1e8, 10) + "億"
-	case n >= 1e6:
-		s = strconv.FormatUint(n/1e6, 10) + "百万"
 	case n >= 1e4:
 		s = strconv.FormatUint(n/1e4, 10) + "万"
 	case n >= 1e3:

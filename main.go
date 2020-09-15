@@ -108,11 +108,12 @@ func main() {
 	}
 	// 検索対象ファイル数の合計値を算出
 	var n uint64
-	n, err = cmd.LocateStatsSum(locateS)
+	n, err = cmd.LocateStatsSum(locateS) // 検索ファイル数の初期値
 	if err != nil {
 		log.Error(err)
 	}
 	stats.Items = cmd.Ambiguous(n)
+	stats.LastUpdateTime = DBLastUpdateTime()
 	if err != nil {
 		log.Error(err)
 	}
@@ -138,6 +139,7 @@ func setLogger(f *os.File) {
 
 // html デフォルトの説明文
 func htmlClause(s string) string {
+	// Get searched word from log file
 	logs, err := cmd.LogWord()
 	if err != nil {
 		log.Error(err)
@@ -163,7 +165,10 @@ func htmlClause(s string) string {
 							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。<br>
 							 * 単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)<br>
 							 例: "電気 -工 業"=>"電気"と"業"を含み"工"を含まないファイルを検索します。
-							 </small>`, s, s, sw)
+							 </small>
+						<h4>
+							<a href=/status>DB</a> last update: %s<br>
+						`, s, s, sw, stats.LastUpdateTime)
 }
 
 // Datalist convert []string to <datalist> string
@@ -173,6 +178,16 @@ func Datalist(slice []string) string {
 		list = append(list, fmt.Sprintf(`<option value="%s"></option>`, l))
 	}
 	return strings.Join(list, "")
+}
+
+// DBLastUpdateTime returns date time string for directory update time
+func DBLastUpdateTime() string {
+	filestat, err := os.Stat(LOCATEDIR)
+	if err != nil {
+		log.Error(err)
+	}
+	layout := "2006-01-02 15:05"
+	return filestat.ModTime().Format(layout)
 }
 
 // Top page
@@ -221,8 +236,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		cmd.QueryParser(receiveValue); err != nil { // 検索文字チェックERROR
 		log.Errorf("%s [ %-50s ]", err, receiveValue)
 		fmt.Fprint(w, htmlClause(receiveValue))
-		fmt.Fprintf(w, `<h4>
-							%s
+		fmt.Fprintf(w, ` %s
 						</h4>
 					</body>
 					</html>`, err)
@@ -238,6 +252,8 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 			var n uint64
 			n, err = cmd.LocateStatsSum(l) // 検索ファイル数の更新
 			stats.Items = cmd.Ambiguous(n)
+			stats.LastUpdateTime = DBLastUpdateTime()
+
 			if err != nil {
 				log.Error(err)
 			}
@@ -259,26 +275,15 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		/* normalizedWordではなく、あえてreceiveValueを
 		表示して生の検索文字列を記録したい*/
 
-		// Update time
-		filestat, err := os.Stat(LOCATEDIR)
-		if err != nil {
-			log.Error(err)
-		}
-		layout := "2006-01-02 15:05"
-		stats.LastUpdateTime = filestat.ModTime().Format(layout)
-
 		// Search result page
 		fmt.Fprint(w, htmlClause(receiveValue))
 
 		// Google検索の表示例
 		// 約 8,010,000 件 （0.50 秒）
 		fmt.Fprintf(w,
-			`<h4>
-			 <a href=/status>DB</a> last update: %s<br>
-			 ヒット数: %d件中、最大%d件を表示<br>
+			`ヒット数: %d件中、最大%d件を表示<br>
 			 %.3fmsec で約%s件を検索しました。<br>
 			</h4>`,
-			stats.LastUpdateTime,
 			stats.ResultNum,
 			loc.Limit,
 			stats.SearchTime,

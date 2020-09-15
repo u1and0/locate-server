@@ -251,12 +251,11 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 			locateS = l // 保持するDB情報の更新
 			var n uint64
 			n, err = cmd.LocateStatsSum(l) // 検索ファイル数の更新
-			stats.Items = cmd.Ambiguous(n)
-			stats.LastUpdateTime = DBLastUpdateTime()
-
 			if err != nil {
 				log.Error(err)
 			}
+			stats.Items = cmd.Ambiguous(n)
+			stats.LastUpdateTime = DBLastUpdateTime()
 			cache = cmd.CacheMap{} // キャッシュリセット
 		}
 

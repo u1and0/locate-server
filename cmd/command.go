@@ -1,7 +1,6 @@
 package locater
 
 import (
-	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -146,15 +145,6 @@ func (l *Locater) Cmd() ([]PathMap, uint64, error) {
 	results := make([]PathMap, 0, l.Limit)
 	var resultsNum uint64
 
-	// LOCATE_PATH と--databaseオプション両方使うと二重に検索されるため
-	// LOCATE_PATHの中身を空にしておく
-	if l.Process != 1 {
-		lp := os.Getenv("LOCATE_PATH")
-		defer os.Setenv("LOCATE_PATH", lp) // 関数終了時にLOCATE_PATHを元に戻す
-		if err := os.Setenv("LOCATE_PATH", ""); err != nil {
-			log.Panicf("Cannot set env variable %v", err)
-		}
-	}
 	out, err := pipeline.Output(l.CmdGen()...)
 	if err != nil {
 		return results, resultsNum, err

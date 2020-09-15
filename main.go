@@ -15,7 +15,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "2.0.0"
+	VERSION = "2.0.0r"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
@@ -115,6 +115,12 @@ func main() {
 	if err != nil {
 		log.Error(err)
 	}
+
+	logs, err := cmd.LogWord()
+	if err != nil {
+		log.Error(err)
+	}
+	fmt.Printf("%v", logs)
 
 	// HTTP pages
 	http.HandleFunc("/", showInit)

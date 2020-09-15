@@ -116,11 +116,11 @@ func TestLocater_CmdGen(t *testing.T) {
 	actual = l.CmdGen()
 	expected = [][]string{
 		[]string{"echo", "../test/mlocatetest.db:../test/mlocatetest1.db"},
-		[]string{"tr", ":", "\\n"},
-		[]string{"xargs", "-P", "0",
+		[]string{"tr", ":", "'\\n'"},
+		[]string{"xargs", "-P", "0", "-I@",
 			"locate", "--ignore-case", "--quiet",
 			"--regex", "the.*path.*for.*search",
-			"--database"},
+			"--database", "@"},
 		[]string{"grep", "-ivE", "exclude"},
 		[]string{"grep", "-ivE", "paths"},
 	}

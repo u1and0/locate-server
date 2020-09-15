@@ -12,11 +12,6 @@ const (
 	LOGFILE = "/var/lib/mlocate/locate.log"
 )
 
-var (
-	loc  Locater
-	line []byte
-)
-
 // LogWord extract search word from LOGFILE
 func LogWord() (words []string, err error) {
 	fp, err := os.Open(LOGFILE)
@@ -24,10 +19,12 @@ func LogWord() (words []string, err error) {
 		panic(err)
 	}
 	defer fp.Close()
-
 	reader := bufio.NewReader(fp)
-
 	for {
+		var (
+			loc  Locater
+			line []byte
+		)
 		line, _, err = reader.ReadLine()
 		if err == io.EOF { // if EOF then finish func
 			err = nil
@@ -40,11 +37,10 @@ func LogWord() (words []string, err error) {
 		if start := strings.Index(lines, "[ "); start > -1 { // Not found "[  ]"
 			end := strings.Index(lines, " ]")
 			s := lines[start+1 : end-1]
-			loc.SearchWords, loc.ExcludeWords, err = QueryParser(s)
-			if err != nil {
-				return
+			// 検索エラーのない文字列だけwordsに追加する
+			if loc.SearchWords, loc.ExcludeWords, err = QueryParser(s); err == nil {
+				words = append(words, loc.Normalize())
 			}
-			words = append(words, loc.Normalize())
 		}
 	}
 	words = SliceUnique(words)

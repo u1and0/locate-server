@@ -97,7 +97,7 @@ func highlightString(s string, words []string) string {
 //
 // Process = 1以外のとき
 // マルチプロセスlocateを発行する
-// echo $LOCATE_PATH | tr :, '\n' | xargs -P0 -I@ locate 検索語 | grep -v 除外語 | grep -v 除外語...
+// echo $LOCATE_PATH | tr :, \n | xargs -P0 -I@ locate 検索語 | grep -v 除外語 | grep -v 除外語...
 func (l *Locater) CmdGen() (pipeline [][]string) {
 	locate := []string{
 		"locate",
@@ -118,11 +118,11 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 		tr := []string{"tr", ":", "\\n"}
 		// xargs -P 2 -I@
 		// xargs := []string{"xargs", "-P", strconv.Itoa(l.Process)}
-		xargs := []string{"xargs", "-t", "-P", strconv.Itoa(l.Process), "-I@"}
+		xargs := []string{"xargs", "-P", strconv.Itoa(l.Process), "-I@"}
 		// xargs -P 2 -I@ locate -iq --regex hoge.*foo --database
 		xargs = append(xargs, locate...)
 		xargs = append(xargs, "@")
-		// echo $LOCATE_PATH | tr : '\n' | xargs -P 2 -I@ locate -iq --regex hoge.*foo --database
+		// echo $LOCATE_PATH | tr : \n | xargs -P 2 -I@ locate -iq --regex hoge.*foo --database
 		pipeline = append(pipeline, echo, tr, xargs)
 	} else { // Single processing search
 		locate = append(locate, l.Dbpath)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	cmd "locate-server/cmd"
@@ -116,12 +117,6 @@ func main() {
 		log.Error(err)
 	}
 
-	logs, err := cmd.LogWord()
-	if err != nil {
-		log.Error(err)
-	}
-	fmt.Printf("%v", logs)
-
 	// HTTP pages
 	http.HandleFunc("/", showInit)
 	http.HandleFunc("/searching", addResult)
@@ -143,11 +138,19 @@ func setLogger(f *os.File) {
 
 // html デフォルトの説明文
 func htmlClause(s string) string {
+	logs, err := cmd.LogWord()
+	if err != nil {
+		log.Error(err)
+	}
+	sw := Datalist(logs)
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server %s</title></head>
 					<body>
 						<form method="get" action="/searching">
-							<input type="text" name="query" value="%s" size="50">
+							<input type="text" name="query" value="%s" size="50" list="searchedWords">
+							<datalist id="searchedWords">
+							%s
+							</datalist>
 							<input type="submit" name="submit" value="検索">
 							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 						</form>
@@ -160,7 +163,16 @@ func htmlClause(s string) string {
 							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。<br>
 							 * 単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)<br>
 							 例: "電気 -工 業"=>"電気"と"業"を含み"工"を含まないファイルを検索します。
-						</small>`, s, s)
+							 </small>`, s, s, sw)
+}
+
+// Datalist convert []string to <datalist> string
+func Datalist(slice []string) string {
+	var list []string
+	for _, l := range slice {
+		list = append(list, fmt.Sprintf(`<option value="%s"></option>`, l))
+	}
+	return strings.Join(list, "")
 }
 
 // Top page

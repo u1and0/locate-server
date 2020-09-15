@@ -18,7 +18,7 @@ var (
 )
 
 // LogWord extract search word from LOGFILE
-func LogWord() (ss []string, err error) {
+func LogWord() (words []string, err error) {
 	fp, err := os.Open(LOGFILE)
 	if err != nil {
 		panic(err)
@@ -31,23 +31,34 @@ func LogWord() (ss []string, err error) {
 		line, _, err = reader.ReadLine()
 		if err == io.EOF { // if EOF then finish func
 			err = nil
-			return
+			break
 		}
 		if err != nil {
 			return
 		}
 		lines := string(line)
-		// start := bytes.IndexByte(line, []byte(`[ `))
-		// end := bytes.IndexByte(line, []byte(` ]`))
-		start := strings.Index(lines, "[ ")
-		end := strings.Index(lines, " ]")
-		if start > -1 { // Not found "[  ]"
-			searchWord := lines[start+1 : end-1]
-			loc.SearchWords, loc.ExcludeWords, err = QueryParser(searchWord)
+		if start := strings.Index(lines, "[ "); start > -1 { // Not found "[  ]"
+			end := strings.Index(lines, " ]")
+			s := lines[start+1 : end-1]
+			loc.SearchWords, loc.ExcludeWords, err = QueryParser(s)
 			if err != nil {
 				return
 			}
-			ss = append(ss, loc.Normalize())
+			words = append(words, loc.Normalize())
 		}
 	}
+	words = SliceUnique(words)
+	return
+}
+
+// SliceUnique prune duplicate words in slice
+func SliceUnique(target []string) (unique []string) {
+	m := map[string]bool{}
+	for _, v := range target {
+		if !m[v] {
+			m[v] = true
+			unique = append(unique, v)
+		}
+	}
+	return unique
 }

@@ -65,12 +65,7 @@ func LogWord(logfile string) (History, error) {
 		if err != nil {
 			continue // Ignore time.Parse() Error
 		}
-		// words = append(words, History{loc.Normalize(), d, 0})
-		if v, ok := history[word]; ok {
-			history[word] = append(v, event)
-		} else {
-			history[word] = v
-		}
+		history[word] = append(history[word], event)
 	}
 	// words = SliceUnique(words)
 	return history, err
@@ -145,5 +140,5 @@ func (history History) RankByScore() FrecencyList {
 }
 
 func (p FrecencyList) Len() int           { return len(p) }
-func (p FrecencyList) Less(i, j int) bool { return p[i].Score < p[j].Score }
+func (p FrecencyList) Less(i, j int) bool { return p[i].Score > p[j].Score }
 func (p FrecencyList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }

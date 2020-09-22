@@ -145,6 +145,8 @@ func htmlClause(s string) string {
 		log.Error(err)
 	}
 	fmt.Printf("%v", logs)
+	wordList := logs.RankByScore()
+	fmt.Printf("%v", wordList)
 	// sw := Datalist(logs)
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server %s</title></head>

@@ -139,22 +139,20 @@ func setLogger(f *os.File) {
 // html デフォルトの説明文
 func htmlClause(s string) string {
 	// Get searched word from log file
-	logs, err := cmd.LogWord(LOGFILE)
+	historymap, err := cmd.LogWord(LOGFILE)
 	if err != nil {
 		log.Error(err)
 	}
-	fmt.Printf("%v", logs)
-	wordList := logs.RankByScore()
-	fmt.Printf("%v", wordList)
-	sw := wordList.Datalist()
+	wordList := historymap.RankByScore()
+	if debug {
+		log.Debugf("Frecency list: %v", wordList)
+	}
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server %s</title></head>
 					<body>
 						<form method="get" action="/searching">
-							<input type="text" name="query" value="%s" size="50" list="searchedWords">
- 							<datalist id="searchedWords">
- 							%s
- 							</datalist>
+							<input type="text" name="query" value="%s" size="50" list="searched-words" >
+ 							<datalist id="searched-words"> %s </datalist>
 							<input type="submit" name="submit" value="検索">
 							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 						</form>
@@ -170,7 +168,7 @@ func htmlClause(s string) string {
 							 </small>
 						<h4>
 							<a href=/status>DB</a> last update: %s<br>
-						`, s, s, sw, stats.LastUpdateTime)
+						`, s, s, wordList.Datalist(), stats.LastUpdateTime)
 }
 
 // DBLastUpdateTime returns date time string for directory update time

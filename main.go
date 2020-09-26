@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	cmd "locate-server/cmd"
@@ -128,7 +127,7 @@ func main() {
 // setLogger is printing out log message to STDOUT and LOGFILE
 func setLogger(f *os.File) {
 	var format = logging.MustStringFormatter(
-		`%{color}[%{level:.6s}] ▶ %{time:2006/01/02 15:04:05.000} %{shortfile} %{message} %{color:reset}`,
+		`%{color}[%{level:.6s}] ▶ %{time:2006-01-02 15:04:05.000} %{shortfile} %{message} %{color:reset}`,
 	)
 	backend1 := logging.NewLogBackend(os.Stdout, "", 0)
 	backend2 := logging.NewLogBackend(f, "", 0)
@@ -140,19 +139,20 @@ func setLogger(f *os.File) {
 // html デフォルトの説明文
 func htmlClause(s string) string {
 	// Get searched word from log file
-	logs, err := cmd.LogWord()
+	historymap, err := cmd.LogWord(LOGFILE)
 	if err != nil {
 		log.Error(err)
 	}
-	sw := Datalist(logs)
+	wordList := historymap.RankByScore()
+	if debug {
+		log.Debugf("Frecency list: %v", wordList)
+	}
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server %s</title></head>
 					<body>
 						<form method="get" action="/searching">
-							<input type="text" name="query" value="%s" size="50" list="searchedWords">
-							<datalist id="searchedWords">
-							%s
-							</datalist>
+							<input type="text" name="query" value="%s" size="50" list="searched-words" >
+ 							<datalist id="searched-words"> %s </datalist>
 							<input type="submit" name="submit" value="検索">
 							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 						</form>
@@ -168,16 +168,7 @@ func htmlClause(s string) string {
 							 </small>
 						<h4>
 							<a href=/status>DB</a> last update: %s<br>
-						`, s, s, sw, stats.LastUpdateTime)
-}
-
-// Datalist convert []string to <datalist> string
-func Datalist(slice []string) string {
-	var list []string
-	for _, l := range slice {
-		list = append(list, fmt.Sprintf(`<option value="%s"></option>`, l))
-	}
-	return strings.Join(list, "")
+						`, s, s, wordList.Datalist(), stats.LastUpdateTime)
 }
 
 // DBLastUpdateTime returns date time string for directory update time

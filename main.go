@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	cmd "locate-server/cmd"
@@ -147,14 +146,15 @@ func htmlClause(s string) string {
 	fmt.Printf("%v", logs)
 	wordList := logs.RankByScore()
 	fmt.Printf("%v", wordList)
-	// sw := Datalist(logs)
+	sw := wordList.Datalist()
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server %s</title></head>
 					<body>
 						<form method="get" action="/searching">
 							<input type="text" name="query" value="%s" size="50" list="searchedWords">
-							`+
-		`
+ 							<datalist id="searchedWords">
+ 							%s
+ 							</datalist>
 							<input type="submit" name="submit" value="検索">
 							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 						</form>
@@ -170,17 +170,7 @@ func htmlClause(s string) string {
 							 </small>
 						<h4>
 							<a href=/status>DB</a> last update: %s<br>
-						`, s, s, stats.LastUpdateTime)
-	// `, s, s, sw, stats.LastUpdateTime)
-}
-
-// Datalist convert []string to <datalist> string
-func Datalist(slice []string) string {
-	var list []string
-	for _, l := range slice {
-		list = append(list, fmt.Sprintf(`<option value="%s"></option>`, l))
-	}
-	return strings.Join(list, "")
+						`, s, s, sw, stats.LastUpdateTime)
 }
 
 // DBLastUpdateTime returns date time string for directory update time

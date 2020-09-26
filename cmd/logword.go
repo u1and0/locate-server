@@ -2,6 +2,7 @@ package locater
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"regexp"
@@ -139,6 +140,16 @@ func (history History) RankByScore() FrecencyList {
 	return l
 }
 
-func (p FrecencyList) Len() int           { return len(p) }
-func (p FrecencyList) Less(i, j int) bool { return p[i].Score > p[j].Score }
-func (p FrecencyList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (fl FrecencyList) Len() int           { return len(fl) }
+func (fl FrecencyList) Less(i, j int) bool { return fl[i].Score > fl[j].Score }
+func (fl FrecencyList) Swap(i, j int)      { fl[i], fl[j] = fl[j], fl[i] }
+
+// Datalist convert []string to <datalist> string
+// like `<option value="Fecency.Word"></option>`
+func (fl FrecencyList) Datalist() string {
+	var list []string
+	for _, f := range fl {
+		list = append(list, fmt.Sprintf(`<option value="%s"></option>`, f.Word))
+	}
+	return strings.Join(list, "")
+}

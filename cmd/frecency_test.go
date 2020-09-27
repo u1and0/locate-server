@@ -68,26 +68,11 @@ func Test_ExtractKeyword(t *testing.T) {
 	}
 }
 
-// func Test_Scoring(t *testing.T) {
-// 	now := time.Now()
-// 	tt := []time.Time{
-// 		now.Sub(5*time.Hour),
-// 	}
-// 	for _,t := range tt{
-// 		actual := Scoring(t)
-// 		expected := 16
-// 		if actual != expected{
-// 			t.Fatalf("got: %v want: %v", actual, expected)
-// 		}
-// 	}
-// func Test_ScoreSum(t *testing.T){
-// }
-// func Test_History RankByScore(t *testing.T){
-// 	h := History{"a":}
-// 	if actual != expected {
-// 		t.Fatalf("got: %v want: %v", actual, expected)
-// 	}
-// }
-// func Test_Datalist(t *testing.T){
-// }
-//
+func Test_Datalist(t *testing.T) {
+	f := FrecencyList{Frecency{"hoge", 1}, Frecency{"foo", 0}}
+	actual := f.Datalist()
+	expected := `<option value="hoge"></option><option value="foo"></option>`
+	if actual != expected {
+		t.Fatalf("got: %v want: %v", actual, expected)
+	}
+}

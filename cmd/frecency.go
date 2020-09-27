@@ -87,7 +87,7 @@ func ExtractKeyword(s string) string {
 }
 
 // Scoring : 日時から頻出度を算出する
-func Scoring(t time.Time) int { // map[string]int{
+func Scoring(t time.Time) int {
 	since := time.Since(t).Hours()
 	switch {
 	case since < 24:

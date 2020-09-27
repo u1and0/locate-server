@@ -14,10 +14,6 @@ import (
 type (
 	// History : logfileから読み込んだ検索キーワードと検索時刻
 	History map[string][]time.Time
-	// Keyword  string    // 検索キーワード
-	// Datetime []time.Time // 検索時刻
-	// }
-	// Histories []History
 
 	// Frecency : A coined word of "frequently" + "recency"
 	Frecency struct {
@@ -68,7 +64,6 @@ func LogWord(logfile string) (History, error) {
 		}
 		history[word] = append(history[word], event)
 	}
-	// words = SliceUnique(words)
 	return history, err
 }
 
@@ -91,27 +86,15 @@ func ExtractKeyword(s string) string {
 	return s[start+1 : end-1]
 }
 
-// SliceUnique prune duplicate words in slice
-func SliceUnique(target []string) (unique []string) {
-	m := map[string]bool{}
-	for _, v := range target {
-		if !m[v] {
-			m[v] = true
-			unique = append(unique, v)
-		}
-	}
-	return unique
-}
-
 // Scoring : 日時から頻出度を算出する
 func Scoring(t time.Time) int { // map[string]int{
 	since := time.Since(t).Hours()
 	switch {
-	case since < 6:
-		return 16
 	case since < 24:
-		return 8
+		return 16
 	case since < 24*7:
+		return 8
+	case since < 24*14:
 		return 4
 	case since < 24*28:
 		return 2

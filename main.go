@@ -127,7 +127,7 @@ func main() {
 // setLogger is printing out log message to STDOUT and LOGFILE
 func setLogger(f *os.File) {
 	var format = logging.MustStringFormatter(
-		`%{color}[%{level:.6s}] ▶ %{time:2006-01-02 15:04:05.000} %{shortfile} %{message} %{color:reset}`,
+		`%{color}[%{level:.6s}] ▶ %{time:2006-01-02 15:04:05} %{shortfile} %{message} %{color:reset}`,
 	)
 	backend1 := logging.NewLogBackend(os.Stdout, "", 0)
 	backend2 := logging.NewLogBackend(f, "", 0)

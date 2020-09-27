@@ -1,6 +1,7 @@
 package locater
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -57,8 +58,16 @@ func Test_ExtractDatetime(t *testing.T) {
 	}
 }
 
-// func Test_ExtractKeyword(t *testing.T){
-// }
+func Test_ExtractKeyword(t *testing.T) {
+	expected := "usr pac"
+	actual := strings.TrimSpace(ExtractKeyword(`
+[32m[NOTICE] ▶ 2020-09-27 07:46:54.418 main.go:263     2666files 144.478msec PUSH result to cache [ usr pac                                            ] [0m
+`))
+	if actual != expected {
+		t.Fatalf("got: %v want: %v", actual, expected)
+	}
+}
+
 // func Test_Scoring(t *testing.T) {
 // 	now := time.Now()
 // 	tt := []time.Time{

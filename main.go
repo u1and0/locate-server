@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	cmd "locate-server/cmd"
@@ -16,7 +15,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "2.0.0r"
+	VERSION = "2.1.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
@@ -128,7 +127,7 @@ func main() {
 // setLogger is printing out log message to STDOUT and LOGFILE
 func setLogger(f *os.File) {
 	var format = logging.MustStringFormatter(
-		`%{color}[%{level:.6s}] ▶ %{time:2006/01/02 15:04:05.000} %{shortfile} %{message} %{color:reset}`,
+		`%{color}[%{level:.6s}] ▶ %{time:2006-01-02 15:04:05} %{shortfile} %{message} %{color:reset}`,
 	)
 	backend1 := logging.NewLogBackend(os.Stdout, "", 0)
 	backend2 := logging.NewLogBackend(f, "", 0)
@@ -140,44 +139,43 @@ func setLogger(f *os.File) {
 // html デフォルトの説明文
 func htmlClause(s string) string {
 	// Get searched word from log file
-	logs, err := cmd.LogWord()
+	historymap, err := cmd.LogWord(LOGFILE)
 	if err != nil {
 		log.Error(err)
 	}
-	sw := Datalist(logs)
+	wordList := historymap.RankByScore()
+	if debug {
+		log.Debugf("Frecency list: %v", wordList)
+	}
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server %s</title></head>
 					<body>
 						<form method="get" action="/searching">
-							<input type="text" name="query" value="%s" size="50" list="searchedWords">
-							<datalist id="searchedWords">
-							%s
-							</datalist>
+							<input type="text" name="query" value="%s" size="50" list="searched-words" >
+ 							<datalist id="searched-words"> %s </datalist>
 							<input type="submit" name="submit" value="検索">
 							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 						</form>
 						<small>
-							 * 検索文字列は2文字以上を指定してください。<br>
-							 * 英字の大文字/小文字は無視します。<br>
-							 * << マーククリックでフォルダが開きます。<br>
-							 * スペース区切りで複数入力できます。(AND検索)<br>
-							 * 半角カッコでくくって | で区切ると | で区切られる前後で検索します。(OR検索)<br>
-							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。<br>
-							 * 単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)<br>
-							 例: "電気 -工 業"=>"電気"と"業"を含み"工"を含まないファイルを検索します。
+							* 検索ワードを指定して検索を押すかEnterキーを押すと共有フォルダ内のファイルを高速に検索します。<br>
+							* 対象文字列は2文字以上の文字列を指定してください。<br>
+							* 英字 大文字/小文字は無視します。<br>
+							* 全角/半角スペースで区切ると0文字以上の正規表現(\.\*)に変換して検索されます。(AND検索)<br>
+							* "(aaa|bbb)"のグループ化表現が使えます。(OR検索)<br>
+							例: **golang\\\.(pdf|txt)** => **golang\.pdf**と**golang\.txt**を検索します。<br>
+							* [a-zA-Z0-9]の正規表現が使えます。<br>
+							例: file[xy].txt で**filex.txt**と**filey.txt** を検索します。<br>
+							例: 201[6-9]S  => **2016S**, **2017S**, **2018S**, **2019S**を検索します。<br>
+							* 0文字か1文字の正規表現"?"が使えます。<br>
+							例: **jpe?g** => **jpeg** と **jpg**を検索します。<br>
+							* 単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)<br>
+							例: **gobook txt -doc**=>**gobook**と**txt**を含み**doc**を含まないファイルを検索します。<br>
+							* AND検索は順序を守って検索をかけますが、NOT検索は順序は問わずに除外します。<br>
+							例: **gobook txt -doc** と**txt gobook -doc** は異なる検索結果ですが、 **gobook txt -doc** と**gobook -doc txt**は同じ検索結果になります。<br>
 							 </small>
 						<h4>
 							<a href=/status>DB</a> last update: %s<br>
-						`, s, s, sw, stats.LastUpdateTime)
-}
-
-// Datalist convert []string to <datalist> string
-func Datalist(slice []string) string {
-	var list []string
-	for _, l := range slice {
-		list = append(list, fmt.Sprintf(`<option value="%s"></option>`, l))
-	}
-	return strings.Join(list, "")
+						`, s, s, wordList.Datalist(), stats.LastUpdateTime)
 }
 
 // DBLastUpdateTime returns date time string for directory update time

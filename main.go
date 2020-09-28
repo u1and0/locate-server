@@ -151,28 +151,59 @@ func htmlClause(s string) string {
 					<head><title>Locate Server %s</title></head>
 					<body>
 						<form method="get" action="/searching">
+							<!-- 検索窓 -->
 							<input type="text" name="query" value="%s" size="50" list="searched-words" >
+
+							<!-- 検索履歴 Frecency リスト -->
  							<datalist id="searched-words"> %s </datalist>
+
+							<!-- 検索ボタン -->
 							<input type="submit" name="submit" value="検索">
 							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 						</form>
+
+						<!-- 説明　折り畳み -->
 						<small>
-							* 検索ワードを指定して検索を押すかEnterキーを押すと共有フォルダ内のファイルを高速に検索します。<br>
-							* 対象文字列は2文字以上の文字列を指定してください。<br>
-							* 英字 大文字/小文字は無視します。<br>
-							* 全角/半角スペースで区切ると0文字以上の正規表現(\.\*)に変換して検索されます。(AND検索)<br>
-							* "(aaa|bbb)"のグループ化表現が使えます。(OR検索)<br>
-							例: **golang\\\.(pdf|txt)** => **golang\.pdf**と**golang\.txt**を検索します。<br>
-							* [a-zA-Z0-9]の正規表現が使えます。<br>
-							例: file[xy].txt で**filex.txt**と**filey.txt** を検索します。<br>
-							例: 201[6-9]S  => **2016S**, **2017S**, **2018S**, **2019S**を検索します。<br>
-							* 0文字か1文字の正規表現"?"が使えます。<br>
-							例: **jpe?g** => **jpeg** と **jpg**を検索します。<br>
-							* 単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)<br>
-							例: **gobook txt -doc**=>**gobook**と**txt**を含み**doc**を含まないファイルを検索します。<br>
-							* AND検索は順序を守って検索をかけますが、NOT検索は順序は問わずに除外します。<br>
-							例: **gobook txt -doc** と**txt gobook -doc** は異なる検索結果ですが、 **gobook txt -doc** と**gobook -doc txt**は同じ検索結果になります。<br>
-							 </small>
+							<ul>
+								<li>
+								検索ワードを指定して検索を押すかEnterキーを押すと共有フォルダ内のファイルを高速に検索します。
+								</li>
+								<li>
+								対象文字列は2文字以上の文字列を指定してください。
+								</li>
+								<li>
+								英字 大文字/小文字は無視します。
+								</li>
+								<li>
+								全角/半角スペースで区切ると0文字以上の正規表現(\.\*)に変換して検索されます。(AND検索)
+								</li>
+								<li>
+								"(aaa|bbb)"のグループ化表現が使えます。(OR検索)
+								</li>
+								<li>
+								例: <strong>golang\\\.(pdf|txt)</strong> => <strong>golang\.pdf</strong>と<strong>golang\.txt</strong>を検索します。
+								</li>
+								<li>
+								[a-zA-Z0-9]の正規表現が使えます。
+								</li>
+								<li>
+								例: file[xy].txt で<strong>filex.txt</strong>と<strong>filey.txt</strong> を検索します。
+								例: 201[6-9]S  => <strong>2016S</strong>, <strong>2017S</strong>, <strong>2018S</strong>, <strong>2019S</strong>を検索します。
+								</li>
+								<li>
+								0文字か1文字の正規表現"?"が使えます。
+								例: <strong>jpe?g</strong> => <strong>jpeg</strong> と <strong>jpg</strong>を検索します。
+								</li>
+								<li>
+								単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)
+								例: <strong>gobook txt -doc</strong>=><strong>gobook</strong>と<strong>txt</strong>を含み<strong>doc</strong>を含まないファイルを検索します。
+								</li>
+								<li>
+								AND検索は順序を守って検索をかけますが、NOT検索は順序は問わずに除外します。
+								例: <strong>gobook txt -doc</strong> と<strong>txt gobook -doc</strong> は異なる検索結果ですが、 <strong>gobook txt -doc</strong> と<strong>gobook -doc txt</strong>は同じ検索結果になります。
+								</li>
+							</ul>
+						</small>
 						<h4>
 							<a href=/status>DB</a> last update: %s<br>
 						`, s, s, wordList.Datalist(), stats.LastUpdateTime)

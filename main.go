@@ -138,7 +138,7 @@ func setLogger(f *os.File) {
 }
 
 // html デフォルトの説明文
-func htmlClause(s string) string {
+func htmlClause(title string) string {
 	// Get searched word from log file
 	historymap, err := cmd.LogWord(LOGFILE)
 	if err != nil {
@@ -148,6 +148,88 @@ func htmlClause(s string) string {
 	if debug {
 		log.Debugf("Frecency list: %v", wordList)
 	}
+	explain := SurroundTag(func() string {
+		ss := []string{
+			`検索ワードを指定して検索を押すかEnterキーを押すと共有フォルダ内のファイルを高速に検索します。`,
+			`対象文字列は2文字以上の文字列を指定してください。`,
+			`英字 大文字/小文字は無視します。`,
+			`全角/半角スペースで区切ると0文字以上の正規表現(\.\*)に変換して検索されます。(AND検索)`,
+			`"(aaa|bbb)"のグループ化表現が使えます。(OR検索)` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s => %sと%sを検索します。`,
+							SurroundTag("golang.(pdf|txt)", "strong"),
+							SurroundTag("golang.pdf", "strong"),
+							SurroundTag("golang.txt", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+			`[a-zA-Z0-9]の正規表現が使えます。` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: file[xy].txt で%sと%s を検索します。`,
+							SurroundTag("filex.txt", "strong"),
+							SurroundTag("filey.txt", "strong"),
+						),
+						"li",
+					)+
+						SurroundTag(
+							fmt.Sprintf(`例: 201[6-9]S  => %s, %s, %s, %sを検索します。`,
+								SurroundTag("2016S", "strong"),
+								SurroundTag("2017S", "strong"),
+								SurroundTag("2018S", "strong"),
+								SurroundTag("2019S", "strong"),
+							),
+							"li",
+						),
+					"ul",
+				),
+			`0文字か1文字の正規表現"?"が使えます。` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s => %sと %sを検索します。`,
+							SurroundTag("jpe?g", "strong"),
+							SurroundTag("jpeg", "strong"),
+							SurroundTag("jpg", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+			`単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s=>%sと%sを含み%sを含まないファイルを検索します。`,
+							SurroundTag("gobook txt -doc", "strong"),
+							SurroundTag("gobook", "strong"),
+							SurroundTag("txt", "strong"),
+							SurroundTag("doc", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+			`AND検索は順序を守って検索をかけますが、NOT検索は順序は問わずに除外します。` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s と%s は異なる検索結果ですが、 %s と%sは同じ検索結果になります。`,
+							SurroundTag("gobook txt -doc", "strong"),
+							SurroundTag("txt gobook -doc", "strong"),
+							SurroundTag("gobook txt -doc", "strong"),
+							SurroundTag("gobook -doc txt", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+		}
+		for i, s := range ss {
+			ss[i] = SurroundTag(s, "li")
+		}
+		return strings.Join(ss, "")
+	}(), "ul")
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server %s</title></head>
 					<body>
@@ -167,33 +249,13 @@ func htmlClause(s string) string {
 						<small> %s </small>
 						<h4>
 							<a href=/status>DB</a> last update: %s<br>
-							`, s,
-		s,
+							`,
+		title,
+		title,
 		wordList.Datalist(),
+		explain,
 		stats.LastUpdateTime,
-		SurroundTag(func() string {
-			ss := []string{
-				`検索ワードを指定して検索を押すかEnterキーを押すと共有フォルダ内のファイルを高速に検索します。`,
-				`対象文字列は2文字以上の文字列を指定してください。`,
-				`英字 大文字/小文字は無視します。`,
-				`全角/半角スペースで区切ると0文字以上の正規表現(\.\*)に変換して検索されます。(AND検索)`,
-				`"(aaa|bbb)"のグループ化表現が使えます。(OR検索)`,
-				`例: <strong>golang\\\.(pdf|txt)</strong> => <strong>golang\.pdf</strong>と<strong>golang\.txt</strong>を検索します。`,
-				`[a-zA-Z0-9]の正規表現が使えます。`,
-				`例: file[xy].txt で<strong>filex.txt</strong>と<strong>filey.txt</strong> を検索します。`,
-				`例: 201[6-9]S  => <strong>2016S</strong>, <strong>2017S</strong>, <strong>2018S</strong>, <strong>2019S</strong>を検索します。`,
-				`0文字か1文字の正規表現"?"が使えます。`,
-				fmt.Sprintf(`例: %s => %sと %sを検索します。`, SurroundTag("jpe?g", "strong"), SurroundTag("jpeg", "strong"), SurroundTag("jpg", "strong")),
-				`単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)`,
-				`例: <strong>gobook txt -doc</strong>=><strong>gobook</strong>と<strong>txt</strong>を含み<strong>doc</strong>を含まないファイルを検索します。`,
-				`AND検索は順序を守って検索をかけますが、NOT検索は順序は問わずに除外します。`,
-				`例: <strong>gobook txt -doc</strong> と<strong>txt gobook -doc</strong> は異なる検索結果ですが、 <strong>gobook txt -doc</strong> と<strong>gobook -doc txt</strong>は同じ検索結果になります。`,
-			}
-			for i, s := range ss {
-				ss[i] = SurroundTag(s, "li")
-			}
-			return strings.Join(ss, "")
-		}(), "ul"))
+	)
 }
 
 // SurroundTag surrounds some word `s` for any html tag `tag`

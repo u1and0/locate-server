@@ -115,6 +115,10 @@ URLを送られた人はリンクをクリックするだけで検索バーに�
 [ローカルファイルリンク有効化](https://chrome.google.com/webstore/detail/enable-local-file-links/nikfmfgobenbhmocjaaboihbeocackld)
 
 
+### Microsoft Edgeでリンクをクリックしてもファイルが開かない現象について
+"GoogleChromeでリンクをクリックしてもファイルが開かない現象について" を参照してください。
+
+
 ### Firefoxでリンクをクリックしてもファイルが開かない現象について
 アドオンを追加します。
 
@@ -122,6 +126,7 @@ URLを送られた人はリンクをクリックするだけで検索バーに�
 
 
 # Release Note
+## v2.1.0: 検索履歴
 ## v2.0.0: マルチスレッドlocate検索
 * ~~マルチスレッド検索を有効化するオプション`locate-server -P [NUM]`を実装しました。~~
 * マルチスレッド機能は現在調整中。`-P 1`以外の指定で検索されないときがあります。

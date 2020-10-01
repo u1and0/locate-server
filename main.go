@@ -245,11 +245,21 @@ func htmlClause(title string) string {
 							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 						</form>
 
-						<!-- 説明　折り畳み -->
+						<!-- 折りたたみ展開ボタン -->
+						<div onclick="obj=document.getElementById('hidden-explain').style; obj.display=(obj.display=='none')?'block':'none';">
+						<a style="cursor:pointer;">▼ 検索ヘルプを表示</a>
+						</div>
+						<!--// 折りたたみ展開ボタン -->
+
+						<!-- ここから先を折りたたむ -->
+						<div id="hidden-explain" style="display:none;clear:both;">
 						<small> %s </small>
+						</div>
+						<!-- 折りたたみここまで -->
+
 						<h4>
 							<a href=/status>DB</a> last update: %s<br>
-							`,
+						`,
 		title,
 		title,
 		wordList.Datalist(),

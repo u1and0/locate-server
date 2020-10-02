@@ -73,6 +73,7 @@ $ go test
   * 例: **golang\\\.(pdf|txt)** => **golang\.pdf**と**golang\.txt**を検索します。
 * [a-zA-Z0-9]の正規表現が使えます。
   * 例: file[xy].txt で**filex.txt**と**filey.txt** を検索します。
+  * 例: file[x-z].txt で**filex.txt**と**filey.txt**と**filez.txt** を検索します。
   * 例: 201[6-9]S  => **2016S**, **2017S**, **2018S**, **2019S**を検索します。
 * 0文字か1文字の正規表現`?`が使えます。
   * 例: **jpe?g** => **jpeg** と **jpg**を検索します。
@@ -80,6 +81,8 @@ $ go test
 	* 例: **gobook txt -doc**=>**gobook**と**txt**を含み**doc**を含まないファイルを検索します。
 * AND検索は順序を守って検索をかけますが、NOT検索は順序は問わずに除外します。
 	* 例: **gobook txt -doc** と**txt gobook -doc** は異なる検索結果ですが、 **gobook txt -doc** と**gobook -doc txt**は同じ検索結果になります。
+* ファイル拡張子を指定するときは、文字列の最後を表す**$**記号を行末につけます。
+	* 例: **gobook pdf$ **=>**gobook**を含み、**pdf**が行末につくファイルを検索します。
 
 ### ファイル/フォルダ表示機能
 * 検索結果はリンク付で最大1000件まで表示します。

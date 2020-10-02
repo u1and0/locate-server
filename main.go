@@ -153,7 +153,7 @@ func htmlClause(title string) string {
 			`検索ワードを指定して検索を押すかEnterキーを押すと共有フォルダ内のファイルを高速に検索します。`,
 			`対象文字列は2文字以上の文字列を指定してください。`,
 			`英字 大文字/小文字は無視します。`,
-			`全角/半角スペースで区切ると0文字以上の正規表現(\.\*)に変換して検索されます。(AND検索)`,
+			`全角/半角スペースで区切ると0文字以上の正規表現(.*)に変換して検索されます。(AND検索)`,
 			`"(aaa|bbb)"のグループ化表現が使えます。(OR検索)` +
 				SurroundTag(
 					SurroundTag(
@@ -169,14 +169,25 @@ func htmlClause(title string) string {
 			`[a-zA-Z0-9]の正規表現が使えます。` +
 				SurroundTag(
 					SurroundTag(
-						fmt.Sprintf(`例: file[xy].txt で%sと%s を検索します。`,
+						fmt.Sprintf(`例: %s =>%sと%s を検索します。`,
+							SurroundTag("file[xy].txt", "strong"),
 							SurroundTag("filex.txt", "strong"),
 							SurroundTag("filey.txt", "strong"),
 						),
 						"li",
 					)+
 						SurroundTag(
-							fmt.Sprintf(`例: 201[6-9]S  => %s, %s, %s, %sを検索します。`,
+							fmt.Sprintf(`例: %s =>%sと%sと%s を検索します。`,
+								SurroundTag("file[x-z].txt", "strong"),
+								SurroundTag("filex.txt", "strong"),
+								SurroundTag("filey.txt", "strong"),
+								SurroundTag("filez.txt", "strong"),
+							),
+							"li",
+						)+
+						SurroundTag(
+							fmt.Sprintf(`例: %s  => %s, %s, %s, %sを検索します。`,
+								SurroundTag("201[6-9]S", "strong"),
 								SurroundTag("2016S", "strong"),
 								SurroundTag("2017S", "strong"),
 								SurroundTag("2018S", "strong"),
@@ -219,6 +230,18 @@ func htmlClause(title string) string {
 							SurroundTag("txt gobook -doc", "strong"),
 							SurroundTag("gobook txt -doc", "strong"),
 							SurroundTag("gobook -doc txt", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+			fmt.Sprintf(`ファイル拡張子を指定するときは、文字列の最後を表す%s記号を行末につけます。`, SurroundTag("$", "strong")) +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s =>%sを含み、%sが行末につくファイルを検索します。`,
+							SurroundTag("gobook pdf$", "strong"),
+							SurroundTag("gobook", "strong"),
+							SurroundTag("pdf", "strong"),
 						),
 						"li",
 					),

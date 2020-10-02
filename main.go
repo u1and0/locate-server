@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	cmd "locate-server/cmd"
@@ -137,7 +138,7 @@ func setLogger(f *os.File) {
 }
 
 // html デフォルトの説明文
-func htmlClause(s string) string {
+func htmlClause(title string) string {
 	// Get searched word from log file
 	historymap, err := cmd.LogWord(LOGFILE)
 	if err != nil {
@@ -147,35 +148,153 @@ func htmlClause(s string) string {
 	if debug {
 		log.Debugf("Frecency list: %v", wordList)
 	}
+	explain := SurroundTag(func() string {
+		ss := []string{
+			`検索ワードを指定して検索を押すかEnterキーを押すと共有フォルダ内のファイルを高速に検索します。`,
+			`対象文字列は2文字以上の文字列を指定してください。`,
+			`英字 大文字/小文字は無視します。`,
+			`全角/半角スペースで区切ると0文字以上の正規表現(.*)に変換して検索されます。(AND検索)`,
+			`"(aaa|bbb)"のグループ化表現が使えます。(OR検索)` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s => %sと%sを検索します。`,
+							SurroundTag("golang.(pdf|txt)", "strong"),
+							SurroundTag("golang.pdf", "strong"),
+							SurroundTag("golang.txt", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+			`[a-zA-Z0-9]の正規表現が使えます。` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s =>%sと%s を検索します。`,
+							SurroundTag("file[xy].txt", "strong"),
+							SurroundTag("filex.txt", "strong"),
+							SurroundTag("filey.txt", "strong"),
+						),
+						"li",
+					)+
+						SurroundTag(
+							fmt.Sprintf(`例: %s =>%sと%sと%s を検索します。`,
+								SurroundTag("file[x-z].txt", "strong"),
+								SurroundTag("filex.txt", "strong"),
+								SurroundTag("filey.txt", "strong"),
+								SurroundTag("filez.txt", "strong"),
+							),
+							"li",
+						)+
+						SurroundTag(
+							fmt.Sprintf(`例: %s  => %s, %s, %s, %sを検索します。`,
+								SurroundTag("201[6-9]S", "strong"),
+								SurroundTag("2016S", "strong"),
+								SurroundTag("2017S", "strong"),
+								SurroundTag("2018S", "strong"),
+								SurroundTag("2019S", "strong"),
+							),
+							"li",
+						),
+					"ul",
+				),
+			`0文字か1文字の正規表現"?"が使えます。` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s => %sと %sを検索します。`,
+							SurroundTag("jpe?g", "strong"),
+							SurroundTag("jpeg", "strong"),
+							SurroundTag("jpg", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+			`単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s=>%sと%sを含み%sを含まないファイルを検索します。`,
+							SurroundTag("gobook txt -doc", "strong"),
+							SurroundTag("gobook", "strong"),
+							SurroundTag("txt", "strong"),
+							SurroundTag("doc", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+			`AND検索は順序を守って検索をかけますが、NOT検索は順序は問わずに除外します。` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s と%s は異なる検索結果ですが、 %s と%sは同じ検索結果になります。`,
+							SurroundTag("gobook txt -doc", "strong"),
+							SurroundTag("txt gobook -doc", "strong"),
+							SurroundTag("gobook txt -doc", "strong"),
+							SurroundTag("gobook -doc txt", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+			fmt.Sprintf(`ファイル拡張子を指定するときは、文字列の最後を表す%s記号を行末につけます。`, SurroundTag("$", "strong")) +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s =>%sを含み、%sが行末につくファイルを検索します。`,
+							SurroundTag("gobook pdf$", "strong"),
+							SurroundTag("gobook", "strong"),
+							SurroundTag("pdf", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+		}
+		for i, s := range ss {
+			ss[i] = SurroundTag(s, "li")
+		}
+		return strings.Join(ss, "")
+	}(), "ul")
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server %s</title></head>
 					<body>
 						<form method="get" action="/searching">
+							<!-- 検索窓 -->
 							<input type="text" name="query" value="%s" size="50" list="searched-words" >
+
+							<!-- 検索履歴 Frecency リスト -->
  							<datalist id="searched-words"> %s </datalist>
+
+							<!-- 検索ボタン -->
 							<input type="submit" name="submit" value="検索">
 							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 						</form>
-						<small>
-							* 検索ワードを指定して検索を押すかEnterキーを押すと共有フォルダ内のファイルを高速に検索します。<br>
-							* 対象文字列は2文字以上の文字列を指定してください。<br>
-							* 英字 大文字/小文字は無視します。<br>
-							* 全角/半角スペースで区切ると0文字以上の正規表現(\.\*)に変換して検索されます。(AND検索)<br>
-							* "(aaa|bbb)"のグループ化表現が使えます。(OR検索)<br>
-							例: **golang\\\.(pdf|txt)** => **golang\.pdf**と**golang\.txt**を検索します。<br>
-							* [a-zA-Z0-9]の正規表現が使えます。<br>
-							例: file[xy].txt で**filex.txt**と**filey.txt** を検索します。<br>
-							例: 201[6-9]S  => **2016S**, **2017S**, **2018S**, **2019S**を検索します。<br>
-							* 0文字か1文字の正規表現"?"が使えます。<br>
-							例: **jpe?g** => **jpeg** と **jpg**を検索します。<br>
-							* 単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)<br>
-							例: **gobook txt -doc**=>**gobook**と**txt**を含み**doc**を含まないファイルを検索します。<br>
-							* AND検索は順序を守って検索をかけますが、NOT検索は順序は問わずに除外します。<br>
-							例: **gobook txt -doc** と**txt gobook -doc** は異なる検索結果ですが、 **gobook txt -doc** と**gobook -doc txt**は同じ検索結果になります。<br>
-							 </small>
+
+						<!-- 折りたたみ展開ボタン -->
+						<div onclick="obj=document.getElementById('hidden-explain').style; obj.display=(obj.display=='none')?'block':'none';">
+						<a style="cursor:pointer;">▼ 検索ヘルプを表示</a>
+						</div>
+						<!--// 折りたたみ展開ボタン -->
+
+						<!-- ここから先を折りたたむ -->
+						<div id="hidden-explain" style="display:none;clear:both;">
+						<!-- 検索ヘルプ -->
+						<small> %s </small>
+						</div>
+						<!-- 折りたたみここまで -->
+
 						<h4>
 							<a href=/status>DB</a> last update: %s<br>
-						`, s, s, wordList.Datalist(), stats.LastUpdateTime)
+						`,
+		title,
+		title,
+		wordList.Datalist(),
+		explain,
+		stats.LastUpdateTime,
+	)
+}
+
+// SurroundTag surrounds some word `s` for any html tag `tag`
+func SurroundTag(s, tag string) string {
+	return fmt.Sprintf("<%s>%s</%s>", tag, s, tag)
 }
 
 // DBLastUpdateTime returns date time string for directory update time

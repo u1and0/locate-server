@@ -16,7 +16,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "2.0.0r"
+	VERSION = "2.1.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
@@ -128,7 +128,7 @@ func main() {
 // setLogger is printing out log message to STDOUT and LOGFILE
 func setLogger(f *os.File) {
 	var format = logging.MustStringFormatter(
-		`%{color}[%{level:.6s}] ▶ %{time:2006/01/02 15:04:05.000} %{shortfile} %{message} %{color:reset}`,
+		`%{color}[%{level:.6s}] ▶ %{time:2006-01-02 15:04:05} %{shortfile} %{message} %{color:reset}`,
 	)
 	backend1 := logging.NewLogBackend(os.Stdout, "", 0)
 	backend2 := logging.NewLogBackend(f, "", 0)
@@ -138,46 +138,163 @@ func setLogger(f *os.File) {
 }
 
 // html デフォルトの説明文
-func htmlClause(s string) string {
+func htmlClause(title string) string {
 	// Get searched word from log file
-	logs, err := cmd.LogWord()
+	historymap, err := cmd.LogWord(LOGFILE)
 	if err != nil {
 		log.Error(err)
 	}
-	sw := Datalist(logs)
+	wordList := historymap.RankByScore()
+	if debug {
+		log.Debugf("Frecency list: %v", wordList)
+	}
+	explain := SurroundTag(func() string {
+		ss := []string{
+			`検索ワードを指定して検索を押すかEnterキーを押すと共有フォルダ内のファイルを高速に検索します。`,
+			`対象文字列は2文字以上の文字列を指定してください。`,
+			`英字 大文字/小文字は無視します。`,
+			`全角/半角スペースで区切ると0文字以上の正規表現(.*)に変換して検索されます。(AND検索)`,
+			`"(aaa|bbb)"のグループ化表現が使えます。(OR検索)` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s => %sと%sを検索します。`,
+							SurroundTag("golang.(pdf|txt)", "strong"),
+							SurroundTag("golang.pdf", "strong"),
+							SurroundTag("golang.txt", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+			`[a-zA-Z0-9]の正規表現が使えます。` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s =>%sと%s を検索します。`,
+							SurroundTag("file[xy].txt", "strong"),
+							SurroundTag("filex.txt", "strong"),
+							SurroundTag("filey.txt", "strong"),
+						),
+						"li",
+					)+
+						SurroundTag(
+							fmt.Sprintf(`例: %s =>%sと%sと%s を検索します。`,
+								SurroundTag("file[x-z].txt", "strong"),
+								SurroundTag("filex.txt", "strong"),
+								SurroundTag("filey.txt", "strong"),
+								SurroundTag("filez.txt", "strong"),
+							),
+							"li",
+						)+
+						SurroundTag(
+							fmt.Sprintf(`例: %s  => %s, %s, %s, %sを検索します。`,
+								SurroundTag("201[6-9]S", "strong"),
+								SurroundTag("2016S", "strong"),
+								SurroundTag("2017S", "strong"),
+								SurroundTag("2018S", "strong"),
+								SurroundTag("2019S", "strong"),
+							),
+							"li",
+						),
+					"ul",
+				),
+			`0文字か1文字の正規表現"?"が使えます。` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s => %sと %sを検索します。`,
+							SurroundTag("jpe?g", "strong"),
+							SurroundTag("jpeg", "strong"),
+							SurroundTag("jpg", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+			`単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s=>%sと%sを含み%sを含まないファイルを検索します。`,
+							SurroundTag("gobook txt -doc", "strong"),
+							SurroundTag("gobook", "strong"),
+							SurroundTag("txt", "strong"),
+							SurroundTag("doc", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+			`AND検索は順序を守って検索をかけますが、NOT検索は順序は問わずに除外します。` +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s と%s は異なる検索結果ですが、 %s と%sは同じ検索結果になります。`,
+							SurroundTag("gobook txt -doc", "strong"),
+							SurroundTag("txt gobook -doc", "strong"),
+							SurroundTag("gobook txt -doc", "strong"),
+							SurroundTag("gobook -doc txt", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+			fmt.Sprintf(`ファイル拡張子を指定するときは、文字列の最後を表す%s記号を行末につけます。`, SurroundTag("$", "strong")) +
+				SurroundTag(
+					SurroundTag(
+						fmt.Sprintf(`例: %s =>%sを含み、%sが行末につくファイルを検索します。`,
+							SurroundTag("gobook pdf$", "strong"),
+							SurroundTag("gobook", "strong"),
+							SurroundTag("pdf", "strong"),
+						),
+						"li",
+					),
+					"ul",
+				),
+		}
+		for i, s := range ss {
+			ss[i] = SurroundTag(s, "li")
+		}
+		return strings.Join(ss, "")
+	}(), "ul")
 	return fmt.Sprintf(`<html>
 					<head><title>Locate Server %s</title></head>
 					<body>
 						<form method="get" action="/searching">
-							<input type="text" name="query" value="%s" size="50" list="searchedWords">
-							<datalist id="searchedWords">
-							%s
-							</datalist>
+							<!-- 検索窓 -->
+							<input type="text" name="query" value="%s" size="50" list="searched-words" >
+
+							<!-- 検索履歴 Frecency リスト -->
+ 							<datalist id="searched-words"> %s </datalist>
+
+							<!-- 検索ボタン -->
 							<input type="submit" name="submit" value="検索">
 							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 						</form>
-						<small>
-							 * 検索文字列は2文字以上を指定してください。<br>
-							 * 英字の大文字/小文字は無視します。<br>
-							 * << マーククリックでフォルダが開きます。<br>
-							 * スペース区切りで複数入力できます。(AND検索)<br>
-							 * 半角カッコでくくって | で区切ると | で区切られる前後で検索します。(OR検索)<br>
-							 例: "電(気|機)工業" => "電気工業"と"電機工業"を検索します。<br>
-							 * 単語の頭に半角ハイフン"-"をつけるとその単語を含まないファイルを検索します。(NOT検索)<br>
-							 例: "電気 -工 業"=>"電気"と"業"を含み"工"を含まないファイルを検索します。
-							 </small>
+
+						<!-- 折りたたみ展開ボタン -->
+						<div onclick="obj=document.getElementById('hidden-explain').style; obj.display=(obj.display=='none')?'block':'none';">
+						<a style="cursor:pointer;">▼ 検索ヘルプを表示</a>
+						</div>
+						<!--// 折りたたみ展開ボタン -->
+
+						<!-- ここから先を折りたたむ -->
+						<div id="hidden-explain" style="display:none;clear:both;">
+						<!-- 検索ヘルプ -->
+						<small> %s </small>
+						</div>
+						<!-- 折りたたみここまで -->
+
 						<h4>
 							<a href=/status>DB</a> last update: %s<br>
-						`, s, s, sw, stats.LastUpdateTime)
+						`,
+		title,
+		title,
+		wordList.Datalist(),
+		explain,
+		stats.LastUpdateTime,
+	)
 }
 
-// Datalist convert []string to <datalist> string
-func Datalist(slice []string) string {
-	var list []string
-	for _, l := range slice {
-		list = append(list, fmt.Sprintf(`<option value="%s"></option>`, l))
-	}
-	return strings.Join(list, "")
+// SurroundTag surrounds some word `s` for any html tag `tag`
+func SurroundTag(s, tag string) string {
+	return fmt.Sprintf("<%s>%s</%s>", tag, s, tag)
 }
 
 // DBLastUpdateTime returns date time string for directory update time

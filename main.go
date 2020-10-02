@@ -253,6 +253,7 @@ func htmlClause(title string) string {
 
 						<!-- ここから先を折りたたむ -->
 						<div id="hidden-explain" style="display:none;clear:both;">
+						<!-- 検索ヘルプ -->
 						<small> %s </small>
 						</div>
 						<!-- 折りたたみここまで -->

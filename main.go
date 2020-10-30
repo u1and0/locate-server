@@ -16,7 +16,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "2.1.1"
+	VERSION = "2.2.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
@@ -355,6 +355,8 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintf(w, ` %s
 						</h4>
+					<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+					<script type="text/javascript" src="datalist.js"></script>
 					</body>
 					</html>`, err)
 	} else { // 検索文字数チェックOK

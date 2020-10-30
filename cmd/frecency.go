@@ -90,6 +90,8 @@ func ExtractKeyword(s string) string {
 func Scoring(t time.Time) int {
 	since := time.Since(t).Hours()
 	switch {
+	case since < 6:
+		return 32
 	case since < 24:
 		return 16
 	case since < 24*7:

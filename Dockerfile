@@ -15,6 +15,7 @@ RUN apk --update --no-cache add git &&\
 
 FROM frolvlad/alpine-glibc
 COPY --from=go_official /go/bin/locate-server /usr/bin/locate-server
+COPY ./js /usr/bin/js
 RUN apk --update --no-cache add mlocate tzdata
 ENTRYPOINT ["/usr/bin/locate-server"]
 

@@ -1,0 +1,13 @@
+README.md
+/app/
+/backup/
+/doc/
+/log/
+/var
+/var_/
+/test/
+/web/
+/.git/
+locate-server*
+tags
+G*

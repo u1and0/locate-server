@@ -103,6 +103,8 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 		"locate",
 		"--ignore-case", // Ignore case distinctions when matching patterns.
 		"--quiet",       // Report no error messages about reading databases
+		"--existing",    // Print only entries that refer to files existing at the time locate is run.
+		"--nofollow",    // When  checking  whether files exist do not follow trailing symbolic links.
 	}
 
 	// Include PATTERNs

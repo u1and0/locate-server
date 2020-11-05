@@ -157,10 +157,10 @@ func htmlClause(title string) string {
 			`"(aaa|bbb)"のグループ化表現が使えます。(OR検索)` +
 				SurroundTag(
 					SurroundTag(
-						fmt.Sprintf(`例: %s => %sと%sを検索します。`,
-							SurroundTag("golang.(pdf|txt)", "strong"),
-							SurroundTag("golang.pdf", "strong"),
-							SurroundTag("golang.txt", "strong"),
+						fmt.Sprintf(`例: %s => %s並びに%sを検索します。`,
+							SurroundTag(`golang (pdf|txt)`, "strong"),
+							SurroundTag("golang及びpdf", "strong"),
+							SurroundTag("golang及びtxt", "strong"),
 						),
 						"li",
 					),
@@ -169,19 +169,19 @@ func htmlClause(title string) string {
 			`[a-zA-Z0-9]の正規表現が使えます。` +
 				SurroundTag(
 					SurroundTag(
-						fmt.Sprintf(`例: %s =>%sと%s を検索します。`,
-							SurroundTag("file[xy].txt", "strong"),
-							SurroundTag("filex.txt", "strong"),
-							SurroundTag("filey.txt", "strong"),
+						fmt.Sprintf(`例: %s =>%s並びに%s を検索します。`,
+							SurroundTag("file[xy] txt", "strong"),
+							SurroundTag("filex及びtxt", "strong"),
+							SurroundTag("filey及びtxt", "strong"),
 						),
 						"li",
 					)+
 						SurroundTag(
-							fmt.Sprintf(`例: %s =>%sと%sと%s を検索します。`,
-								SurroundTag("file[x-z].txt", "strong"),
-								SurroundTag("filex.txt", "strong"),
-								SurroundTag("filey.txt", "strong"),
-								SurroundTag("filez.txt", "strong"),
+							fmt.Sprintf(`例: %s =>%s、%s並びに%s を検索します。`,
+								SurroundTag("file[x-z] txt", "strong"),
+								SurroundTag("filex及びtxt", "strong"),
+								SurroundTag("filey及びtxt", "strong"),
+								SurroundTag("filez及びtxt", "strong"),
 							),
 							"li",
 						)+

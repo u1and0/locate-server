@@ -5,3 +5,4 @@ tags
 TODO.md
 *.tar.gz
 G*
+/locate-server*

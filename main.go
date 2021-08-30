@@ -26,7 +26,7 @@ const (
 	// DEFAULTDB : locateがデフォルトで検索するdbpath
 	DEFAULTDB = "/var/lib/mlocate/mlocate.db"
 	// EXE : locate search command
-	EXE = "locate"
+	EXE = "gocate"
 )
 
 var (
@@ -348,7 +348,6 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		PathSplitWin: pathSplitWin, // path separatorを\にする
 		Root:         root,         // Path prefix insert
 		Trim:         trim,         // Path prefix trim
-		Process:      process,      // xargsによるマルチプロセス数
 		Debug:        debug,        //Debugフラグ
 	}
 	// Modify query

@@ -100,36 +100,21 @@ func highlightString(s string, words []string) string {
 // echo $LOCATE_PATH | tr :, \n | xargs -P0 -I@ locate 検索語 | grep -v 除外語 | grep -v 除外語...
 func (l *Locater) CmdGen() (pipeline [][]string) {
 	locate := []string{
-		l.Exe,           // locate command path
+		l.Exe,                  // locate command path
+		"--database", l.Dbpath, //Add database option
+		"--",            // Inject locate option
 		"--ignore-case", // Ignore case distinctions when matching patterns.
 		"--quiet",       // Report no error messages about reading databases
 		"--existing",    // Print only entries that refer to files existing at the time locate is run.
 		"--nofollow",    // When  checking  whether files exist do not follow trailing symbolic links.
 	}
+	// -> gocate --database -- --ignore-case --quiet --regex hoge.*my.*name
 
 	// Include PATTERNs
 	// -> locate --ignore-case --quiet --regex hoge.*my.*name
 	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))
 
-	// Add database option
-	// -> locate --ignore-case --quiet --regex hoge.*my.*name --database
-	locate = append(locate, "--database")
-
-	if l.Process != 1 { // Multi processing search
-		echo := []string{"echo", l.Dbpath}
-		tr := []string{"tr", ":", "\\n"}
-		// xargs -P 2 -I@
-		// xargs := []string{"xargs", "-P", strconv.Itoa(l.Process)}
-		xargs := []string{"xargs", "-P", strconv.Itoa(l.Process), "-I@"}
-		// xargs -P 2 -I@ locate -iq --regex hoge.*foo --database
-		xargs = append(xargs, locate...)
-		xargs = append(xargs, "@")
-		// echo $LOCATE_PATH | tr : \n | xargs -P 2 -I@ locate -iq --regex hoge.*foo --database
-		pipeline = append(pipeline, echo, tr, xargs)
-	} else { // Single processing search
-		locate = append(locate, l.Dbpath)
-		pipeline = append(pipeline, locate)
-	}
+	pipeline = append(pipeline, locate)
 
 	// Exclude PATTERNs
 	for _, ex := range l.ExcludeWords {

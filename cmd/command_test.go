@@ -84,7 +84,6 @@ func TestLocater_highlightString(t *testing.T) {
 func TestLocater_CmdGen(t *testing.T) {
 	// Single process test
 	l := Locater{
-		Process:      1,
 		SearchWords:  []string{"the", "path", "for", "search"},
 		ExcludeWords: []string{"exclude", "paths"},
 		Dbpath:       "../test/mlocatetest.db:../test/mlocatetest1.db",
@@ -108,7 +107,6 @@ func TestLocater_CmdGen(t *testing.T) {
 
 	// Multi process test
 	l = Locater{
-		Process:      0,
 		SearchWords:  []string{"the", "path", "for", "search"},
 		ExcludeWords: []string{"exclude", "paths"},
 		Dbpath:       "../test/mlocatetest.db:../test/mlocatetest1.db",

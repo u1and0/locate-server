@@ -15,7 +15,6 @@ type Locater struct {
 	PathSplitWin bool     // TrueでWindowsパスセパレータを使用する
 	Root         string   // 追加するドライブパス名
 	Trim         string   // 削除するドライブパス名
-	Process      int      // xargsによるマルチプロセス数
 	Debug        bool     // Debugフラグ
 }
 

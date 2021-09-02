@@ -1,5 +1,7 @@
 Session.vim
 /log/
+/doc/
+/script/
 /misc/
 tags
 TODO.md

@@ -7,7 +7,6 @@ import (
 
 // Locater : queryから読み取った検索ワードと無視するワード
 type Locater struct {
-	Exe          string   // locate command path
 	SearchWords  []string // 検索キーワード
 	ExcludeWords []string // 検索から取り除くキーワード
 	Dbpath       string   // 検索対象DBパス /path/to/database:/path/to/another

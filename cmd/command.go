@@ -100,7 +100,7 @@ func highlightString(s string, words []string) string {
 // echo $LOCATE_PATH | tr :, \n | xargs -P0 -I@ locate 検索語 | grep -v 除外語 | grep -v 除外語...
 func (l *Locater) CmdGen() (pipeline [][]string) {
 	locate := []string{
-		l.Exe,                  // locate command path
+		"gocate",                  // locate command path
 		"--database", l.Dbpath, //Add database option
 		"--",            // Inject locate option
 		"--ignore-case", // Ignore case distinctions when matching patterns.

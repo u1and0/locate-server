@@ -16,7 +16,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "2.2.2r"
+	VERSION = "2.2.2"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
@@ -25,8 +25,6 @@ const (
 	LOCATEDIR = "/var/lib/mlocate"
 	// DEFAULTDB : locateがデフォルトで検索するdbpath
 	DEFAULTDB = "/var/lib/mlocate/mlocate.db"
-	// EXE : locate search command
-	EXE = "gocate"
 )
 
 var (
@@ -46,8 +44,6 @@ var (
 	stats        cmd.Stats
 	process      int
 	debug        bool
-	// exe : locate search command path
-	exe string
 )
 
 var log = logging.MustGetLogger("main")
@@ -97,7 +93,7 @@ func main() {
 	}
 
 	// Command check
-	if exe, err = exec.LookPath(EXE); err != nil {
+	if _, err := exec.LookPath("locate"); err != nil {
 		log.Panic(err) // locateコマンドがなければ終了
 	}
 
@@ -342,7 +338,6 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	)
 	// 検索コンフィグ構造体
 	loc := cmd.Locater{
-		Exe:          exe,
 		Limit:        limit,        // 検索件数上限
 		Dbpath:       dbpath,       // 検索対象パス
 		PathSplitWin: pathSplitWin, // path separatorを\にする

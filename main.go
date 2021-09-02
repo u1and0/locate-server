@@ -16,7 +16,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "2.2.2"
+	VERSION = "2.3.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
@@ -42,7 +42,6 @@ var (
 	getpushLog   string
 	locateS      []byte
 	stats        cmd.Stats
-	process      int
 	debug        bool
 )
 
@@ -56,7 +55,6 @@ func main() {
 	flag.BoolVar(&pathSplitWin, "s", false, "OS path split windows backslash")
 	flag.StringVar(&root, "r", "", "DB insert prefix for directory path")
 	flag.StringVar(&trim, "t", "", "DB trim prefix for directory path")
-	flag.IntVar(&process, "P", 1, "Search in multi process by `xargs -P`")
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")
@@ -157,10 +155,10 @@ func htmlClause(title string) string {
 			`"(aaa|bbb)"のグループ化表現が使えます。(OR検索)` +
 				SurroundTag(
 					SurroundTag(
-						fmt.Sprintf(`例: %s => %sと%sを検索します。`,
-							SurroundTag("golang.(pdf|txt)", "strong"),
-							SurroundTag("golang.pdf", "strong"),
-							SurroundTag("golang.txt", "strong"),
+						fmt.Sprintf(`例: %s => %s並びに%sを検索します。`,
+							SurroundTag(`golang (pdf|txt)`, "strong"),
+							SurroundTag("golang及びpdf", "strong"),
+							SurroundTag("golang及びtxt", "strong"),
 						),
 						"li",
 					),
@@ -169,19 +167,19 @@ func htmlClause(title string) string {
 			`[a-zA-Z0-9]の正規表現が使えます。` +
 				SurroundTag(
 					SurroundTag(
-						fmt.Sprintf(`例: %s =>%sと%s を検索します。`,
-							SurroundTag("file[xy].txt", "strong"),
-							SurroundTag("filex.txt", "strong"),
-							SurroundTag("filey.txt", "strong"),
+						fmt.Sprintf(`例: %s =>%s並びに%s を検索します。`,
+							SurroundTag("file[xy] txt", "strong"),
+							SurroundTag("filex及びtxt", "strong"),
+							SurroundTag("filey及びtxt", "strong"),
 						),
 						"li",
 					)+
 						SurroundTag(
-							fmt.Sprintf(`例: %s =>%sと%sと%s を検索します。`,
-								SurroundTag("file[x-z].txt", "strong"),
-								SurroundTag("filex.txt", "strong"),
-								SurroundTag("filey.txt", "strong"),
-								SurroundTag("filez.txt", "strong"),
+							fmt.Sprintf(`例: %s =>%s、%s並びに%s を検索します。`,
+								SurroundTag("file[x-z] txt", "strong"),
+								SurroundTag("filex及びtxt", "strong"),
+								SurroundTag("filey及びtxt", "strong"),
+								SurroundTag("filez及びtxt", "strong"),
 							),
 							"li",
 						)+
@@ -343,7 +341,6 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		PathSplitWin: pathSplitWin, // path separatorを\にする
 		Root:         root,         // Path prefix insert
 		Trim:         trim,         // Path prefix trim
-		Process:      process,      // xargsによるマルチプロセス数
 		Debug:        debug,        //Debugフラグ
 	}
 	// Modify query

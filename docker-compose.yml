@@ -16,7 +16,7 @@ services:
             # - LOCATE_PATH=/var/lib/mlocate/mlocate.db
             - TZ=Asia/Tokyo
         entrypoint: /usr/bin/locate-server
-        # command: [-s, -r, \\sampanet.gr.jp\DFS]
+        # command: [-s, -r, \\gr.jp\DFS]
         #
         # restart_policy:
         #     condition: on-failure

@@ -1,7 +1,10 @@
 Session.vim
 /log/
+/doc/
+/script/
 /misc/
 tags
 TODO.md
 *.tar.gz
 G*
+/locate-server*

@@ -17,24 +17,21 @@ MacOS 未テスト
 ## Usage
 
 ```
-$ locate-server -h
-Usage of locate-server:
-  -P xargs -P
-        Search in multi process by xargs -P (default 1)
+Usage of ./locate-server:
   -d string
-        Path of locate database file (ex: /path/something.db:/path/another.db) (default "/var/lib/mlocate/mlocate.db")
+    	Path of locate database file (ex: /path/something.db:/path/another.db) (default "/var/lib/mlocate/mlocate.db")
   -debug
-        Debug mode
+    	Debug mode
   -l int
-        Maximum limit for results (default 1000)
+    	Maximum limit for results (default 1000)
   -r string
-        DB insert prefix for directory path
-  -s    OS path split windows backslash
+    	DB insert prefix for directory path
+  -s	OS path split windows backslash
   -t string
-        DB trim prefix for directory path
-  -v    show version
+    	DB trim prefix for directory path
+  -v	show version
   -version
-        show version
+    	show version
 ```
 
 ```
@@ -43,7 +40,6 @@ $ locate-server \
   -s \
   -t '\\gr.jp\share' \
   -l 2000 \
-  -P 0
 ```
 
 ## Installation
@@ -70,10 +66,10 @@ $ go test
 * 英字 大文字/小文字は無視します。
 * 全角/半角スペースで区切ると0文字以上の正規表現(\.\*)に変換して検索されます。(AND検索)
 * `(aaa|bbb)`のグループ化表現が使えます。(OR検索)
-  * 例: **golang\\\.(pdf|txt)** => **golang\.pdf**と**golang\.txt**を検索します。
+  * 例: **golang (pdf|txt)** => **golang及びpdf**並びに**golang及びtxt**を検索します。
 * [a-zA-Z0-9]の正規表現が使えます。
-  * 例: file[xy].txt で**filex.txt**と**filey.txt** を検索します。
-  * 例: file[x-z].txt で**filex.txt**と**filey.txt**と**filez.txt** を検索します。
+  * 例: file[xy] txt で**filex及びtxt並びに*と**filey及びtxt** を検索します。
+  * 例: file[x-z] txt で**filex及びtxt**並びに**filey及びtxt**と**filez.txt** を検索します。
   * 例: 201[6-9]S  => **2016S**, **2017S**, **2018S**, **2019S**を検索します。
 * 0文字か1文字の正規表現`?`が使えます。
   * 例: **jpe?g** => **jpeg** と **jpg**を検索します。
@@ -129,6 +125,10 @@ URLを送られた人はリンクをクリックするだけで検索バーに�
 
 
 # Release Note
+## v2.3.0: マルチスレッドgocate検索
+* xargsによるマルチスレッド検索廃止しました。
+* 代わりにマルチスレッド版locateとして[gocate](https://github.com/u1and0/gocate)を実装しました。
+
 ## v2.2.2: 部分文字列検索
 * Dockerベースイメージ修正 -> golang:1.15.3-alpine3.12
 * Version上方修正
@@ -282,6 +282,12 @@ docker run --name personal --volumes-from db\
 2.1. `docker stop web`
 2.2. `docker rename web web_old`  # 今まで使っていたコンテナを退避(バックアップ)
 2.3. 新しい環境変数を設定したコンテナをrun `docker run ... -e LOCATE_PATH="..."``
+
+# Bugs
+既知のバグ報告。
+
+* 検索ワードハイライトが検索順序を守らない。
+  * 内部的にString.ReplaceAll()を使用しているため。
 
 # Authors
 u1and0<e01.ando60@gmail.com>

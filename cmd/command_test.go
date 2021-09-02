@@ -82,47 +82,27 @@ func TestLocater_highlightString(t *testing.T) {
 }
 
 func TestLocater_CmdGen(t *testing.T) {
-	// Single process test
 	l := Locater{
-		Process:      1,
 		SearchWords:  []string{"the", "path", "for", "search"},
 		ExcludeWords: []string{"exclude", "paths"},
 		Dbpath:       "../test/mlocatetest.db:../test/mlocatetest1.db",
 	}
 	actual := l.CmdGen()
 	expected := [][]string{
-		[]string{"locate", "--ignore-case", "--quiet",
-			"--regex", "the.*path.*for.*search",
-			"--database", "../test/mlocatetest.db:../test/mlocatetest1.db"},
-		[]string{"grep", "-ivE", "exclude"},
-		[]string{"grep", "-ivE", "paths"},
-	}
-	t.Logf("expected command: %v, actual command: %v", expected, actual) // Print command
-	for i, e1 := range expected {
-		for j, e2 := range e1 {
-			if actual[i][j] != e2 {
-				t.Fatalf("got: %v want: %v\ncommand: %s", actual[i][j], e2, actual)
-			}
-		}
-	}
-
-	// Multi process test
-	l = Locater{
-		Process:      0,
-		SearchWords:  []string{"the", "path", "for", "search"},
-		ExcludeWords: []string{"exclude", "paths"},
-		Dbpath:       "../test/mlocatetest.db:../test/mlocatetest1.db",
-	}
-	actual = l.CmdGen()
-	expected = [][]string{
-		[]string{"echo", "../test/mlocatetest.db:../test/mlocatetest1.db"},
-		[]string{"tr", ":", "\\n"},
-		[]string{"xargs", "-P", "0", "-I@",
-			"locate", "--ignore-case", "--quiet",
-			"--regex", "the.*path.*for.*search",
-			"--database", "@"},
-		[]string{"grep", "-ivE", "exclude"},
-		[]string{"grep", "-ivE", "paths"},
+		{
+			"gocate",
+			"--database",
+			"../test/mlocatetest.db:../test/mlocatetest1.db",
+			"--",
+			"--ignore-case",
+			"--quiet",
+			"--existing",
+			"--nofollow",
+			"--regex",
+			"the.*path.*for.*search",
+		},
+		{"grep", "-ivE", "exclude"},
+		{"grep", "-ivE", "paths"},
 	}
 	t.Logf("expected command: %v, actual command: %v", expected, actual) // Print command
 	for i, e1 := range expected {

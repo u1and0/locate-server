@@ -17,24 +17,21 @@ MacOS 未テスト
 ## Usage
 
 ```
-$ locate-server -h
-Usage of locate-server:
-  -P xargs -P
-        Search in multi process by xargs -P (default 1)
+Usage of ./locate-server:
   -d string
-        Path of locate database file (ex: /path/something.db:/path/another.db) (default "/var/lib/mlocate/mlocate.db")
+    	Path of locate database file (ex: /path/something.db:/path/another.db) (default "/var/lib/mlocate/mlocate.db")
   -debug
-        Debug mode
+    	Debug mode
   -l int
-        Maximum limit for results (default 1000)
+    	Maximum limit for results (default 1000)
   -r string
-        DB insert prefix for directory path
-  -s    OS path split windows backslash
+    	DB insert prefix for directory path
+  -s	OS path split windows backslash
   -t string
-        DB trim prefix for directory path
-  -v    show version
+    	DB trim prefix for directory path
+  -v	show version
   -version
-        show version
+    	show version
 ```
 
 ```
@@ -43,7 +40,6 @@ $ locate-server \
   -s \
   -t '\\gr.jp\share' \
   -l 2000 \
-  -P 0
 ```
 
 ## Installation
@@ -129,6 +125,10 @@ URLを送られた人はリンクをクリックするだけで検索バーに�
 
 
 # Release Note
+## v2.3.0: マルチスレッドgocate検索
+* xargsによるマルチスレッド検索廃止しました。
+* 代わりにマルチスレッド版locateとして[gocate](https://github.com/u1and0/gocate)を実装しました。
+
 ## v2.2.2: 部分文字列検索
 * Dockerベースイメージ修正 -> golang:1.15.3-alpine3.12
 * Version上方修正

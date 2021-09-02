@@ -42,7 +42,6 @@ var (
 	getpushLog   string
 	locateS      []byte
 	stats        cmd.Stats
-	process      int
 	debug        bool
 )
 
@@ -56,7 +55,6 @@ func main() {
 	flag.BoolVar(&pathSplitWin, "s", false, "OS path split windows backslash")
 	flag.StringVar(&root, "r", "", "DB insert prefix for directory path")
 	flag.StringVar(&trim, "t", "", "DB trim prefix for directory path")
-	flag.IntVar(&process, "P", 1, "Search in multi process by `xargs -P`")
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")

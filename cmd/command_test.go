@@ -7,8 +7,7 @@ import (
 )
 
 func TestLocateStats(t *testing.T) {
-	dbpath := "../test/etc.db:../test/root.db:../test/usr.db"
-	b, _ := LocateStats(dbpath)
+	b, _ := LocateStats()
 	actual := strings.Fields(string(b))
 	expected := strings.Fields(`
 		データベース ../test/etc.db:
@@ -39,8 +38,7 @@ func TestLocateStatsSum(t *testing.T) {
 	if _, err := os.Stat("/var/lib/mlocate/mlocate.db"); err == nil {
 		t.Fatal("このテストは/var/lib/mlocate/mlocate.dbがあると失敗する")
 	}
-	dbpath := "../test/etc.db:../test/root.db:../test/usr.db"
-	b, err := LocateStats(dbpath)
+	b, err := LocateStats()
 	if err != nil {
 		t.Fatalf("LocateStats error occur %s", err)
 	}

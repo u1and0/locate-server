@@ -125,6 +125,11 @@ URLを送られた人はリンクをクリックするだけで検索バーに�
 
 
 # Release Note
+## v2.3.1: マルチスレッドgocate検索
+* gocate に合わせて内部動作を微修正しました。
+* gocate -init (updatedbモード)に対応して、/var/lib/mlocate下を検索するようにしました。
+* LOCATE_PATH を使用しないように変更しました。
+
 ## v2.3.0: マルチスレッドgocate検索
 * xargsによるマルチスレッド検索廃止しました。
 * 代わりにマルチスレッド版locateとして[gocate](https://github.com/u1and0/gocate)を実装しました。

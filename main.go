@@ -16,15 +16,13 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "2.3.0"
+	VERSION = "2.3.0r"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
 	// /var/lib/mlocate以下すべてを検索対象とするときのLOCATE_PATHの指定方法
 	// LOCATE_PATH=$(paste -sd: <(find /var/lib/mlocate -name '*.db'))
 	LOCATEDIR = "/var/lib/mlocate"
-	// DEFAULTDB : locateがデフォルトで検索するdbpath
-	DEFAULTDB = "/var/lib/mlocate/mlocate.db"
 )
 
 var (
@@ -48,9 +46,7 @@ var (
 var log = logging.MustGetLogger("main")
 
 func main() {
-	flag.StringVar(&dbpath, "d", DEFAULTDB,
-		"Path of locate database file (ex: /path/something.db:/path/another.db)")
-
+	flag.StringVar(&dbpath, "d", LOCATEDIR, "Path of locate database directory")
 	flag.IntVar(&limit, "l", 1000, "Maximum limit for results")
 	flag.BoolVar(&pathSplitWin, "s", false, "OS path split windows backslash")
 	flag.StringVar(&root, "r", "", "DB insert prefix for directory path")
@@ -76,13 +72,6 @@ func main() {
 	}
 
 	// DB path flag parse
-	// dbpathがデフォルトであり かつ $LOCATE_PATHが指定されていれば(=空でなければ)
-	if d := os.Getenv("LOCATE_PATH"); dbpath == DEFAULTDB && d != "" {
-		dbpath = d // dbpathを上書きする
-		if err := os.Setenv("LOCATE_PATH", ""); err != nil {
-			log.Panicf("Cannot set env variable %s", err)
-		}
-	}
 	log.Infof("Set dbpath: %s", dbpath)
 
 	// Directory check
@@ -91,7 +80,7 @@ func main() {
 	}
 
 	// Command check
-	if _, err := exec.LookPath("locate"); err != nil {
+	if _, err := exec.LookPath("gocate"); err != nil {
 		log.Panic(err) // locateコマンドがなければ終了
 	}
 
@@ -100,7 +89,7 @@ func main() {
 	cache = cmd.CacheMap{}
 	// cacheを廃棄するかの判断に必要
 	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
-	locateS, err = cmd.LocateStats(dbpath)
+	locateS, err = cmd.LocateStats()
 	if err != nil {
 		log.Error(err)
 	}
@@ -319,7 +308,7 @@ func locateStatusPage(w http.ResponseWriter, r *http.Request) {
 					</body>
 					</html>`,
 		func() (s interface{}) {
-			if l, err := cmd.LocateStats(dbpath); err == nil {
+			if l, err := cmd.LocateStats(); err == nil {
 				s = l
 			} else {
 				s = err.Error()
@@ -360,7 +349,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		/* LocateStats()の結果が前と異なっていたら
 		locateS更新
 		cacheを初期化 */
-		if l, err := cmd.LocateStats(dbpath); string(l) != string(locateS) { // DB更新されていたら
+		if l, err := cmd.LocateStats(); string(l) != string(locateS) { // DB更新されていたら
 			if err != nil {
 				log.Error(err)
 			}

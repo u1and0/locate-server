@@ -29,8 +29,8 @@ type Stats struct {
 }
 
 // LocateStats : Result of `locate -S`
-func LocateStats(path string) ([]byte, error) {
-	return exec.Command("locate", "-Sd", path).Output()
+func LocateStats() ([]byte, error) {
+	return exec.Command("gocate", "--", "-S").Output()
 }
 
 // LocateStatsSum : locateされるファイル数をDB情報から合計する
@@ -100,7 +100,7 @@ func highlightString(s string, words []string) string {
 // echo $LOCATE_PATH | tr :, \n | xargs -P0 -I@ locate 検索語 | grep -v 除外語 | grep -v 除外語...
 func (l *Locater) CmdGen() (pipeline [][]string) {
 	locate := []string{
-		"gocate",                  // locate command path
+		"gocate",               // locate command path
 		"--database", l.Dbpath, //Add database option
 		"--",            // Inject locate option
 		"--ignore-case", // Ignore case distinctions when matching patterns.

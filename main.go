@@ -319,7 +319,7 @@ func locateStatusPage(w http.ResponseWriter, r *http.Request) {
 					</body>
 					</html>`,
 		func() (s interface{}) {
-			if l, err := cmd.LocateStats(dbpath); err == nil {
+			if l, err := cmd.LocateStats(); err == nil {
 				s = l
 			} else {
 				s = err.Error()

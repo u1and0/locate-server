@@ -80,7 +80,7 @@ func main() {
 	}
 
 	// Command check
-	if _, err := exec.LookPath("locate"); err != nil {
+	if _, err := exec.LookPath("gocate"); err != nil {
 		log.Panic(err) // locateコマンドがなければ終了
 	}
 

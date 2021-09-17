@@ -13,7 +13,7 @@ WORKDIR /go/src/github.com/u1and0/locate-server
 ENV GO111MODULE=on
 RUN apk --update --no-cache add git &&\
     go build -o /go/bin/locate-server
-RUN go get github.com/u1and0/gocate
+RUN go install github.com/u1and0/gocate@v0.3.0
 
 FROM frolvlad/alpine-glibc:alpine-3.14_glibc-2.33
 COPY --from=go_official /go/bin/locate-server /usr/bin/locate-server
@@ -24,4 +24,4 @@ ENTRYPOINT ["/usr/bin/locate-server"]
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
       description="Running locate-server"\
-      version="v2.3.0"
+      version="v2.3.1"

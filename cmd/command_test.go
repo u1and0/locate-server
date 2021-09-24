@@ -1,13 +1,12 @@
 package locater
 
 import (
-	"os"
 	"strings"
 	"testing"
 )
 
 func TestLocateStats(t *testing.T) {
-	b, _ := LocateStats()
+	b, _ := LocateStats("../test")
 	actual := strings.Fields(string(b))
 	expected := strings.Fields(`
 		データベース ../test/etc.db:
@@ -35,10 +34,7 @@ func TestLocateStats(t *testing.T) {
 }
 
 func TestLocateStatsSum(t *testing.T) {
-	if _, err := os.Stat("/var/lib/mlocate/mlocate.db"); err == nil {
-		t.Fatal("このテストは/var/lib/mlocate/mlocate.dbがあると失敗する")
-	}
-	b, err := LocateStats()
+	b, err := LocateStats("../test")
 	if err != nil {
 		t.Fatalf("LocateStats error occur %s", err)
 	}

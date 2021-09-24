@@ -16,7 +16,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "2.3.2"
+	VERSION = "2.3.2r"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
@@ -27,12 +27,8 @@ const (
 
 var (
 	showVersion  bool
-	receiveValue string
-	err          error
 	limit        int
-	// dbpathオプションがなければ$LOCATE_PATHを参照する
-	// $LOCATE_PATHも空のときはデフォルト値"/var/lib/mlocate/mlocate.db"を使用する
-	dbpath       = "/var/lib/mlocate/mlocate.db"
+	dbpath       string
 	pathSplitWin bool
 	root         string
 	trim         string
@@ -89,7 +85,7 @@ func main() {
 	cache = cmd.CacheMap{}
 	// cacheを廃棄するかの判断に必要
 	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
-	locateS, err = cmd.LocateStats(dbpath)
+	locateS, err := cmd.LocateStats(dbpath)
 	if err != nil {
 		log.Error(err)
 	}
@@ -323,20 +319,11 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 	var (
 		results []cmd.PathMap
 	)
-	// 検索コンフィグ構造体
-	loc := cmd.Locater{
-		Limit:        limit,        // 検索件数上限
-		Dbpath:       dbpath,       // 検索対象パス
-		PathSplitWin: pathSplitWin, // path separatorを\にする
-		Root:         root,         // Path prefix insert
-		Trim:         trim,         // Path prefix trim
-		Debug:        debug,        //Debugフラグ
-	}
 	// Modify query
-	receiveValue = r.FormValue("query")
-
-	if loc.SearchWords, loc.ExcludeWords, err =
-		cmd.QueryParser(receiveValue); err != nil { // 検索文字チェックERROR
+	receiveValue := r.FormValue("query")
+	sw, ew, err := cmd.QueryParser(receiveValue)
+	// 検索コンフィグ構造体
+	if err != nil { // 検索文字チェックERROR
 		log.Errorf("%s [ %-50s ]", err, receiveValue)
 		fmt.Fprint(w, htmlClause(receiveValue))
 		fmt.Fprintf(w, ` %s
@@ -345,68 +332,79 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 					<script type="text/javascript" src="js/datalist.js"></script>
 					</body>
 					</html>`, err)
-	} else { // 検索文字数チェックOK
-		/* LocateStats()の結果が前と異なっていたら
-		locateS更新
-		cacheを初期化 */
-		if l, err := cmd.LocateStats(dbpath); string(l) != string(locateS) { // DB更新されていたら
-			if err != nil {
-				log.Error(err)
-			}
-			locateS = l // 保持するDB情報の更新
-			var n uint64
-			n, err = cmd.LocateStatsSum(l) // 検索ファイル数の更新
-			if err != nil {
-				log.Error(err)
-			}
-			stats.Items = cmd.Ambiguous(n)
-			stats.LastUpdateTime = DBLastUpdateTime()
-			cache = cmd.CacheMap{} // キャッシュリセット
-		}
-
-		// Searching
-		st := time.Now()
-		results, stats.ResultNum, getpushLog, err = loc.ResultsCache(&cache)
-		/* cache は&cacheによりdeep copyされてResultsCache()内で
-		直接書き換えられるので、returnされない*/
-		stats.SearchTime = float64((time.Since(st)).Nanoseconds()) / float64(time.Millisecond)
-
-		if err != nil {
-			log.Errorf("%s [ %-50s ]", err, receiveValue)
-		}
-		log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]",
-			stats.ResultNum, stats.SearchTime, getpushLog, receiveValue)
-		/* normalizedWordではなく、あえてreceiveValueを
-		表示して生の検索文字列を記録したい*/
-
-		// Search result page
-		fmt.Fprint(w, htmlClause(receiveValue))
-
-		// Google検索の表示例
-		// 約 8,010,000 件 （0.50 秒）
-		fmt.Fprintf(w,
-			`ヒット数: %d件中、最大%d件を表示<br>
-			 %.3fmsec で約%s件を検索しました。<br>
-			</h4>`,
-			stats.ResultNum,
-			loc.Limit,
-			stats.SearchTime,
-			stats.Items)
-
-		// 検索結果を行列表示
-		fmt.Fprintln(w, `<table>
-						  <tr>`)
-		for _, e := range results {
-			fmt.Fprintf(w, `<tr>
-				<td>
-					<a href="file://%s">%s</a>
-					<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
-				</td>
-			</tr>`, e.File, e.Highlight, e.Dir)
-		}
-
-		fmt.Fprintln(w, `</table>
-					  </body>
-					  </html>`)
+		return
 	}
+	loc := cmd.Locater{
+		SearchWords:  sw,           // 検索キーワード
+		ExcludeWords: ew,           // 検索から取り除くキーワード
+		Limit:        limit,        // 検索件数上限
+		Dbpath:       dbpath,       // 検索対象パス
+		PathSplitWin: pathSplitWin, // path separatorを\にする
+		Root:         root,         // Path prefix insert
+		Trim:         trim,         // Path prefix trim
+		Debug:        debug,        //Debugフラグ
+	}
+	// 検索文字数チェックOK
+	/* LocateStats()の結果が前と異なっていたら
+	locateS更新
+	cacheを初期化 */
+	if l, err := cmd.LocateStats(dbpath); string(l) != string(locateS) { // DB更新されていたら
+		if err != nil {
+			log.Error(err)
+		}
+		locateS = l // 保持するDB情報の更新
+		var n uint64
+		n, err = cmd.LocateStatsSum(l) // 検索ファイル数の更新
+		if err != nil {
+			log.Error(err)
+		}
+		stats.Items = cmd.Ambiguous(n)
+		stats.LastUpdateTime = DBLastUpdateTime()
+		cache = cmd.CacheMap{} // キャッシュリセット
+	}
+
+	// Searching
+	st := time.Now()
+	results, stats.ResultNum, getpushLog, err = loc.ResultsCache(&cache)
+	/* cache は&cacheによりdeep copyされてResultsCache()内で
+	直接書き換えられるので、returnされない*/
+	stats.SearchTime = float64((time.Since(st)).Nanoseconds()) / float64(time.Millisecond)
+
+	if err != nil {
+		log.Errorf("%s [ %-50s ]", err, receiveValue)
+	}
+	log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]",
+		stats.ResultNum, stats.SearchTime, getpushLog, receiveValue)
+	/* normalizedWordではなく、あえてreceiveValueを
+	表示して生の検索文字列を記録したい*/
+
+	// Search result page
+	fmt.Fprint(w, htmlClause(receiveValue))
+
+	// Google検索の表示例
+	// 約 8,010,000 件 （0.50 秒）
+	fmt.Fprintf(w,
+		`ヒット数: %d件中、最大%d件を表示<br>
+		 %.3fmsec で約%s件を検索しました。<br>
+		</h4>`,
+		stats.ResultNum,
+		loc.Limit,
+		stats.SearchTime,
+		stats.Items)
+
+	// 検索結果を行列表示
+	fmt.Fprintln(w, `<table>
+					  <tr>`)
+	for _, e := range results {
+		fmt.Fprintf(w, `<tr>
+			<td>
+				<a href="file://%s">%s</a>
+				<a href="file://%s" title="<< クリックでフォルダに移動"><<</a>
+			</td>
+		</tr>`, e.File, e.Highlight, e.Dir)
+	}
+
+	fmt.Fprintln(w, `</table>
+				  </body>
+				  </html>`)
 }

@@ -16,7 +16,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "2.3.0r"
+	VERSION = "2.3.2"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locateのデータベースやログファイルを置く場所
@@ -89,7 +89,7 @@ func main() {
 	cache = cmd.CacheMap{}
 	// cacheを廃棄するかの判断に必要
 	// lstatが変わった=mlocate.dbの内容が更新されたのでcacheを新しくする
-	locateS, err = cmd.LocateStats()
+	locateS, err = cmd.LocateStats(dbpath)
 	if err != nil {
 		log.Error(err)
 	}
@@ -308,7 +308,7 @@ func locateStatusPage(w http.ResponseWriter, r *http.Request) {
 					</body>
 					</html>`,
 		func() (s interface{}) {
-			if l, err := cmd.LocateStats(); err == nil {
+			if l, err := cmd.LocateStats(dbpath); err == nil {
 				s = l
 			} else {
 				s = err.Error()
@@ -349,7 +349,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 		/* LocateStats()の結果が前と異なっていたら
 		locateS更新
 		cacheを初期化 */
-		if l, err := cmd.LocateStats(); string(l) != string(locateS) { // DB更新されていたら
+		if l, err := cmd.LocateStats(dbpath); string(l) != string(locateS) { // DB更新されていたら
 			if err != nil {
 				log.Error(err)
 			}

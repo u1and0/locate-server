@@ -125,6 +125,9 @@ URLを送られた人はリンクをクリックするだけで検索バーに�
 
 
 # Release Note
+## v2.3.2: DB ステータス表示バグ修正
+* `gocate -- -S` を使用せず、`locate -Sd "dbpathのファイル"` を使用するように変更
+
 ## v2.3.1: マルチスレッドgocate検索
 * gocate に合わせて内部動作を微修正しました。
 * gocate -init (updatedbモード)に対応して、/var/lib/mlocate下を検索するようにしました。

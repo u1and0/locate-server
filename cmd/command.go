@@ -29,8 +29,18 @@ type Stats struct {
 }
 
 // LocateStats : Result of `locate -S`
-func LocateStats() ([]byte, error) {
-	return exec.Command("gocate", "--", "-S").Output()
+func LocateStats(s string) ([]byte, error) {
+	dbs, err := filepath.Glob(s + "/*.db")
+	if err != nil {
+		return []byte{}, err
+	}
+	d := strings.Join(dbs, ":")
+	b, err := exec.Command("locate", "-Sd", d).Output()
+	// => locate -Sd /var/lib/mlocate/db1.db:/var/lib/mlocate/db2.db:...
+	if err != nil {
+		return b, err
+	}
+	return b, err
 }
 
 // LocateStatsSum : locateされるファイル数をDB情報から合計する

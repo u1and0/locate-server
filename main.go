@@ -2,6 +2,9 @@ package main
 
 import (
 	"net/http"
+	"strings"
+
+	cmd "github.com/u1and0/locate-server/cmd"
 
 	"github.com/gin-gonic/gin"
 )
@@ -22,8 +25,9 @@ func main() {
 	type Paths []string
 	type Result struct {
 		Paths  `json:"paths"`
-		Status int   `json:"status"`
-		Err    error `json:"error"`
+		Status int    `json:"status"`
+		Err    error  `json:"error"`
+		Query  string `json:"query"`
 	}
 	var err error
 	result := Result{}
@@ -36,6 +40,18 @@ func main() {
 	result.Err = err
 
 	r.GET("/search", func(c *gin.Context) {
+		q := c.Query("query")
+		l := cmd.Locater{
+			SearchWords: strings.Fields(q),
+			Dbpath:      "/var/lib/mlocate",
+			Debug:       false,
+		}
+		path, err := l.Locate()
+		result.Paths = path
+		if err != nil {
+			panic(err)
+		}
+		result.Query = q
 		c.JSON(http.StatusOK, result)
 	})
 

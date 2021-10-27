@@ -137,6 +137,17 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 	return
 }
 
+// Locate excute locate (or gocate) command
+func (l *Locater) Locate() ([]string, error) {
+	out, err := pipeline.Output(l.CmdGen()...)
+	if l.Debug {
+		log.Debugf("gocate result %v", out)
+	}
+	outslice := strings.Split(string(out), "\n")
+	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
+	return outslice, err
+}
+
 // Cmd : locate検索し、
 // 結果をPathMapのスライス(最大l.Limit件(limit = default 1000))にして返す
 // 更に検索結果数、あれば検索時のエラーを返す

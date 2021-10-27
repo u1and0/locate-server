@@ -1,0 +1,37 @@
+<html>
+	<h1>
+		{{ .title }}
+	</h1>
+    <script src="js/index.js"></script>
+<html>
+					<head><title>Locate Server {{ .title }}</title></head>
+					<body>
+						<form method="get" action="/search">
+							<!-- 検索窓 -->
+							<input type="text" name="query" value={{ .title }} size="50" list="searched-words" >
+
+							<!-- 検索履歴 Frecency リスト -->
+ 							<datalist id="searched-words"> {{ .datalist }} </datalist>
+
+							<!-- 検索ボタン -->
+							<input type="submit" name="submit" value="Search">
+							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
+						</form>
+
+						<!-- 折りたたみ展開ボタン -->
+						<div onclick="obj=document.getElementById('hidden-explain').style; obj.display=(obj.display=='none')?'block':'none';">
+						<a style="cursor:pointer;">▼ 検索ヘルプを表示</a>
+						</div>
+						<!--// 折りたたみ展開ボタン -->
+
+						<!-- ここから先を折りたたむ -->
+						<div id="hidden-explain" style="display:none;clear:both;">
+						<!-- 検索ヘルプ -->
+						<small> {{ .explain }} </small>
+						</div>
+						<!-- 折りたたみここまで -->
+
+						<h4>
+							<a href=/status>DB</a> last update: {{ .lastUpdateTime }}
+						</h4>
+</html>

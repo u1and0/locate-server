@@ -10,16 +10,22 @@ import (
 )
 
 func main() {
+	var (
+		q string
+	)
 	r := gin.Default()
 	r.LoadHTMLGlob("templates/*")
 
-	r.GET("/index", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.tmpl", gin.H{
-			"title":          "Locate Server",
-			"explain":        "説明",
-			"LastUpdateTime": "2016-01-02 15:04:05",
-			"datalist":       "datalist",
-		})
+	r.GET("/", func(c *gin.Context) {
+		c.HTML(http.StatusOK,
+			"index.tmpl",
+			gin.H{
+				"title":          q,
+				"explain":        "説明",
+				"lastUpdateTime": "2016-01-02 15:04:05",
+				"datalist":       "datalist",
+				"query":          q,
+			})
 	})
 
 	type Paths []string
@@ -31,16 +37,9 @@ func main() {
 	}
 	var err error
 	result := Result{}
-	result.Paths = Paths{
-		"path/to/1",
-		"path/to/2",
-		"path/to/3",
-	}
-	result.Status = http.StatusOK
-	result.Err = err
 
 	r.GET("/search", func(c *gin.Context) {
-		q := c.Query("query")
+		q = c.Query("query")
 		l := cmd.Locater{
 			SearchWords: strings.Fields(q),
 			Dbpath:      "/var/lib/mlocate",
@@ -49,7 +48,9 @@ func main() {
 		path, err := l.Locate()
 		result.Paths = path
 		if err != nil {
-			panic(err)
+			result.Err = err
+		} else {
+			result.Status = http.StatusOK
 		}
 		result.Query = q
 		c.JSON(http.StatusOK, result)

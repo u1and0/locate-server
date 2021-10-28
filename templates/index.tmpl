@@ -16,17 +16,18 @@
 
       <form method="get" action="/search">
         <!-- 検索窓 -->
-        <input type="text" name="query" value="{{ .query }}" size="50" list="searched-words" >
+        <input type="text" name="q" value="{{ .query }}" size="50" list="searched-words" >
         <!-- 検索履歴 Frecency リスト -->
         <datalist id="searched-words"> "{{ .datalist }}" </datalist>
         <!-- 検索ボタン -->
-        <input type="submit" name="submit" value="Search">
+        <button onclick="main();">Get user info</button>
     <a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
       </form>
 
       <h4>
         <a href=/status>DB</a> last update: {{ .lastUpdateTime }}
       </h4>
+    <script src="js/parsejson.js"></script>
     <script src="js/datalist.js"></script>
   </body>
 </html>

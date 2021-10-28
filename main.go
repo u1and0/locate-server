@@ -9,19 +9,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func main() {
-	type Paths []string
-	type Result struct {
-		Paths  `json:"paths"`
-		Status int    `json:"status"`
-		Err    error  `json:"error"`
-		Query  string `json:"query"`
-	}
+// Paths locate command result
+type Paths []string
 
+// Result return JSON struct
+type Result struct {
+	Paths  `json:"paths"`
+	Status int    `json:"status"`
+	Err    error  `json:"error"`
+	Query  string `json:"query"`
+}
+
+func main() {
 	var (
-		q      string
-		route  = gin.Default()
-		result = Result{}
+		q     string
+		route = gin.Default()
 	)
 	route.LoadHTMLGlob("templates/*")
 
@@ -38,21 +40,24 @@ func main() {
 	})
 
 	route.GET("/search", func(c *gin.Context) {
-		q = c.Query("query")
+		q = c.Query("q")
 		l := cmd.Locater{
 			SearchWords: strings.Fields(q),
 			Dbpath:      "/var/lib/mlocate",
 			Debug:       false,
 		}
 		path, err := l.Locate()
-		result.Paths = path
+		result := Result{
+			Paths: path,
+			Query: q,
+		}
 		if err != nil {
 			result.Err = err
+			c.JSON(404, result)
 		} else {
 			result.Status = http.StatusOK
+			c.JSON(http.StatusOK, result)
 		}
-		result.Query = q
-		c.JSON(http.StatusOK, result)
 	})
 
 	route.GET("/status", func(c *gin.Context) {

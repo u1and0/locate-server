@@ -10,13 +10,22 @@ import (
 )
 
 func main() {
-	var (
-		q string
-	)
-	r := gin.Default()
-	r.LoadHTMLGlob("templates/*")
+	type Paths []string
+	type Result struct {
+		Paths  `json:"paths"`
+		Status int    `json:"status"`
+		Err    error  `json:"error"`
+		Query  string `json:"query"`
+	}
 
-	r.GET("/", func(c *gin.Context) {
+	var (
+		q      string
+		route  = gin.Default()
+		result = Result{}
+	)
+	route.LoadHTMLGlob("templates/*")
+
+	route.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK,
 			"index.tmpl",
 			gin.H{
@@ -28,17 +37,7 @@ func main() {
 			})
 	})
 
-	type Paths []string
-	type Result struct {
-		Paths  `json:"paths"`
-		Status int    `json:"status"`
-		Err    error  `json:"error"`
-		Query  string `json:"query"`
-	}
-	var err error
-	result := Result{}
-
-	r.GET("/search", func(c *gin.Context) {
+	route.GET("/search", func(c *gin.Context) {
 		q = c.Query("query")
 		l := cmd.Locater{
 			SearchWords: strings.Fields(q),
@@ -56,19 +55,17 @@ func main() {
 		c.JSON(http.StatusOK, result)
 	})
 
-	r.GET("/moreJSON", func(c *gin.Context) {
-		// gin.H is a shortcut for map[string]interface{}
+	route.GET("/status", func(c *gin.Context) {
+		db := "/var/lib/mlocate"
+		l, err := cmd.LocateStats(db)
+		ss := strings.Split(string(l), "\n")
 		c.JSON(http.StatusOK, gin.H{
-			"results": Paths{
-				"path/to/4",
-				"path/to/5",
-				"path/to/6",
-			},
+			"result": ss,
 			"status": http.StatusOK,
 			"error":  err,
 		})
 	})
 
 	// Listen and serve on 0.0.0.0:8080
-	r.Run(":8080")
+	route.Run(":8080")
 }

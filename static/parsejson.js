@@ -10,7 +10,7 @@ async function main(){
 
 // fetchの返り値のPromiseを返す
 function fetchLocatePath(query){
-  return fetch(`http://localhost:8080/json?q=bin+ls`)
+  return fetch(`http://localhost:8080/json?q=${makeQuery(query)}`)
     .then(response =>{
       console.log(response.status);
       if (!response.ok) {
@@ -20,6 +20,10 @@ function fetchLocatePath(query){
         return response.json(); //.then(userInfo =>  ここはmain()で解決
       }
     });
+}
+
+function makeQuery(str){
+  return str.split(" ").join("+")
 }
 
 // HTMLの挿入

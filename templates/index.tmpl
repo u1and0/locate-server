@@ -14,21 +14,25 @@
       </div>
       <!-- 折りたたみここまで -->
 
-      <form method="get" action="/search">
+      <!-- GET method URI-->
+      <!-- <form method="get" action="/search"> -->
         <!-- 検索窓 -->
-        <input type="text" name="q" value="{{ .query }}" size="50" list="searched-words" >
+        <input type="text" id="q" value="{{ .query }}" size="50" list="searched-words" >
         <!-- 検索履歴 Frecency リスト -->
         <datalist id="searched-words"> "{{ .datalist }}" </datalist>
         <!-- 検索ボタン -->
-        <button onclick="main();">Get user info</button>
+        <button onclick="main();">Search</button>
+        <!-- <input type="submit" name="submit" value="Search"> -->
     <a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
-      </form>
+      <!-- </form> -->
 
       <h4>
         <a href=/status>DB</a> last update: {{ .lastUpdateTime }}
       </h4>
-    <script src="js/parsejson.js"></script>
-    <script src="js/datalist.js"></script>
+
+      <div id="result"></div>
+
+    <script type="text/javascript" src="/static/parsejson.js"></script>
   </body>
 </html>
 

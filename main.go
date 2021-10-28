@@ -25,6 +25,7 @@ func main() {
 		q     string
 		route = gin.Default()
 	)
+	route.Static("/static", "./static")
 	route.LoadHTMLGlob("templates/*")
 
 	route.GET("/", func(c *gin.Context) {
@@ -40,17 +41,21 @@ func main() {
 	})
 
 	route.GET("/search", func(c *gin.Context) {
-		q = c.Query("q")
-		l := cmd.Locater{
-			SearchWords: strings.Fields(q),
-			Dbpath:      "/var/lib/mlocate",
-			Debug:       false,
-		}
-		path, err := l.Locate()
-		result := Result{
-			Paths: path,
-			Query: q,
-		}
+		// result, _ := ResultPath(c)
+		c.HTML(http.StatusOK,
+			"index.tmpl",
+			gin.H{
+				"title":          q,
+				"explain":        "説明",
+				"lastUpdateTime": "2016-01-02 15:04:05",
+				"datalist":       "datalist",
+				"query":          q,
+				// "paths":          result.Paths,
+			})
+	})
+
+	route.GET("/json", func(c *gin.Context) {
+		result, err := ResultPath(c)
 		if err != nil {
 			result.Err = err
 			c.JSON(404, result)
@@ -73,4 +78,20 @@ func main() {
 
 	// Listen and serve on 0.0.0.0:8080
 	route.Run(":8080")
+}
+
+// ResultPath execute locate and return
+func ResultPath(c *gin.Context) (Result, error) {
+	q := c.Query("q")
+	l := cmd.Locater{
+		SearchWords: strings.Fields(q),
+		Dbpath:      "/var/lib/mlocate",
+		Debug:       false,
+	}
+	path, err := l.Locate()
+	result := Result{
+		Paths: path,
+		Query: q,
+	}
+	return result, err
 }

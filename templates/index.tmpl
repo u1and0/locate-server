@@ -7,7 +7,11 @@
         <!-- 検索窓 -->
         <input type="text" name="q" value="{{ .query }}" size="50" list="searched-words" >
         <!-- 検索履歴 Frecency リスト -->
-        <datalist id="searched-words"> "{{ .datalist }}" </datalist>
+        <datalist id="searched-words">
+            {{ range .datalist }}
+                <option>{{ .Word }}</option>
+            {{ end }}
+        </datalist>
         <!-- 検索ボタン -->
         <input type="submit" id="submit" value="search">
       </form>

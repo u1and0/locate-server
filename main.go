@@ -71,17 +71,25 @@ func main() {
 	stats.LastUpdateTime = cmd.DBLastUpdateTime(args.Dbpath)
 
 	route.GET("/", func(c *gin.Context) {
+		datalist, err := cmd.Datalist(LOGFILE)
+		if err != nil {
+			log.Error(err)
+		}
 		c.HTML(http.StatusOK,
 			"index.tmpl",
 			gin.H{
 				"title":          "",
 				"lastUpdateTime": stats.LastUpdateTime,
-				"datalist":       "datalist",
+				"datalist":       datalist,
 				"query":          "",
 			})
 	})
 
 	route.GET("/search", func(c *gin.Context) {
+		datalist, err := cmd.Datalist(LOGFILE)
+		if err != nil {
+			log.Error(err)
+		}
 		query := c.Request.URL.Query()
 		q := strings.Join(query["q"], " ")
 		c.HTML(http.StatusOK,
@@ -89,7 +97,7 @@ func main() {
 			gin.H{
 				"title":          q,
 				"lastUpdateTime": stats.LastUpdateTime,
-				"datalist":       "datalist",
+				"datalist":       datalist,
 				"query":          q,
 			})
 	})

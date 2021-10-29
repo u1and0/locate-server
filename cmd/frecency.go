@@ -2,7 +2,6 @@ package locater
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"os"
 	"regexp"
@@ -29,7 +28,7 @@ func LogWord(logfile string) (History, error) {
 	history := make(History, 100)
 	fp, err := os.Open(logfile)
 	if err != nil {
-		panic(err)
+		return history, err
 	}
 	defer fp.Close()
 	reader := bufio.NewReader(fp)
@@ -129,12 +128,9 @@ func (fl FrecencyList) Len() int           { return len(fl) }
 func (fl FrecencyList) Less(i, j int) bool { return fl[i].Score > fl[j].Score }
 func (fl FrecencyList) Swap(i, j int)      { fl[i], fl[j] = fl[j], fl[i] }
 
-// Datalist convert []string to <datalist> string
-// like `<option value="Fecency.Word"></option>`
-func (fl FrecencyList) Datalist() string {
-	var list []string
-	for _, f := range fl {
-		list = append(list, fmt.Sprintf(`<option value="%s"></option>`, f.Word))
-	}
-	return strings.Join(list, "")
+// Datalist throw list of searched words sorted by score
+func Datalist(f string) (FrecencyList, error) {
+	historymap, err := LogWord(f)
+	wordList := historymap.RankByScore()
+	return wordList, err
 }

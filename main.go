@@ -47,13 +47,12 @@ var log = logging.MustGetLogger("main")
 
 func main() {
 	var (
-		route = gin.Default()
 		stats = cmd.Stats{}
 		args  = parse()
 	)
 
 	if args.ShowVersion {
-		fmt.Println("version:", VERSION)
+		fmt.Println("locate-server version", VERSION)
 		return // versionを表示して終了
 	}
 
@@ -65,6 +64,8 @@ func main() {
 		log.Panicf("Cannot open logfile %v", err)
 	}
 
+	// Open server
+	route := gin.Default()
 	route.Static("/static", "./static")
 	route.LoadHTMLGlob("templates/*")
 	stats.LastUpdateTime = cmd.DBLastUpdateTime(args.Dbpath)

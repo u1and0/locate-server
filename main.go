@@ -50,7 +50,6 @@ func main() {
 				"lastUpdateTime": "2016-01-02 15:04:05",
 				"datalist":       "datalist",
 				"query":          q,
-				// "paths":          result.Paths,
 			})
 	})
 

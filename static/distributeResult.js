@@ -1,23 +1,23 @@
 main()
+
 async function main(){
   try {
-    const url = new URL(window.location.href);
-    const params = url.searchParams;
-    const query = params.get("q");
-    console.log("Params: ", query);
-    // const query = document.getElementsByName("q")[0].value;
+    const query = getQ();
     if (!query) { // queryが""やnullや<empty string>のときは何もしない
       return
     }
       const resultPath = await fetchLocatePath(query);
       console.log(resultPath);
       displayView(resultPath);
-      // // URLからqueryとtitle変更
-      // document.getElementsByName("q")[0].value = query;
-      // document.title = query;
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }
+}
+
+function getQ() {
+  const url = new URL(window.location.href);
+  const params = url.searchParams;
+  return params.get("q");
 }
 
 // fetchの返り値のPromiseを返す

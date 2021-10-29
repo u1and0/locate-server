@@ -13,26 +13,25 @@
       <small> {{ .explain }} </small>
       </div>
       <!-- 折りたたみここまで -->
+      <a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
 
       <!-- GET method URI-->
-      <!-- <form method="get" action="/search"> -->
+      <form name="form1" method="get" action="/search">
         <!-- 検索窓 -->
-        <input type="text" id="q" value="{{ .query }}" size="50" list="searched-words" >
+        <input type="text" name="q" value="{{ .query }}" size="50" list="searched-words" >
         <!-- 検索履歴 Frecency リスト -->
         <datalist id="searched-words"> "{{ .datalist }}" </datalist>
         <!-- 検索ボタン -->
-        <button onclick="main();">Search</button>
-        <!-- <input type="submit" name="submit" value="Search"> -->
-    <a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
-      <!-- </form> -->
+        <!-- <input type="submit" value="search" onclick="main();">-->
+        <input type="submit" id="submit" value="search">
+        <!-- <input type="button" value="search" onclick="main()"> -->
+      </form>
 
       <h4>
         <a href=/status>DB</a> last update: {{ .lastUpdateTime }}
       </h4>
 
       <table id="result">
-          <tr>
-          </tr>
       </table>
 
     <script type="text/javascript" src="/static/distributeResult.js"></script>

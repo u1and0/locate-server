@@ -1,8 +1,20 @@
+main()
 async function main(){
   try {
-    const query = document.getElementById("q").value;
-    const resultPath = await fetchLocatePath(query);
-    displayView(resultPath);
+    const url = new URL(window.location.href);
+    const params = url.searchParams;
+    const query = params.get("q");
+    console.log("Params: ", query);
+    // const query = document.getElementsByName("q")[0].value;
+    if (!query) { // queryが""やnullや<empty string>のときは何もしない
+      return
+    }
+      const resultPath = await fetchLocatePath(query);
+      console.log(resultPath);
+      displayView(resultPath);
+      // // URLからqueryとtitle変更
+      // document.getElementsByName("q")[0].value = query;
+      // document.title = query;
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }
@@ -10,7 +22,8 @@ async function main(){
 
 // fetchの返り値のPromiseを返す
 function fetchLocatePath(query){
-  return fetch(`http://localhost:8080/json?q=${makeQuery(query)}`)
+  const url="http://localhost:8080"
+  return fetch(`${url}/json?q=${makeQuery(query)}`)
     .then(response =>{
       console.log(response.status);
       if (!response.ok) {

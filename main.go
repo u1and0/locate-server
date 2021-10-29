@@ -22,7 +22,6 @@ type Result struct {
 
 func main() {
 	var (
-		q     string
 		route = gin.Default()
 	)
 	route.Static("/static", "./static")
@@ -32,16 +31,17 @@ func main() {
 		c.HTML(http.StatusOK,
 			"index.tmpl",
 			gin.H{
-				"title":          q,
+				"title":          "",
 				"explain":        "説明",
 				"lastUpdateTime": "2016-01-02 15:04:05",
 				"datalist":       "datalist",
-				"query":          q,
+				"query":          "",
 			})
 	})
 
 	route.GET("/search", func(c *gin.Context) {
-		// result, _ := ResultPath(c)
+		query := c.Request.URL.Query()
+		q := strings.Join(query["q"], " ")
 		c.HTML(http.StatusOK,
 			"index.tmpl",
 			gin.H{

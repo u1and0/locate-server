@@ -1,22 +1,6 @@
 <html>
   <head><title>Locate Server {{ .title }}</title></head>
     <body>
-      <!-- 折りたたみ展開ボタン -->
-      <div onclick="obj=document.getElementById('hidden-explain').style; obj.display=(obj.display=='none')?'block':'none';">
-      <a style="cursor:pointer;">▼ 検索ヘルプを表示</a>
-      </div>
-      <!--// 折りたたみ展開ボタン -->
-
-      <!-- ここから先を折りたたむ -->
-      <div id="hidden-explain" style="display:none;clear:both;">
-      <!-- 検索ヘルプ -->
-      <small> {{ .explain }} </small>
-      </div>
-      <!-- 折りたたみここまで -->
-
-      <h4>
-        <a href=/status>DB</a> last update: {{ .lastUpdateTime }}
-      </h4>
 
       <!-- GET method URI-->
       <form name="form1" method="get" action="/search">
@@ -26,13 +10,33 @@
         <datalist id="searched-words"> "{{ .datalist }}" </datalist>
         <!-- 検索ボタン -->
         <input type="submit" id="submit" value="search">
-        <a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
       </form>
 
+      <!-- 折りたたみ展開ボタン -->
+      <div onclick="toggleMenu('hidden-explain')">
+        <a style="cursor:pointer;">▼ Show HELP</a> <!--// 折りたたみ展開ボタン -->
+      </div>
+      <!-- ここから先を折りたたむ -->
+      <div id="hidden-explain" style="display:none;clear:both;">
+      <!-- 検索ヘルプ -->
+        <a href=https://github.com/u1and0/locate-server/blob/master/README.md>Official README</a><br>
+          <small>
+            {{ .explain }}
+          </small>
+      </div>
+      <!-- 折りたたみここまで -->
+
+      <!-- Database status -->
+      <h4>
+        <a href=/status>DB</a> last update: {{ .lastUpdateTime }}
+      </h4>
+
+      <!-- Search result -->
       <table id="result">
       </table>
 
     <script type="text/javascript" src="/static/distributeResult.js"></script>
+    <script type="text/javascript" src="/static/tooltips.js"></script>
   </body>
 </html>
 

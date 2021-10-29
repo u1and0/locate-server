@@ -25,7 +25,6 @@ function fetchLocatePath(query){
   const url="http://localhost:8080"
   return fetch(`${url}/json?q=${makeQuery(query)}`)
     .then(response =>{
-      console.log(response.status);
       if (!response.ok) {
         // console.error("Error response", response);
         return Promise.reject(new Error(`{${response.status}: ${response.statusText}`));

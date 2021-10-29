@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"net/http"
 	"strings"
 
@@ -9,8 +10,27 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	// VERSION : version
+	VERSION = "2.3.2r"
+	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
+	LOGFILE = "/var/lib/mlocate/locate.log"
+	// LOCATE_PATH=$(paste -sd: <(find /var/lib/mlocate -name '*.db'))
+	LOCATEDIR = "/var/lib/mlocate"
+)
+
 // Paths locate command result
 type Paths []string
+
+// Args command line flag options
+type Args struct {
+	Dbpath      string
+	Limit       int
+	Root        string
+	Trim        string
+	Debug       bool
+	ShowVersion bool
+}
 
 // Result return JSON struct
 type Result struct {
@@ -23,9 +43,12 @@ type Result struct {
 func main() {
 	var (
 		route = gin.Default()
+		stats = cmd.Stats{}
+		args  = Parse()
 	)
 	route.Static("/static", "./static")
 	route.LoadHTMLGlob("templates/*")
+	stats.LastUpdateTime = cmd.DBLastUpdateTime(args.Dbpath)
 
 	route.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK,
@@ -33,7 +56,7 @@ func main() {
 			gin.H{
 				"title":          "",
 				"explain":        "説明",
-				"lastUpdateTime": "2016-01-02 15:04:05",
+				"lastUpdateTime": stats.LastUpdateTime,
 				"datalist":       "datalist",
 				"query":          "",
 			})
@@ -47,7 +70,7 @@ func main() {
 			gin.H{
 				"title":          q,
 				"explain":        "説明",
-				"lastUpdateTime": "2016-01-02 15:04:05",
+				"lastUpdateTime": stats.LastUpdateTime,
 				"datalist":       "datalist",
 				"query":          q,
 			})
@@ -93,4 +116,37 @@ func ResultPath(c *gin.Context) (Result, error) {
 		Query: q,
 	}
 	return result, err
+}
+
+// Parse command line option
+func Parse() Args {
+	var (
+		showVersion  bool
+		limit        int
+		dbpath       string
+		pathSplitWin bool
+		root         string
+		trim         string
+		debug        bool
+	)
+
+	flag.StringVar(&dbpath, "d", LOCATEDIR, "Path of locate database directory")
+	flag.IntVar(&limit, "l", 1000, "Maximum limit for results")
+	flag.BoolVar(&pathSplitWin, "s", false, "OS path split windows backslash")
+	flag.StringVar(&root, "r", "", "DB insert prefix for directory path")
+	flag.StringVar(&trim, "t", "", "DB trim prefix for directory path")
+	flag.BoolVar(&debug, "debug", false, "Debug mode")
+	flag.BoolVar(&showVersion, "v", false, "show version")
+	flag.BoolVar(&showVersion, "version", false, "show version")
+	flag.Parse()
+
+	args := Args{
+		Dbpath:      dbpath,
+		Limit:       limit,
+		Root:        root,
+		Trim:        trim,
+		Debug:       debug,
+		ShowVersion: showVersion,
+	}
+	return args
 }

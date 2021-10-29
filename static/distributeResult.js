@@ -1,11 +1,15 @@
 main()
 
-async function main(){
+function main(){
+  const query = getQ();
+  if (!query) { // queryが""やnullや<empty string>のときは何もしない
+    return
+  }
+  fetchJSONPath()
+}
+
+async function fetchJSONPath(){
   try {
-    const query = getQ();
-    if (!query) { // queryが""やnullや<empty string>のときは何もしない
-      return
-    }
       const resultPath = await fetchLocatePath(query);
       console.log(resultPath);
       displayView(resultPath);

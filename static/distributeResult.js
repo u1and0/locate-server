@@ -45,9 +45,10 @@ function makeQuery(str){
 // HTMLの挿入
 function displayView(view){
   const table = document.getElementById("result");
-  view.paths.forEach((p) =>{
-    let highlight = highlightRegex(p);
-    table.insertAdjacentHTML('beforeend', `<tr><td>${highlight}</tr></td>`)
+  view.paths.forEach((path) =>{
+    let highlight = highlightRegex(path);
+    let mod = `<a href=file://${path}>${highlight}</a>`;
+    table.insertAdjacentHTML('beforeend', `<tr><td>${mod}</tr></td>`);
   });
 }
 
@@ -55,7 +56,8 @@ function highlightRegex(str){
   let query = getQ().split(" ");
   query.forEach((q) =>{
     let re = new RegExp(q);
+    // $&はreのマッチ結果
     str = str.replace(re, "<span style='background-color:#FFCC00;'>$&</span>");
   })
-  return str
+  return str;
 }

@@ -1,7 +1,9 @@
 <html>
-  <head><title>Locate Server {{ .title }}</title></head>
+    <head>
+      <title>Locate Server {{ .title }}</title>
+      <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css">
+    </head>
     <body>
-
       <!-- GET method URI-->
       <form name="form1" method="get" action="/search">
         <!-- 検索窓 -->
@@ -13,7 +15,7 @@
             {{ end }}
         </datalist>
         <!-- 検索ボタン -->
-        <input type="submit" id="submit" value="search">
+        <input type="submit" id="submit" value="&#xf002;" class="fas">
       </form>
 
       <!-- 折りたたみ展開ボタン -->

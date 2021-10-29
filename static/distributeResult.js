@@ -48,7 +48,7 @@ function displayView(view){
   view.paths.forEach((p) =>{
     let highlight = highlightRegex(p);
     let result = `<a href=file://${p}>${highlight}</a>`;
-    result += `<a href=file://${dirname(p)}> <<</a>`;
+    result += `<a href=file://${dirname(p)}> <i class="far fa-folder-open"></i> </a>`;
     table.insertAdjacentHTML('beforeend', `<tr><td>${result}</tr></td>`);
   });
 }

@@ -2,12 +2,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	cmd "github.com/u1and0/locate-server/cmd"
 
 	"github.com/gin-gonic/gin"
+	"github.com/op/go-logging"
 )
 
 const (
@@ -15,7 +18,7 @@ const (
 	VERSION = "2.3.2r"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
-	// LOCATE_PATH=$(paste -sd: <(find /var/lib/mlocate -name '*.db'))
+	// LOCATEDIR : locate (gocate) search db path
 	LOCATEDIR = "/var/lib/mlocate"
 )
 
@@ -40,12 +43,28 @@ type Result struct {
 	Query  string `json:"query"`
 }
 
+var log = logging.MustGetLogger("main")
+
 func main() {
 	var (
 		route = gin.Default()
 		stats = cmd.Stats{}
-		args  = Parse()
+		args  = parse()
 	)
+
+	if args.ShowVersion {
+		fmt.Println("version:", VERSION)
+		return // versionを表示して終了
+	}
+
+	// Log setting
+	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	defer logfile.Close()
+	setLogger(logfile) // log.XXX()を使うものはここより後に書く
+	if err != nil {
+		log.Panicf("Cannot open logfile %v", err)
+	}
+
 	route.Static("/static", "./static")
 	route.LoadHTMLGlob("templates/*")
 	stats.LastUpdateTime = cmd.DBLastUpdateTime(args.Dbpath)
@@ -119,7 +138,7 @@ func ResultPath(c *gin.Context) (Result, error) {
 }
 
 // Parse command line option
-func Parse() Args {
+func parse() Args {
 	var (
 		showVersion  bool
 		limit        int
@@ -149,4 +168,16 @@ func Parse() Args {
 		ShowVersion: showVersion,
 	}
 	return args
+}
+
+// setLogger is printing out log message to STDOUT and LOGFILE
+func setLogger(f *os.File) {
+	var format = logging.MustStringFormatter(
+		`%{color}[%{level:.6s}] ▶ %{time:2006-01-02 15:04:05} %{shortfile} %{message} %{color:reset}`,
+	)
+	backend1 := logging.NewLogBackend(os.Stdout, "", 0)
+	backend2 := logging.NewLogBackend(f, "", 0)
+	backend1Formatter := logging.NewBackendFormatter(backend1, format)
+	backend2Formatter := logging.NewBackendFormatter(backend2, format)
+	logging.SetBackend(backend1Formatter, backend2Formatter)
 }

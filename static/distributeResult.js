@@ -5,10 +5,10 @@ function main(){
   if (!query) { // queryが""やnullや<empty string>のときは何もしない
     return
   }
-  fetchJSONPath()
+  fetchJSONPath(query)
 }
 
-async function fetchJSONPath(){
+async function fetchJSONPath(query){
   try {
       const resultPath = await fetchLocatePath(query);
       console.log(resultPath);
@@ -45,10 +45,17 @@ function makeQuery(str){
 // HTMLの挿入
 function displayView(view){
   const table = document.getElementById("result");
-  // result.innerHTML = view;
   view.paths.forEach((p) =>{
-      let newRow = table.insertRow();
-      let newCell = newRow.insertCell();
-      newCell.appendChild(document.createTextNode(p));
+    let highlight = highlightRegex(p);
+    table.insertAdjacentHTML('beforeend', `<tr><td>${highlight}</tr></td>`)
   });
+}
+
+function highlightRegex(str){
+  let query = getQ().split(" ");
+  query.forEach((q) =>{
+    let re = new RegExp(q);
+    str = str.replace(re, "<span style='background-color:#FFCC00;'>$&</span>");
+  })
+  return str
 }

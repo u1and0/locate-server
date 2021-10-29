@@ -75,7 +75,6 @@ func main() {
 			"index.tmpl",
 			gin.H{
 				"title":          "",
-				"explain":        "説明",
 				"lastUpdateTime": stats.LastUpdateTime,
 				"datalist":       "datalist",
 				"query":          "",
@@ -89,7 +88,6 @@ func main() {
 			"index.tmpl",
 			gin.H{
 				"title":          q,
-				"explain":        "説明",
 				"lastUpdateTime": stats.LastUpdateTime,
 				"datalist":       "datalist",
 				"query":          q,

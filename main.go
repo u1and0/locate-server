@@ -102,13 +102,15 @@ func main() {
 			Trim:         args.Trim,
 			Debug:        args.Debug,
 		}
-		result, err := l.ResultPath()
+		result, err := l.Locate()
 		if err != nil {
-			result.Err = err
-			c.JSON(404, result)
+			log.Error(err)
+			l.Status = 404
+			c.JSON(404, l)
 		} else {
-			result.Status = http.StatusOK
-			c.JSON(http.StatusOK, result)
+			l.Paths = result
+			l.Status = http.StatusOK
+			c.JSON(http.StatusOK, l)
 		}
 	})
 

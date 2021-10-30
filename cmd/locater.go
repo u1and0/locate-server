@@ -1,7 +1,6 @@
 package locater
 
 import (
-	"fmt"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -9,17 +8,32 @@ import (
 	pipeline "github.com/mattn/go-pipeline"
 )
 
-// Locater : queryから読み取った検索ワードと無視するワード
-type Locater struct {
-	SearchWords  []string // 検索キーワード
-	ExcludeWords []string // 検索から取り除くキーワード
-	Dbpath       string   // 検索対象DBパス /path/to/database:/path/to/another
-	Limit        int      // 検索結果HTML表示制限数
-	PathSplitWin bool     // TrueでWindowsパスセパレータを使用する
-	Root         string   // 追加するドライブパス名
-	Trim         string   // 削除するドライブパス名
-	Debug        bool     // Debugフラグ
-}
+type (
+	// Locater : queryから読み取った検索ワードと無視するワード
+	Locater struct {
+		SearchWords  []string `json:"search-words"`   // 検索キーワード
+		ExcludeWords []string `json:"exclude-words"`  // 検索から取り除くキーワード
+		Dbpath       string   `json:"dbpath"`         // 検索対象DBパス /path/to/database:/path/to/another
+		Limit        int      `json:"limit"`          // 検索結果HTML表示制限数
+		PathSplitWin bool     `json:"path-split-win"` // TrueでWindowsパスセパレータを使用する
+		Root         string   `json:"root"`           // 追加するドライブパス名
+		Trim         string   `json:"trim"`           // 削除するドライブパス名
+		Debug        bool     `json:"debug"`          // Debugフラグ
+		// -- Result struct
+		Paths  `json:"paths"`
+		Status int   `json:"status"`
+	}
+	// Paths locate command result
+	Paths []string
+
+	// // Result return JSON struct
+	// Result struct {
+	// 	Paths  `json:"paths"`
+	// 	Status int    `json:"status"`
+	// 	Err    error  `json:"error"`
+	// 	Query  string `json:"query"`
+	// }
+)
 
 // Normalize : SearchWordsとExcludeWordsを合わせる
 // SearchWordsは小文字にする
@@ -179,13 +193,9 @@ func (l *Locater) Cmd() ([]PathMap, uint64, error) {
 	return results, resultsNum, err
 }
 
-// ResultPath execute locate and return
-func (l *Locater) ResultPath() (Result, error) {
-	path, err := l.Locate()
-	path = l.Convert(path)
-	fmt.Printf("%v", path)
-	result := Result{
-		Paths: path,
-	}
-	return result, err
-}
+// // ResultPath execute locate and return
+// func (l *Locater) ResultPath() (*Locater, error) {
+// 	path, err := l.Locate()
+// 	l.Paths = l.Convert(path)
+// 	return l, err
+// }

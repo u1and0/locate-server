@@ -28,17 +28,6 @@ type Stats struct {
 	Items          string  // 検索対象のすべてのファイル数
 }
 
-// Paths locate command result
-type Paths []string
-
-// Result return JSON struct
-type Result struct {
-	Paths  `json:"paths"`
-	Status int    `json:"status"`
-	Err    error  `json:"error"`
-	Query  string `json:"query"`
-}
-
 // DBLastUpdateTime returns date time string for directory update time
 func DBLastUpdateTime(db string) string {
 	filestat, err := os.Stat(db)

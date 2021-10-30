@@ -1,11 +1,15 @@
 main()
 
-async function main(){
+function main(){
+  const query = getQ();
+  if (!query) { // queryが""やnullや<empty string>のときは何もしない
+    return
+  }
+  fetchJSONPath(query)
+}
+
+async function fetchJSONPath(query){
   try {
-    const query = getQ();
-    if (!query) { // queryが""やnullや<empty string>のときは何もしない
-      return
-    }
       const resultPath = await fetchLocatePath(query);
       console.log(resultPath);
       displayView(resultPath);
@@ -25,7 +29,6 @@ function fetchLocatePath(query){
   const url="http://localhost:8080"
   return fetch(`${url}/json?q=${makeQuery(query)}`)
     .then(response =>{
-      console.log(response.status);
       if (!response.ok) {
         // console.error("Error response", response);
         return Promise.reject(new Error(`{${response.status}: ${response.statusText}`));
@@ -42,10 +45,25 @@ function makeQuery(str){
 // HTMLの挿入
 function displayView(view){
   const table = document.getElementById("result");
-  // result.innerHTML = view;
   view.paths.forEach((p) =>{
-      let newRow = table.insertRow();
-      let newCell = newRow.insertCell();
-      newCell.appendChild(document.createTextNode(p));
+    let highlight = highlightRegex(p);
+    let result = `<a href=file://${p}>${highlight}</a>`;
+    result += `<a href=file://${dirname(p)}> <i class="far fa-folder-open"></i> </a>`;
+    table.insertAdjacentHTML('beforeend', `<tr><td>${result}</tr></td>`);
   });
+}
+
+function highlightRegex(str){
+  let query = getQ().split(" ");
+  query.forEach((q) =>{
+    let re = new RegExp(q);
+    // $&はreのマッチ結果
+    str = str.replace(re, "<span style='background-color:#FFCC00;'>$&</span>");
+  })
+  return str;
+}
+
+function dirname(str){
+  const idx = str.lastIndexOf("/")
+  return str.slice(0,idx)
 }

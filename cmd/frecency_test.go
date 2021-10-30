@@ -69,10 +69,16 @@ func Test_ExtractKeyword(t *testing.T) {
 }
 
 func Test_Datalist(t *testing.T) {
-	f := FrecencyList{Frecency{"hoge", 1}, Frecency{"foo", 0}}
-	actual := f.Datalist()
-	expected := `<option value="hoge"></option><option value="foo"></option>`
-	if actual != expected {
-		t.Fatalf("got: %v want: %v", actual, expected)
+	actual, _ := Datalist("../test/locate.log")
+	expected := FrecencyList{
+		Frecency{"etc pacman new", 4},
+		Frecency{"usr pac", 3},
+		Frecency{"load bash", 1},
+		Frecency{"yay package", 1},
+	}
+	for i, e := range expected {
+		if e != actual[i] {
+			t.Fatalf("got: %v want: %v", actual, expected)
+		}
 	}
 }

@@ -1,6 +1,7 @@
 package locater
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -26,6 +27,16 @@ type Stats struct {
 	SearchTime     float64 // 検索にかかった時間
 	ResultNum      uint64  // 検索結果数
 	Items          string  // 検索対象のすべてのファイル数
+}
+
+// DBLastUpdateTime returns date time string for directory update time
+func DBLastUpdateTime(db string) string {
+	filestat, err := os.Stat(db)
+	if err != nil {
+		log.Error(err)
+	}
+	layout := "2006-01-02 15:05"
+	return filestat.ModTime().Format(layout)
 }
 
 // LocateStats : Result of `locate -S`

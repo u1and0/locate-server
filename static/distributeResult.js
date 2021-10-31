@@ -48,8 +48,8 @@ function displayView(view){
     let modified = pathModify(p, view.root, view.trim, view.pathSplitWin);
     let highlight = highlightRegex(modified);
     let dir = dirname(modified);
-    let result = `<a href=file://${modified}>${highlight}</a>`;
-    result += `<a href=file://${dir}> <i class="far fa-folder-open"></i> </a>`;
+    let result = `<a href="file://${modified}">${highlight}</a>`;
+    result += `<a href="file://${dir}"> <i class="far fa-folder-open"></i> </a>`;
     table.insertAdjacentHTML('beforeend', `<tr><td>${result}</tr></td>`);
   });
 }

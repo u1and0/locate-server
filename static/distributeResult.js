@@ -13,7 +13,8 @@ async function fetchJSONPath(query){
       const locaterJSON = await fetchLocatePath(query);
       console.log(locaterJSON);
       displayView(locaterJSON);
-      showStats(locaterJSON);
+      showHitCount(locaterJSON);
+      showSearchTime(locaterJSON);
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }
@@ -83,7 +84,7 @@ function dirname(str){
   return str.slice(0,idx)
 }
 
-function showStats(json){
+function showHitCount(json){
   const divElem = document.getElementById("search-status");
   const newElem = document.createElement("b");
 
@@ -93,10 +94,16 @@ function showStats(json){
   divElem.appendChild(newElem);
   const br = document.createElement("br");
   divElem.appendChild(br);
+}
+
+function showSearchTime(json){
+  const divElem = document.getElementById("search-status");
+  const newElem = document.createElement("b");
 
   // 検索件数表示
   searchTime = json.stats.searchTime.toFixed(3);
   newElem.textContent = `${searchTime}msec で約${json.stats.items}件を検索しました。`;
   divElem.appendChild(newElem);
+  const br = document.createElement("br");
   divElem.appendChild(br);
 }

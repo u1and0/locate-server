@@ -25,6 +25,7 @@ const (
 var (
 	log         = logging.MustGetLogger("main")
 	showVersion bool
+	port        string
 )
 
 func main() {
@@ -111,7 +112,7 @@ func main() {
 	})
 
 	// Listen and serve on 0.0.0.0:8080
-	route.Run(":8080")
+	route.Run(":" + port)
 }
 
 // Parse command line option
@@ -122,6 +123,8 @@ func parse() (l cmd.Locater) {
 	flag.StringVar(&l.Root, "r", "", "DB insert prefix for directory path")
 	flag.StringVar(&l.Trim, "t", "", "DB trim prefix for directory path")
 	flag.BoolVar(&l.Debug, "debug", false, "Debug mode")
+	flag.StringVar(&port, "p", "8080", "Server port number. Default access to http://localhost:8080/")
+	flag.StringVar(&port, "port", "8080", "Server port number. Default access to http://localhost:8080/")
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()

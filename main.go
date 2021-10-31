@@ -35,6 +35,7 @@ var (
 func main() {
 	var (
 		locater = parse()
+		locateS []byte
 	)
 
 	if showVersion {
@@ -51,6 +52,7 @@ func main() {
 	}
 
 	// Command check
+	// スペース区切りされたconstをexec.LookPath()で実行可能ファイルであるかを調べる
 	for _, r := range strings.Fields(REQUIRE) {
 		if _, err := exec.LookPath(r); err != nil {
 			log.Panicf("%s", err.Error())
@@ -86,16 +88,26 @@ func main() {
 		query := c.Request.URL.Query()
 		q := strings.Join(query["q"], " ")
 		// JSON
-		locater.Stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
-		locateS, err := cmd.LocateStats(locater.Dbpath)
-		if err != nil {
-			log.Error(err)
+		// 検索文字数チェックOK
+		/* LocateStats()の結果が前と異なっていたら
+		locateS更新
+		cacheを初期化 */
+		if l, err := cmd.LocateStats(locater.Dbpath); string(l) != string(locateS) {
+			// DB更新されていたら
+			if err != nil {
+				log.Error(err)
+			}
+			locateS = l // 保持するDB情報の更新
+			// Count number of search target files
+			var n uint64
+			n, err = cmd.LocateStatsSum(locateS)
+			if err != nil {
+				log.Error(err)
+			}
+			locater.Stats.Items = cmd.Ambiguous(n)
+			// Update LastUpdateTime for database
+			locater.Stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
 		}
-		n, err := cmd.LocateStatsSum(locateS) // 検索ファイル数の初期値
-		if err != nil {
-			log.Error(err)
-		}
-		locater.Stats.Items = cmd.Ambiguous(n)
 		// Response
 		c.HTML(http.StatusOK,
 			"index.tmpl",

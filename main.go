@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 
 	cmd "github.com/u1and0/locate-server/cmd"
@@ -20,6 +21,8 @@ const (
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locate (gocate) search db path
 	LOCATEDIR = "/var/lib/mlocate"
+	// REQUIRE : required commands. Separate by space.
+	REQUIRE = "locate gocate"
 )
 
 var (
@@ -45,6 +48,13 @@ func main() {
 	setLogger(logfile) // log.XXX()を使うものはここより後に書く
 	if err != nil {
 		log.Panicf("Cannot open logfile %v", err)
+	}
+
+	// Command check
+	for _, r := range strings.Fields(REQUIRE) {
+		if _, err := exec.LookPath(r); err != nil {
+			log.Panicf("%s", err.Error())
+		}
 	}
 
 	// Open server

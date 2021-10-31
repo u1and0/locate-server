@@ -152,12 +152,13 @@ func parse() Args {
 	flag.Parse()
 
 	args := Args{
-		Dbpath:      dbpath,
-		Limit:       limit,
-		Root:        root,
-		Trim:        trim,
-		Debug:       debug,
-		ShowVersion: showVersion,
+		ShowVersion:  showVersion,
+		Limit:        limit,
+		Dbpath:       dbpath,
+		PathSplitWin: pathSplitWin,
+		Root:         root,
+		Trim:         trim,
+		Debug:        debug,
 	}
 	return args
 }

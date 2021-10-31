@@ -11,17 +11,17 @@ import (
 type (
 	// Locater : queryから読み取った検索ワードと無視するワード
 	Locater struct {
-		SearchWords  []string `json:"search-words"`   // 検索キーワード
-		ExcludeWords []string `json:"exclude-words"`  // 検索から取り除くキーワード
-		Dbpath       string   `json:"dbpath"`         // 検索対象DBパス /path/to/database:/path/to/another
-		Limit        int      `json:"limit"`          // 検索結果HTML表示制限数
-		PathSplitWin bool     `json:"path-split-win"` // TrueでWindowsパスセパレータを使用する
-		Root         string   `json:"root"`           // 追加するドライブパス名
-		Trim         string   `json:"trim"`           // 削除するドライブパス名
-		Debug        bool     `json:"debug"`          // Debugフラグ
+		SearchWords  []string `json:"searchWords"`  // 検索キーワード
+		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
+		Dbpath       string   `json:"dbpath"`       // 検索対象DBパス /path/to/database:/path/to/another
+		Limit        int      `json:"limit"`        // 検索結果HTML表示制限数
+		PathSplitWin bool     `json:"pathSplitWin"` // TrueでWindowsパスセパレータを使用する
+		Root         string   `json:"root"`         // 追加するドライブパス名
+		Trim         string   `json:"trim"`         // 削除するドライブパス名
+		Debug        bool     `json:"debug"`        // Debugフラグ
 		// -- Result struct
 		Paths  `json:"paths"`
-		Status int   `json:"status"`
+		Status int `json:"status"`
 	}
 	// Paths locate command result
 	Paths []string

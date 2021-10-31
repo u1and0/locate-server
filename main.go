@@ -121,7 +121,14 @@ func main() {
 
 	route.GET("/json", func(c *gin.Context) {
 		q := c.Query("q")
-		locater.SearchWords = strings.Fields(q)
+		sw, ew, err := cmd.QueryParser(q)
+		if err != nil {
+			log.Errorf("%s [ %-50s ]", err, q)
+			locater.Stats.Response = 404
+			c.JSON(404, locater)
+			return
+		}
+		locater.SearchWords, locater.ExcludeWords = sw, ew
 
 		// Execute locate command
 		st := time.Now()

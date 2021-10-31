@@ -22,26 +22,18 @@ const (
 	LOCATEDIR = "/var/lib/mlocate"
 )
 
-// Args command line flag options
-type Args struct {
-	Dbpath       string
-	Limit        int
-	PathSplitWin bool
-	Root         string
-	Trim         string
-	Debug        bool
-	ShowVersion  bool
-}
-
-var log = logging.MustGetLogger("main")
+var (
+	log         = logging.MustGetLogger("main")
+	showVersion bool
+)
 
 func main() {
 	var (
-		stats = cmd.Stats{}
-		args  = parse()
+		stats   = cmd.Stats{}
+		locater = parse()
 	)
 
-	if args.ShowVersion {
+	if showVersion {
 		fmt.Println("locate-server version", VERSION)
 		return // versionを表示して終了
 	}
@@ -58,7 +50,7 @@ func main() {
 	route := gin.Default()
 	route.Static("/static", "./static")
 	route.LoadHTMLGlob("templates/*")
-	stats.LastUpdateTime = cmd.DBLastUpdateTime(args.Dbpath)
+	stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
 
 	route.GET("/", func(c *gin.Context) {
 		datalist, err := cmd.Datalist(LOGFILE)
@@ -94,23 +86,16 @@ func main() {
 
 	route.GET("/json", func(c *gin.Context) {
 		q := c.Query("q")
-		l := cmd.Locater{
-			SearchWords:  strings.Fields(q),
-			Dbpath:       args.Dbpath,
-			PathSplitWin: args.PathSplitWin,
-			Root:         args.Root,
-			Trim:         args.Trim,
-			Debug:        args.Debug,
-		}
-		result, err := l.Locate()
+		locater.SearchWords = strings.Fields(q)
+		result, err := locater.Locate()
 		if err != nil {
 			log.Error(err)
-			l.Status = 404
-			c.JSON(404, l)
+			locater.Status = 404
+			c.JSON(404, locater)
 		} else {
-			l.Paths = result
-			l.Status = http.StatusOK
-			c.JSON(http.StatusOK, l)
+			locater.Paths = result
+			locater.Status = http.StatusOK
+			c.JSON(http.StatusOK, locater)
 		}
 	})
 
@@ -130,37 +115,17 @@ func main() {
 }
 
 // Parse command line option
-func parse() Args {
-	var (
-		showVersion  bool
-		limit        int
-		dbpath       string
-		pathSplitWin bool
-		root         string
-		trim         string
-		debug        bool
-	)
-
-	flag.StringVar(&dbpath, "d", LOCATEDIR, "Path of locate database directory")
-	flag.IntVar(&limit, "l", 1000, "Maximum limit for results")
-	flag.BoolVar(&pathSplitWin, "s", false, "OS path split windows backslash")
-	flag.StringVar(&root, "r", "", "DB insert prefix for directory path")
-	flag.StringVar(&trim, "t", "", "DB trim prefix for directory path")
-	flag.BoolVar(&debug, "debug", false, "Debug mode")
+func parse() (l cmd.Locater) {
+	flag.StringVar(&l.Dbpath, "d", LOCATEDIR, "Path of locate database directory")
+	flag.IntVar(&l.Limit, "l", 1000, "Maximum limit for results")
+	flag.BoolVar(&l.PathSplitWin, "s", false, "OS path split windows backslash")
+	flag.StringVar(&l.Root, "r", "", "DB insert prefix for directory path")
+	flag.StringVar(&l.Trim, "t", "", "DB trim prefix for directory path")
+	flag.BoolVar(&l.Debug, "debug", false, "Debug mode")
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()
-
-	args := Args{
-		ShowVersion:  showVersion,
-		Limit:        limit,
-		Dbpath:       dbpath,
-		PathSplitWin: pathSplitWin,
-		Root:         root,
-		Trim:         trim,
-		Debug:        debug,
-	}
-	return args
+	return
 }
 
 // setLogger is printing out log message to STDOUT and LOGFILE

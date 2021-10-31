@@ -10,9 +10,10 @@ function main(){
 
 async function fetchJSONPath(query){
   try {
-      const resultPath = await fetchLocatePath(query);
-      console.log(resultPath);
-      displayView(resultPath);
+      const locaterJSON = await fetchLocatePath(query);
+      console.log(locaterJSON);
+      displayView(locaterJSON);
+      showStats(locaterJSON);
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }
@@ -80,4 +81,22 @@ function highlightRegex(str){
 function dirname(str){
   const idx = str.lastIndexOf("/")
   return str.slice(0,idx)
+}
+
+function showStats(json){
+  const divElem = document.getElementById("search-status");
+  const newElem = document.createElement("b");
+
+  // ヒット件数表示
+  const len = json.paths.length;
+  newElem.textContent = `ヒット数: ${len}件`;
+  divElem.appendChild(newElem);
+  const br = document.createElement("br");
+  divElem.appendChild(br);
+
+  // 検索件数表示
+  searchTime = json.stats.searchTime.toFixed(3);
+  newElem.textContent = `${searchTime}msec で約${json.stats.items}件を検索しました。`;
+  divElem.appendChild(newElem);
+  divElem.appendChild(br);
 }

@@ -20,14 +20,6 @@ type PathMap struct {
 	Highlight string
 }
 
-// Stats : locate検索の統計情報
-type Stats struct {
-	LastUpdateTime string  // 最後のDBアップデート時刻
-	SearchTime     float64 // 検索にかかった時間
-	ResultNum      uint64  // 検索結果数
-	Items          string  // 検索対象のすべてのファイル数
-}
-
 // DBLastUpdateTime returns date time string for directory update time
 func DBLastUpdateTime(db string) string {
 	filestat, err := os.Stat(db)

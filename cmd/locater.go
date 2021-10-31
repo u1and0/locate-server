@@ -20,19 +20,20 @@ type (
 		Trim         string   `json:"trim"`         // 削除するドライブパス名
 		Debug        bool     `json:"debug"`        // Debugフラグ
 		// -- Result struct
-		Paths  `json:"paths"`
-		Status int `json:"status"`
+		Paths `json:"paths"`
+		Stats `json:"stats"`
 	}
+
 	// Paths locate command result
 	Paths []string
 
-	// // Result return JSON struct
-	// Result struct {
-	// 	Paths  `json:"paths"`
-	// 	Status int    `json:"status"`
-	// 	Err    error  `json:"error"`
-	// 	Query  string `json:"query"`
-	// }
+	// Stats : locate検索の統計情報
+	Stats struct {
+		LastUpdateTime string  `json:"lastUpdateTime"` // 最後のDBアップデート時刻
+		SearchTime     float64 `json:"searchTime"`     // 検索にかかった時間
+		Items          string  `json:"items"`          // 検索対象のすべてのファイル数
+		Response       int     `json:"response"`       // httpレスポンス　成功で200
+	}
 )
 
 // Normalize : SearchWordsとExcludeWordsを合わせる

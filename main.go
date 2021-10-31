@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	cmd "github.com/u1and0/locate-server/cmd"
 
@@ -33,7 +34,6 @@ var (
 
 func main() {
 	var (
-		stats   = cmd.Stats{}
 		locater = parse()
 	)
 
@@ -61,7 +61,6 @@ func main() {
 	route := gin.Default()
 	route.Static("/static", "./static")
 	route.LoadHTMLGlob("templates/*")
-	stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
 
 	route.GET("/", func(c *gin.Context) {
 		datalist, err := cmd.Datalist(LOGFILE)
@@ -72,24 +71,37 @@ func main() {
 			"index.tmpl",
 			gin.H{
 				"title":          "",
-				"lastUpdateTime": stats.LastUpdateTime,
+				"lastUpdateTime": locater.Stats.LastUpdateTime,
 				"datalist":       datalist,
 				"query":          "",
 			})
 	})
 
 	route.GET("/search", func(c *gin.Context) {
+		// HTML
 		datalist, err := cmd.Datalist(LOGFILE)
 		if err != nil {
 			log.Error(err)
 		}
 		query := c.Request.URL.Query()
 		q := strings.Join(query["q"], " ")
+		// JSON
+		locater.Stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
+		locateS, err := cmd.LocateStats(locater.Dbpath)
+		if err != nil {
+			log.Error(err)
+		}
+		n, err := cmd.LocateStatsSum(locateS) // 検索ファイル数の初期値
+		if err != nil {
+			log.Error(err)
+		}
+		locater.Stats.Items = cmd.Ambiguous(n)
+		// Response
 		c.HTML(http.StatusOK,
 			"index.tmpl",
 			gin.H{
 				"title":          q,
-				"lastUpdateTime": stats.LastUpdateTime,
+				"lastUpdateTime": locater.Stats.LastUpdateTime,
 				"datalist":       datalist,
 				"query":          q,
 			})
@@ -98,14 +110,20 @@ func main() {
 	route.GET("/json", func(c *gin.Context) {
 		q := c.Query("q")
 		locater.SearchWords = strings.Fields(q)
+
+		// Execute locate command
+		st := time.Now()
 		result, err := locater.Locate()
+		locater.Stats.SearchTime =
+			float64((time.Since(st)).Nanoseconds()) / float64(time.Millisecond)
+
 		if err != nil {
 			log.Error(err)
-			locater.Status = 404
+			locater.Stats.Response = 404
 			c.JSON(404, locater)
 		} else {
 			locater.Paths = result
-			locater.Status = http.StatusOK
+			locater.Stats.Response = http.StatusOK
 			c.JSON(http.StatusOK, locater)
 		}
 	})

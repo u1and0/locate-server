@@ -49,6 +49,9 @@ func main() {
 	setLogger(logfile) // log.XXX()を使うものはここより後に書く
 	if err != nil {
 		log.Panicf("Cannot open logfile %v", err)
+	} else {
+		// DB path flag parse
+		log.Infof("Set dbpath: %s", locater.Dbpath)
 	}
 
 	// Command check
@@ -137,7 +140,7 @@ func main() {
 			float64((time.Since(st)).Nanoseconds()) / float64(time.Millisecond)
 
 		if err != nil {
-			log.Error(err)
+			log.Errorf("%s [ %-50s ]", err, q)
 			locater.Stats.Response = 404
 			c.JSON(404, locater)
 		} else {

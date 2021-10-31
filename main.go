@@ -22,25 +22,15 @@ const (
 	LOCATEDIR = "/var/lib/mlocate"
 )
 
-// Paths locate command result
-type Paths []string
-
 // Args command line flag options
 type Args struct {
-	Dbpath      string
-	Limit       int
-	Root        string
-	Trim        string
-	Debug       bool
-	ShowVersion bool
-}
-
-// Result return JSON struct
-type Result struct {
-	Paths  `json:"paths"`
-	Status int    `json:"status"`
-	Err    error  `json:"error"`
-	Query  string `json:"query"`
+	Dbpath       string
+	Limit        int
+	PathSplitWin bool
+	Root         string
+	Trim         string
+	Debug        bool
+	ShowVersion  bool
 }
 
 var log = logging.MustGetLogger("main")
@@ -103,13 +93,24 @@ func main() {
 	})
 
 	route.GET("/json", func(c *gin.Context) {
-		result, err := ResultPath(c)
+		q := c.Query("q")
+		l := cmd.Locater{
+			SearchWords:  strings.Fields(q),
+			Dbpath:       args.Dbpath,
+			PathSplitWin: args.PathSplitWin,
+			Root:         args.Root,
+			Trim:         args.Trim,
+			Debug:        args.Debug,
+		}
+		result, err := l.Locate()
 		if err != nil {
-			result.Err = err
-			c.JSON(404, result)
+			log.Error(err)
+			l.Status = 404
+			c.JSON(404, l)
 		} else {
-			result.Status = http.StatusOK
-			c.JSON(http.StatusOK, result)
+			l.Paths = result
+			l.Status = http.StatusOK
+			c.JSON(http.StatusOK, l)
 		}
 	})
 
@@ -126,22 +127,6 @@ func main() {
 
 	// Listen and serve on 0.0.0.0:8080
 	route.Run(":8080")
-}
-
-// ResultPath execute locate and return
-func ResultPath(c *gin.Context) (Result, error) {
-	q := c.Query("q")
-	l := cmd.Locater{
-		SearchWords: strings.Fields(q),
-		Dbpath:      "/var/lib/mlocate",
-		Debug:       false,
-	}
-	path, err := l.Locate()
-	result := Result{
-		Paths: path,
-		Query: q,
-	}
-	return result, err
 }
 
 // Parse command line option
@@ -167,12 +152,13 @@ func parse() Args {
 	flag.Parse()
 
 	args := Args{
-		Dbpath:      dbpath,
-		Limit:       limit,
-		Root:        root,
-		Trim:        trim,
-		Debug:       debug,
-		ShowVersion: showVersion,
+		ShowVersion:  showVersion,
+		Limit:        limit,
+		Dbpath:       dbpath,
+		PathSplitWin: pathSplitWin,
+		Root:         root,
+		Trim:         trim,
+		Debug:        debug,
 	}
 	return args
 }

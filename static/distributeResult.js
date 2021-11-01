@@ -12,9 +12,9 @@ async function fetchJSONPath(query){
   try {
       const locaterJSON = await fetchLocatePath(query);
       console.log(locaterJSON);
-      displayView(locaterJSON);
       showHitCount(locaterJSON);
       showSearchTime(locaterJSON);
+      displayView(locaterJSON);
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }
@@ -47,7 +47,7 @@ function makeQuery(str){
 function displayView(view){
   const table = document.getElementById("result");
   view.paths.forEach((p) =>{
-    let modified = pathModify(p, view.root, view.trim, view.pathSplitWin);
+    let modified = pathModify(p, view.args.root, view.args.trim, view.args.pathSplitWin);
     let highlight = highlightRegex(modified);
     let dir = dirname(modified);
     let result = `<a href="file://${modified}">${highlight}</a>`;
@@ -56,17 +56,17 @@ function displayView(view){
   });
 }
 
-function pathModify(str, root, trim, strSplitWin){
-  if ( str.startsWith(trim) ){
+function pathModify(str, root, trim, pathSplitWin){
+  if (str.startsWith(trim)){
     str = str.slice(trim.length);
   }
-  if (strSplitWin){
-    str = str.replaceAll("/", "\\")
+  if (pathSplitWin){
+    str = str.replaceAll("/", "\\");
   }
   if (root){
-    str = root+str
+    str = root + str;
   }
-  return str
+  return str;
 }
 
 function highlightRegex(str){
@@ -101,7 +101,7 @@ function showSearchTime(json){
   const newElem = document.createElement("b");
 
   // 検索件数表示
-  searchTime = json.stats.searchTime.toFixed(3);
+  const searchTime = json.stats.searchTime.toFixed(3);
   newElem.textContent = `${searchTime}msec で約${json.stats.items}件を検索しました。`;
   divElem.appendChild(newElem);
   const br = document.createElement("br");

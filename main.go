@@ -147,7 +147,6 @@ func main() {
 
 		// Execute locate command
 		st := time.Now()
-		// result, err := locater.Locate()
 		result, ok, err := cache.Traverse(&locater)
 		getpushLog := "PUSH result to cache"
 		if ok {
@@ -163,7 +162,6 @@ func main() {
 		} else {
 			log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]",
 				len(locater.Paths), locater.Stats.SearchTime, getpushLog, q)
-			// stats.ResultNum, stats.SearchTime, getpushLog, receiveValue)
 			locater.Paths = result
 			locater.Stats.Response = http.StatusOK
 			c.JSON(http.StatusOK, locater)
@@ -187,12 +185,12 @@ func main() {
 
 // Parse command line option
 func parse() (l cmd.Locater) {
-	flag.StringVar(&l.Dbpath, "d", LOCATEDIR, "Path of locate database directory")
-	flag.IntVar(&l.Limit, "l", 1000, "Maximum limit for results")
-	flag.BoolVar(&l.PathSplitWin, "s", false, "OS path split windows backslash")
-	flag.StringVar(&l.Root, "r", "", "DB insert prefix for directory path")
-	flag.StringVar(&l.Trim, "t", "", "DB trim prefix for directory path")
-	flag.BoolVar(&l.Debug, "debug", false, "Debug mode")
+	flag.StringVar(&l.Args.Dbpath, "d", LOCATEDIR, "Path of locate database directory")
+	flag.IntVar(&l.Args.Limit, "l", 1000, "Maximum limit for results")
+	flag.BoolVar(&l.Args.PathSplitWin, "s", false, "OS path split windows backslash")
+	flag.StringVar(&l.Args.Root, "r", "", "DB insert prefix for directory path")
+	flag.StringVar(&l.Args.Trim, "t", "", "DB trim prefix for directory path")
+	flag.BoolVar(&l.Args.Debug, "debug", false, "Debug mode")
 	flag.StringVar(&port, "p", "8080", "Server port number. Default access to http://localhost:8080/")
 	flag.StringVar(&port, "port", "8080", "Server port number. Default access to http://localhost:8080/")
 	flag.BoolVar(&showVersion, "v", false, "show version")

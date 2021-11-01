@@ -54,6 +54,11 @@ func main() {
 		log.Infof("Set dbpath: %s", locater.Dbpath)
 	}
 
+	// Directory check
+	if _, err := os.Stat(LOCATEDIR); os.IsNotExist(err) {
+		log.Panic(err) // /var/lib/mlocateがなければ終了
+	}
+
 	// Command check
 	// スペース区切りされたconstをexec.LookPath()で実行可能ファイルであるかを調べる
 	for _, r := range strings.Fields(REQUIRE) {
@@ -67,6 +72,7 @@ func main() {
 	route.Static("/static", "./static")
 	route.LoadHTMLGlob("templates/*")
 
+	// Top page
 	route.GET("/", func(c *gin.Context) {
 		datalist, err := cmd.Datalist(LOGFILE)
 		if err != nil {
@@ -82,6 +88,7 @@ func main() {
 			})
 	})
 
+	// Result view
 	route.GET("/search", func(c *gin.Context) {
 		// HTML
 		datalist, err := cmd.Datalist(LOGFILE)
@@ -122,6 +129,7 @@ func main() {
 			})
 	})
 
+	// API
 	route.GET("/json", func(c *gin.Context) {
 		q := c.Query("q")
 		sw, ew, err := cmd.QueryParser(q)
@@ -144,6 +152,9 @@ func main() {
 			locater.Stats.Response = 404
 			c.JSON(404, locater)
 		} else {
+			log.Noticef("%8dfiles %3.3fmsec [ %-50s ]",
+				len(locater.Paths), locater.Stats.SearchTime, q)
+			// stats.ResultNum, stats.SearchTime, getpushLog, receiveValue)
 			locater.Paths = result
 			locater.Stats.Response = http.StatusOK
 			c.JSON(http.StatusOK, locater)

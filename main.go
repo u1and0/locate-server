@@ -148,8 +148,7 @@ func main() {
 		// Execute locate command
 		st := time.Now()
 		// result, err := locater.Locate()
-		result, ok, err := locater.Traverse(&cache)
-		fmt.Println(result, ok, err)
+		result, ok, err := cache.Traverse(&locater)
 		getpushLog := "PUSH result to cache"
 		if ok {
 			getpushLog = "GET result from cache"

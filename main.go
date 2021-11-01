@@ -36,6 +36,7 @@ func main() {
 	var (
 		locater = parse()
 		locateS []byte
+		cache   cmd.CacheMap
 	)
 
 	if showVersion {
@@ -108,6 +109,9 @@ func main() {
 				log.Error(err)
 			}
 			locateS = l // 保持するDB情報の更新
+			// Initialize cache
+			// nil map assignment errorを発生させないために必要
+			cache = cmd.CacheMap{} // Reset cache
 			// Count number of search target files
 			var n uint64
 			n, err = cmd.LocateStatsSum(locateS)
@@ -143,7 +147,13 @@ func main() {
 
 		// Execute locate command
 		st := time.Now()
-		result, err := locater.Locate()
+		// result, err := locater.Locate()
+		result, ok, err := locater.Traverse(&cache)
+		fmt.Println(result, ok, err)
+		getpushLog := "PUSH result to cache"
+		if ok {
+			getpushLog = "GET result from cache"
+		}
 		locater.Stats.SearchTime =
 			float64((time.Since(st)).Nanoseconds()) / float64(time.Millisecond)
 
@@ -152,8 +162,8 @@ func main() {
 			locater.Stats.Response = 404
 			c.JSON(404, locater)
 		} else {
-			log.Noticef("%8dfiles %3.3fmsec [ %-50s ]",
-				len(locater.Paths), locater.Stats.SearchTime, q)
+			log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]",
+				len(locater.Paths), locater.Stats.SearchTime, getpushLog, q)
 			// stats.ResultNum, stats.SearchTime, getpushLog, receiveValue)
 			locater.Paths = result
 			locater.Stats.Response = http.StatusOK

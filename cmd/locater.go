@@ -194,9 +194,17 @@ func (l *Locater) Cmd() ([]PathMap, uint64, error) {
 	return results, resultsNum, err
 }
 
-// // ResultPath execute locate and return
-// func (l *Locater) ResultPath() (*Locater, error) {
-// 	path, err := l.Locate()
-// 	l.Paths = l.Convert(path)
-// 	return l, err
-// }
+// Traverse : 検索結果をcacheの中から探し、あれば検索結果と検索数を返し、
+// なければLocater.Cmd()を走らせて検索結果と検索数を得る
+func (l *Locater) Traverse(cache *CacheMap) (paths Paths, ok bool, err error) {
+	s := l.Normalize() // Normlize for cache
+	var v *Paths
+	if v, ok = (*cache)[s]; !ok {
+		// normalizedがcacheになければresultsをcacheに登録
+		paths, err = l.Locate()
+		(*cache)[s] = &paths
+	} else {
+		paths = *v
+	}
+	return
+}

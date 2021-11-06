@@ -43,10 +43,11 @@ class Locater {
   displayView(){
     const folderIcon = '<i class="far fa-folder-open"></i>';
     const table = document.getElementById("result");
+    const sep = this.args.pathSplitWin ? "\\" : "/";
     this.paths.forEach((p) =>{
       let modified = pathModify(p, this.args);
       let highlight = highlightRegex(modified, this.searchWords);
-      let dir = pathModify(dirname(p), this.args);
+      let dir = dirname(modified, sep);
       let result = `<a href="file://${modified}">${highlight}</a>`;
       result += `<a href="file://${dir}"> ${folderIcon} </a>`;
       table.insertAdjacentHTML('beforeend', `<tr><td>${result}</tr></td>`);
@@ -86,19 +87,6 @@ function fetchLocatePath(query){
     });
 }
 
-// HTMLの挿入
-function displayView(view){
-  const table = document.getElementById("result");
-  view.paths.forEach((p) =>{
-    let modified = pathModify(p, view.args.root, view.args.trim, view.args.pathSplitWin);
-    let highlight = highlightRegex(modified);
-    let dir = pathModify(dirname(p), view.args.root, view.args.trim, view.args.pathSplitWin);
-    let result = `<a href="file://${modified}">${highlight}</a>`;
-    result += `<a href="file://${dir}"> <i class="far fa-folder-open"></i> </a>`;
-    table.insertAdjacentHTML('beforeend', `<tr><td>${result}</tr></td>`);
-  });
-}
-
 function pathModify(str, args){
   if (str.startsWith(args.trim)){
     str = str.slice(args.trim.length);
@@ -121,7 +109,7 @@ function highlightRegex(str, searchWords){
   return str;
 }
 
-function dirname(str){
-  const idx = str.lastIndexOf("/")
-  return str.slice(0,idx)
+function dirname(str, sep){
+  const idx = str.lastIndexOf(sep); // sep == "/" or "\\"
+  return str.slice(0,idx);
 }

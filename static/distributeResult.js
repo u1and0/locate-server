@@ -5,16 +5,63 @@ function main(){
   if (!query) { // queryが""やnullや<empty string>のときは何もしない
     return
   }
-  fetchJSONPath(query)
+  fetchJSONPath(query);
+}
+
+class Locater {
+  constructor(json){
+    this.paths = json.paths;
+    this.args = json.args;
+    this.stats = json.stats;
+    this.searchWords = json.searchWords;
+    this.excludeWords = json.excludeWords;
+  }
+
+  // ヒット件数表示
+  displayHitCount(){
+    const divElem = document.getElementById("search-status");
+    const newElem = document.createElement("b");
+    const len = this.paths.length;
+    newElem.textContent = `ヒット数: ${len}件`;
+    divElem.appendChild(newElem);
+    const br = document.createElement("br");
+    divElem.appendChild(br);
+  }
+
+  // 検索件数表示
+  displaySearchTime(){
+    const divElem = document.getElementById("search-status");
+    const newElem = document.createElement("b");
+    const searchTime = this.stats.searchTime.toFixed(3);
+    newElem.textContent = `${searchTime}msec で約${this.stats.items}件を検索しました。`;
+    divElem.appendChild(newElem);
+    const br = document.createElement("br");
+    divElem.appendChild(br);
+  }
+
+  // 検索パス表示
+  displayView(){
+    const folderIcon = '<i class="far fa-folder-open"></i>';
+    const table = document.getElementById("result");
+    this.paths.forEach((p) =>{
+      let modified = pathModify(p, this.args);
+      let highlight = highlightRegex(modified, this.searchWords);
+      let dir = pathModify(dirname(p), this.args);
+      let result = `<a href="file://${modified}">${highlight}</a>`;
+      result += `<a href="file://${dir}"> ${folderIcon} </a>`;
+      table.insertAdjacentHTML('beforeend', `<tr><td>${result}</tr></td>`);
+    });
+  }
 }
 
 async function fetchJSONPath(query){
   try {
       const locaterJSON = await fetchLocatePath(query);
-      console.log(locaterJSON);
-      showHitCount(locaterJSON);
-      showSearchTime(locaterJSON);
-      displayView(locaterJSON);
+      const locater = new Locater(locaterJSON);
+      console.log(locater);
+      locater.displayHitCount();
+      locater.displaySearchTime();
+      locater.displayView();
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }
@@ -29,7 +76,7 @@ function getQ() {
 // fetchの返り値のPromiseを返す
 function fetchLocatePath(query){
   const url="http://localhost:8080"
-  return fetch(`${url}/json?q=${makeQuery(query)}`)
+  return fetch(`${url}/json?q=${query.split(" ").join("+")}`)
     .then(response =>{
       if (!response.ok) {
         return Promise.reject(new Error(`{${response.status}: ${response.statusText}`));
@@ -37,10 +84,6 @@ function fetchLocatePath(query){
         return response.json(); //.then(userInfo =>  ここはmain()で解決
       }
     });
-}
-
-function makeQuery(str){
-  return str.split(" ").join("+")
 }
 
 // HTMLの挿入
@@ -56,22 +99,21 @@ function displayView(view){
   });
 }
 
-function pathModify(str, root, trim, pathSplitWin){
-  if (str.startsWith(trim)){
-    str = str.slice(trim.length);
+function pathModify(str, args){
+  if (str.startsWith(args.trim)){
+    str = str.slice(args.trim.length);
   }
-  if (pathSplitWin){
+  if (args.pathSplitWin){
     str = str.replaceAll("/", "\\");
   }
-  if (root){
-    str = root + str;
+  if (args.root){
+    str = args.root + str;
   }
   return str;
 }
 
-function highlightRegex(str){
-  let query = getQ().split(" ");
-  query.forEach((q) =>{
+function highlightRegex(str, searchWords){
+  searchWords.forEach((q) =>{
     let re = new RegExp(q);
     // $&はreのマッチ結果
     str = str.replace(re, "<span style='background-color:#FFCC00;'>$&</span>");
@@ -82,28 +124,4 @@ function highlightRegex(str){
 function dirname(str){
   const idx = str.lastIndexOf("/")
   return str.slice(0,idx)
-}
-
-function showHitCount(json){
-  const divElem = document.getElementById("search-status");
-  const newElem = document.createElement("b");
-
-  // ヒット件数表示
-  const len = json.paths.length;
-  newElem.textContent = `ヒット数: ${len}件`;
-  divElem.appendChild(newElem);
-  const br = document.createElement("br");
-  divElem.appendChild(br);
-}
-
-function showSearchTime(json){
-  const divElem = document.getElementById("search-status");
-  const newElem = document.createElement("b");
-
-  // 検索件数表示
-  const searchTime = json.stats.searchTime.toFixed(3);
-  newElem.textContent = `${searchTime}msec で約${json.stats.items}件を検索しました。`;
-  divElem.appendChild(newElem);
-  const br = document.createElement("br");
-  divElem.appendChild(br);
 }

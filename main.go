@@ -156,14 +156,14 @@ func main() {
 			float64((time.Since(st)).Nanoseconds()) / float64(time.Millisecond)
 
 		if err != nil {
-			log.Errorf("%s [ %-50s ]", err, q)
 			locater.Stats.Response = 404
+			log.Errorf("%s [ %-50s ]", err, q)
 			c.JSON(404, locater)
 		} else {
-			log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]",
-				len(locater.Paths), locater.Stats.SearchTime, getpushLog, q)
 			locater.Paths = result
 			locater.Stats.Response = http.StatusOK
+			log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]",
+				len(locater.Paths), locater.Stats.SearchTime, getpushLog, q)
 			c.JSON(http.StatusOK, locater)
 		}
 	})

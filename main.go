@@ -169,8 +169,7 @@ func main() {
 	})
 
 	route.GET("/status", func(c *gin.Context) {
-		db := "/var/lib/mlocate"
-		l, err := cmd.LocateStats(db)
+		l, err := cmd.LocateStats(locater.Args.Dbpath)
 		ss := strings.Split(string(l), "\n")
 		c.JSON(http.StatusOK, gin.H{
 			"result": ss,

@@ -102,7 +102,7 @@ function pathModify(str, args){
 
 function highlightRegex(str, searchWords){
   searchWords.forEach((q) =>{
-    let re = new RegExp(q);
+    let re = new RegExp(q, "i"); // second arg "i" for ignore case
     // $&はreのマッチ結果
     str = str.replace(re, "<span style='background-color:#FFCC00;'>$&</span>");
   })

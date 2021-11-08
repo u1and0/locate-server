@@ -41,7 +41,7 @@ class Locater {
 
   // 検索パス表示
   displayView(){
-    const folderIcon = '<i class="far fa-folder-open"></i>';
+    const folderIcon = '<i class="far fa-folder-open" title="クリックでフォルダを開く"></i>';
     const table = document.getElementById("result");
     const sep = this.args.pathSplitWin ? "\\" : "/";
     this.paths.forEach((p) =>{

@@ -41,7 +41,7 @@ class Locater {
 
   // 検索パス表示
   displayView(){
-    const folderIcon = '<i class="far fa-folder-open"></i>';
+    const folderIcon = '<i class="far fa-folder-open" title="クリックでフォルダを開く"></i>';
     const table = document.getElementById("result");
     const sep = this.args.pathSplitWin ? "\\" : "/";
     this.paths.forEach((p) =>{
@@ -102,7 +102,7 @@ function pathModify(str, args){
 
 function highlightRegex(str, searchWords){
   searchWords.forEach((q) =>{
-    let re = new RegExp(q);
+    let re = new RegExp(q, "i"); // second arg "i" for ignore case
     // $&はreのマッチ結果
     str = str.replace(re, "<span style='background-color:#FFCC00;'>$&</span>");
   })

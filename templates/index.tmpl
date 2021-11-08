@@ -7,7 +7,7 @@
       <!-- GET method URI-->
       <form name="form1" method="get" action="/search">
         <!-- 検索窓 -->
-        <input type="text" name="q" value="{{ .query }}" size="50" list="searched-words" >
+        <input type="text" name="q" value="{{ .query }}" size="50" list="searched-words" placeholder="検索キーワードを入力">
         <!-- 検索履歴 Frecency リスト -->
         <datalist id="searched-words">
             {{ range .datalist }}
@@ -16,7 +16,7 @@
         </datalist>
         <!-- 検索ボタン -->
         <input type="submit" id="submit" value="&#xf002;" class="fas">
-        <input type="button" onclick="toggleMenu('hidden-explain')" value="&#xf05a;" class=fas> <!--// Help折りたたみ展開ボタン -->
+        <input type="button" onclick="toggleMenu('hidden-explain')" value="&#xf05a;" class=fas title="Help"> <!--// Help折りたたみ展開ボタン -->
       </form>
 
       <!-- ここから先を折りたたむ -->

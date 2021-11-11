@@ -18,23 +18,10 @@ class Locater {
     this.excludeWords = json.excludeWords;
   }
 
-  // ヒット件数表示
-  displayHitCount(){
+  static displayStats(str){
     const divElem = document.getElementById("search-status");
     const newElem = document.createElement("b");
-    const len = this.paths.length;
-    newElem.textContent = `ヒット数: ${len}件`;
-    divElem.appendChild(newElem);
-    const br = document.createElement("br");
-    divElem.appendChild(br);
-  }
-
-  // 検索件数表示
-  displaySearchTime(){
-    const divElem = document.getElementById("search-status");
-    const newElem = document.createElement("b");
-    const searchTime = this.stats.searchTime.toFixed(3);
-    newElem.textContent = `${searchTime}msec で約${this.stats.items}件を検索しました。`;
+    newElem.textContent = str;
     divElem.appendChild(newElem);
     const br = document.createElement("br");
     divElem.appendChild(br);
@@ -58,12 +45,15 @@ class Locater {
 
 async function fetchJSONPath(url){
   try {
-    const jsonURL=url.href.replace("search", "json")
+    const jsonURL = url.href.replace("search", "json")
     const locaterJSON = await fetchLocatePath(jsonURL);
     const locater = new Locater(locaterJSON);
     console.log(locater);
-    locater.displayHitCount();
-    locater.displaySearchTime();
+    const hitCount = `ヒット数: ${locater.paths.length}件`;
+    Locater.displayStats(hitCount);
+    const searchTime = `${locater.stats.searchTime.toFixed(3)}msec で\
+                        約${locater.stats.items}件を検索しました。`;
+    Locater.displayStats(searchTime);
     locater.displayView();
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る

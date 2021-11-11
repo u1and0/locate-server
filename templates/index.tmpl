@@ -3,6 +3,7 @@
       <title>Locate Server {{ .title }}</title>
       <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css">
       <link rel="icon" href="/static/icons8-検索-50.png">
+      <link rel="stylesheet" href="static/style.css">
     </head>
     <body>
       <!-- GET method URI-->
@@ -74,12 +75,15 @@
       </div>
 
       <!-- Search result -->
+      <div class="loader-wrap">
+        <div class="loader">Loading...</div>
+      </div>
       <table id="result">
       </table>
 
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="text/javascript" src="/static/distributeResult.js"></script>
     <script type="text/javascript" src="/static/tooltips.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="text/javascript" src="/static/datalist.js"></script>
   </body>
 </html>

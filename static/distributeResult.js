@@ -1,11 +1,12 @@
 main()
 
 function main(){
-  const query = getQ();
+  const url = new URL(window.location.href);
+  const query = url.searchParams.get("q");
   if (!query) { // queryが""やnullや<empty string>のときは何もしない
     return
   }
-  fetchJSONPath(query);
+  fetchJSONPath(url);
 }
 
 class Locater {
@@ -55,29 +56,23 @@ class Locater {
   }
 }
 
-async function fetchJSONPath(query){
+async function fetchJSONPath(url){
   try {
-      const locaterJSON = await fetchLocatePath(query);
-      const locater = new Locater(locaterJSON);
-      console.log(locater);
-      locater.displayHitCount();
-      locater.displaySearchTime();
-      locater.displayView();
+    const jsonURL=url.href.replace("search", "json")
+    const locaterJSON = await fetchLocatePath(jsonURL);
+    const locater = new Locater(locaterJSON);
+    console.log(locater);
+    locater.displayHitCount();
+    locater.displaySearchTime();
+    locater.displayView();
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }
 }
 
-function getQ() {
-  const url = new URL(window.location.href);
-  const params = url.searchParams;
-  return params.get("q");
-}
-
 // fetchの返り値のPromiseを返す
-function fetchLocatePath(query){
-  const url="http://localhost:8080"
-  return fetch(`${url}/json?q=${query.split(" ").join("+")}`)
+function fetchLocatePath(url){
+  return fetch(url)
     .then(response =>{
       if (!response.ok) {
         return Promise.reject(new Error(`{${response.status}: ${response.statusText}`));

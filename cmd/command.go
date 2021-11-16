@@ -80,8 +80,8 @@ func Ambiguous(n uint64) (s string) {
 	return
 }
 
-// sの文字列中にあるwordsの背景を黄色にハイライトしたhtmlを返す
-func highlightString(s string, words []string) string {
+// HighlightString : sの文字列中にあるwordsの背景を黄色にハイライトしたhtmlを返す
+func HighlightString(s string, words []string) string {
 	for _, w := range words {
 		re := regexp.MustCompile(`((?i)` + w + `)`)
 		/* Replace only a word

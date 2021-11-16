@@ -16,6 +16,7 @@ class Locater {
     this.stats = json.stats;
     this.searchWords = json.searchWords;
     this.excludeWords = json.excludeWords;
+    this.highlight = json.highlight;
   }
 
   static displayStats(str){
@@ -32,11 +33,10 @@ class Locater {
     const folderIcon = '<i class="far fa-folder-open" title="クリックでフォルダを開く"></i>';
     const table = document.getElementById("result");
     const sep = this.args.pathSplitWin ? "\\" : "/";
-    this.paths.forEach((p) =>{
+    this.paths.forEach((p, i) =>{
       let modified = pathModify(p, this.args);
-      let highlight = highlightRegex(modified, this.searchWords);
       let dir = dirname(modified, sep);
-      let result = `<a href="file://${modified}">${highlight}</a>`;
+      let result = `<a href="file://${modified}">${this.highlight[i]}</a>`;
       result += `<a href="file://${dir}"> ${folderIcon} </a>`;
       table.insertAdjacentHTML('beforeend', `<tr><td>${result}</tr></td>`);
     });
@@ -85,14 +85,14 @@ function pathModify(str, args){
   return str;
 }
 
-function highlightRegex(str, searchWords){
-  searchWords.forEach((q) =>{
-    let re = new RegExp(q, "i"); // second arg "i" for ignore case
-    // $&はreのマッチ結果
-    str = str.replace(re, "<span style='background-color:#FFCC00;'>$&</span>");
-  })
-  return str;
-}
+// function highlightRegex(str, searchWords){
+//   searchWords.forEach((q) =>{
+//     let re = new RegExp(q, "i"); // second arg "i" for ignore case
+//     // $&はreのマッチ結果
+//     str = str.replace(re, "<span style='background-color:#FFCC00;'>$&</span>");
+//   })
+//   return str;
+// }
 
 function dirname(str, sep){
   const idx = str.lastIndexOf(sep); // sep == "/" or "\\"

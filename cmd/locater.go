@@ -13,24 +13,27 @@ type (
 	Locater struct {
 		SearchWords  []string `json:"searchWords"`  // 検索キーワード
 		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
-		Args `json:"args"`
+		Args         `json:"args"`
 		// -- Result struct
-		Paths `json:"paths"`
-		Stats `json:"stats"`
+		Paths     `json:"paths"`
+		Highlight `json:"highlight"`
+		Stats     `json:"stats"`
 	}
 
 	// Args is command line option
-	Args struct{
-		Dbpath       string   `json:"dbpath"`       // 検索対象DBパス /path/to/database:/path/to/another
-		Limit        int      `json:"limit"`        // 検索結果HTML表示制限数
-		PathSplitWin bool     `json:"pathSplitWin"` // TrueでWindowsパスセパレータを使用する
-		Root         string   `json:"root"`         // 追加するドライブパス名
-		Trim         string   `json:"trim"`         // 削除するドライブパス名
-		Debug        bool     `json:"debug"`        // Debugフラグ
+	Args struct {
+		Dbpath       string `json:"dbpath"`       // 検索対象DBパス /path/to/database:/path/to/another
+		Limit        int    `json:"limit"`        // 検索結果HTML表示制限数
+		PathSplitWin bool   `json:"pathSplitWin"` // TrueでWindowsパスセパレータを使用する
+		Root         string `json:"root"`         // 追加するドライブパス名
+		Trim         string `json:"trim"`         // 削除するドライブパス名
+		Debug        bool   `json:"debug"`        // Debugフラグ
 	}
 
 	// Paths locate command result
 	Paths []string
+	// Highlight locate command result with HTML colored background
+	Highlight []string
 
 	// Stats : locate検索の統計情報
 	Stats struct {
@@ -187,7 +190,7 @@ func (l *Locater) Cmd() ([]PathMap, uint64, error) {
 		}
 
 		/* 検索キーワードをハイライト */
-		highlight := highlightString(file, l.SearchWords)
+		highlight := HighlightString(file, l.SearchWords)
 
 		/* 最終的な表示結果をresultsに代入
 		見つかった結果の分だけsliceを拡張する

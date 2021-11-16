@@ -161,6 +161,10 @@ func main() {
 			c.JSON(404, locater)
 		} else {
 			locater.Paths = result
+			locater.Highlight = make([]string, len(result))
+			for i, e := range result {
+				locater.Highlight[i] = cmd.HighlightString(e, locater.SearchWords)
+			}
 			locater.Stats.Response = http.StatusOK
 			log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]",
 				len(locater.Paths), locater.Stats.SearchTime, getpushLog, q)

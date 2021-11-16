@@ -17,3 +17,21 @@ $(function(){
     loader.fadeOut();
   },5000);
 });
+
+
+$('#pagination-container').pagination({
+    dataSource: [1, 2, 3, 4, 5, 6, 7],
+    callback: function(data, pagination) {
+        var html = simpleTemplating(data);
+        $('#result').html(html);
+    }
+});
+
+function simpleTemplating(data) {
+    var html = '<ul>';
+    $.each(data, function(index, item){
+        html += '<li>'+ item +'</li>';
+    });
+    html += '</ul>';
+    return html;
+}

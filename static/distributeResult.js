@@ -38,7 +38,7 @@ class Locater {
       let dir = dirname(modified, sep);
       let result = `<a href="file://${modified}">${highlight}</a>`;
       result += `<a href="file://${dir}"> ${folderIcon} </a>`;
-      table.insertAdjacentHTML('beforeend', `<tr><td>${result}</tr></td>`);
+      table.insertAdjacentHTML('beforeend', `<tr><td>${result}</td></tr>`);
     });
   }
 }
@@ -55,6 +55,11 @@ async function fetchJSONPath(url){
                         約${locater.stats.items}件を検索しました。`;
     Locater.displayStats(searchTime);
     locater.displayView();
+    $(function(){
+      $("#result").pagination({
+        itemElement: "> td"
+      });
+    });
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }

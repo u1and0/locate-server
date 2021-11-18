@@ -57,7 +57,10 @@ async function fetchJSONPath(url){
     locater.displayView();
     $(function(){
       $("#result").pagination({
-        itemElement: "> td"
+        itemElement: "tbody",
+        displayItemCount: 20,
+        paginationClassName      : 'pagination',
+        paginationInnerClassName : 'clearfix',
       });
     });
   } catch(error) {

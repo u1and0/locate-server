@@ -28,24 +28,25 @@ class Locater {
   }
 
   // 検索パス表示
-  displayView(){
+  displayRoll(n, shift){
     const folderIcon = '<i class="far fa-folder-open" title="クリックでフォルダを開く"></i>';
-    const table = document.getElementById("result");
     const sep = this.args.pathSplitWin ? "\\" : "/";
-    this.paths.forEach((p) =>{
+    let dataArray = this.paths.slice(n, n + shift);
+    // $.each(dataArray, function(i){
+    dataArray.forEach((p) =>{
       let modified = pathModify(p, this.args);
       let highlight = highlightRegex(modified, this.searchWords);
       let dir = dirname(modified, sep);
       let result = `<a href="file://${modified}">${highlight}</a>`;
       result += `<a href="file://${dir}"> ${folderIcon} </a>`;
-      table.insertAdjacentHTML('beforeend', `<tr><td>${result}</tr></td>`);
+      $("#result").append("<tr><td>" + result + "</td></tr>");
     });
   }
 }
 
 async function fetchJSONPath(url){
   try {
-    const jsonURL = url.href.replace("search", "json")
+    const jsonURL = url.href.replace("search", "json");
     const locaterJSON = await fetchLocatePath(jsonURL);
     const locater = new Locater(locaterJSON);
     console.log(locater);
@@ -54,11 +55,37 @@ async function fetchJSONPath(url){
     const searchTime = `${locater.stats.searchTime.toFixed(3)}msec で\
                         約${locater.stats.items}件を検索しました。`;
     Locater.displayStats(searchTime);
-    locater.displayView();
+    // Rolling next data
+    let n = 0;
+    const shift = 100;
+    locater.displayRoll(n, shift);
+    $(window).on("scroll", function(){ // scrollで下限近くまで来ると次をロード
+      let inner = $(window).innerHeight();
+      let outer = $(window).outerHeight();
+      let bottom = inner - outer;
+      let tp = $(window).scrollTop();
+      let ob = {
+        "inner": inner,
+        "outer": outer,
+        "bottom": bottom,
+        "tp": tp,
+      }
+      if (tp * 1.05 >= bottom) {
+        //スクロールの位置が下部5%の範囲に来た場合
+        n += shift;
+        locater.displayRoll(n, shift);
+      }
+    });
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }
 }
+
+// $("result").on("scroll", function() {
+//   if($(window).scrollTop() + $(window).innerHeight() >= $(this).[0].scrollHeight) {
+//     alert("end reach");
+//   }
+// });
 
 // fetchの返り値のPromiseを返す
 function fetchLocatePath(url){

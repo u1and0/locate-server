@@ -12,11 +12,18 @@ function main(){
   const shift = 100;
   displayRoll(jsonURL, n, shift);
   $(window).on("scroll", function() { // scrollで下限近くまで来ると次をロード
+    let inner = $(window).innerHeight();
+    let outer = $(window).outerHeight();
+    let bottom = inner - outer;
     let tp = $(window).scrollTop();
-    if (tp > window.innerHeight) {
-      console.log("scropllTop: ", tp);
-      console.log("inner height",window.innerHeight);
-      console.log("outer height",window.outerHeight);
+    let ob = {
+      "inner": inner,
+      "outer": outer,
+      "bottom": bottom,
+      "tp": tp,
+    }
+    if (tp * 1.05 >= bottom) {
+      console.log(ob);
       //スクロールの位置が下部5%の範囲に来た場合
       n += shift;
       displayRoll(jsonURL, n, shift);

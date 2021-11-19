@@ -8,7 +8,7 @@ $(function(){
   var loader = $('.loader-wrap');
 
   //ページの読み込みが完了したらアニメーションを非表示
-  $('#result').on('load',function(){
+  $(window).on('load',function(){
     loader.fadeOut();
   });
 

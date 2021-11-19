@@ -2,43 +2,11 @@ main()
 
 function main(){
   const url = new URL(window.location.href);
-  const jsonURL = url.href.replace("search", "json")
   const query = url.searchParams.get("q");
   if (!query) { // queryが""やnullや<empty string>のときは何もしない
     return
   }
   fetchJSONPath(url);
-  let n = 0;
-  const shift = 100;
-  displayRoll(jsonURL, n, shift);
-  $(window).on("scroll", function() { // scrollで下限近くまで来ると次をロード
-    let inner = $(window).innerHeight();
-    let outer = $(window).outerHeight();
-    let bottom = inner - outer;
-    let tp = $(window).scrollTop();
-    let ob = {
-      "inner": inner,
-      "outer": outer,
-      "bottom": bottom,
-      "tp": tp,
-    }
-    if (tp * 1.05 >= bottom) {
-      console.log(ob);
-      //スクロールの位置が下部5%の範囲に来た場合
-      n += shift;
-      displayRoll(jsonURL, n, shift);
-      console.log("n: ", n);
-    }
-  });
-}
-
-function displayRoll(url, n, shift){
-  $.getJSON(url, function(data){
-    let dataArray = data.paths.slice(n, n + shift);
-    $.each(dataArray, function(i){
-      $("#result").append("<tr><td>" + dataArray[i] + "</td></tr>");
-    });
-  });
 }
 
 class Locater {
@@ -73,11 +41,18 @@ class Locater {
       table.insertAdjacentHTML('beforeend', `<tr><td>${result}</tr></td>`);
     });
   }
+
+  displayRoll(n, shift){
+    let dataArray = this.paths.slice(n, n + shift);
+    $.each(dataArray, function(i){
+      $("#result").append("<tr><td>" + dataArray[i] + "</td></tr>");
+    });
+  }
 }
 
 async function fetchJSONPath(url){
   try {
-    const jsonURL = url.href.replace("search", "json")
+    const jsonURL = url.href.replace("search", "json");
     const locaterJSON = await fetchLocatePath(jsonURL);
     const locater = new Locater(locaterJSON);
     console.log(locater);
@@ -86,8 +61,29 @@ async function fetchJSONPath(url){
     const searchTime = `${locater.stats.searchTime.toFixed(3)}msec で\
                         約${locater.stats.items}件を検索しました。`;
     Locater.displayStats(searchTime);
-    // locater.displayView();
-    // Locater.displayRoll(jsonURL);
+    // Rolling next data
+    let n = 0;
+    const shift = 100;
+    locater.displayRoll(n, shift);
+    $(window).on("scroll", function(){ // scrollで下限近くまで来ると次をロード
+      let inner = $(window).innerHeight();
+      let outer = $(window).outerHeight();
+      let bottom = inner - outer;
+      let tp = $(window).scrollTop();
+      let ob = {
+        "inner": inner,
+        "outer": outer,
+        "bottom": bottom,
+        "tp": tp,
+      }
+      if (tp * 1.05 >= bottom) {
+        console.log(ob);
+        //スクロールの位置が下部5%の範囲に来た場合
+        n += shift;
+        locater.displayRoll(n, shift);
+        console.log("n: ", n);
+      }
+    });
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }

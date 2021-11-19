@@ -28,24 +28,18 @@ class Locater {
   }
 
   // 検索パス表示
-  displayView(){
+  displayRoll(n, shift){
     const folderIcon = '<i class="far fa-folder-open" title="クリックでフォルダを開く"></i>';
-    const table = document.getElementById("result");
     const sep = this.args.pathSplitWin ? "\\" : "/";
-    this.paths.forEach((p) =>{
+    let dataArray = this.paths.slice(n, n + shift);
+    // $.each(dataArray, function(i){
+    dataArray.forEach((p) =>{
       let modified = pathModify(p, this.args);
       let highlight = highlightRegex(modified, this.searchWords);
       let dir = dirname(modified, sep);
       let result = `<a href="file://${modified}">${highlight}</a>`;
       result += `<a href="file://${dir}"> ${folderIcon} </a>`;
-      table.insertAdjacentHTML('beforeend', `<tr><td>${result}</tr></td>`);
-    });
-  }
-
-  displayRoll(n, shift){
-    let dataArray = this.paths.slice(n, n + shift);
-    $.each(dataArray, function(i){
-      $("#result").append("<tr><td>" + dataArray[i] + "</td></tr>");
+      $("#result").append("<tr><td>" + result + "</td></tr>");
     });
   }
 }
@@ -77,11 +71,9 @@ async function fetchJSONPath(url){
         "tp": tp,
       }
       if (tp * 1.05 >= bottom) {
-        console.log(ob);
         //スクロールの位置が下部5%の範囲に来た場合
         n += shift;
         locater.displayRoll(n, shift);
-        console.log("n: ", n);
       }
     });
   } catch(error) {

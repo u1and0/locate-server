@@ -1,3 +1,4 @@
+/* Spinner */
 .loader-wrap {
   position: fixed;
   display: flex;
@@ -74,3 +75,51 @@
     transform: rotate(360deg);
   }
 }
+
+/* Pagination */
+.pagination {
+    display: inline;
+}
+    /* 前・次へ移動するボタン */
+    .pagination .prev-page {}
+    .pagination .next-page {}
+        .pagination .prev-page button {}
+        .pagination .next-page button {}
+
+    /* 前・次へ移動するボタンの無効化時 */
+    .pagination .prev-page.disabled {}
+    .pagination .next-page.disabled {}
+    .pagination .prev-page.disabled button {
+        display: inline;
+    }
+    .pagination .next-page.disabled button {
+        display: inline;
+    }
+
+    /* 最初・最後へ移動するボタン */
+    .pagination .first-page {}
+    .pagination .end-page {}
+        .pagination .first-page button {}
+        .pagination .end-page button {}
+
+    /* 最初・最後へ移動するボタンの無効化時 */
+    .pagination .first-page.disabled {}
+    .pagination .end-page.disabled {}
+        .pagination .first-page.disabled button {}
+        .pagination .end-page.disabled button {}
+
+    /* ページ別切り替えボタン */
+    .pagination ul {}
+    .pagination li {
+        display: inline;
+    }
+            .pagination li a {}
+        /* カレント時（現在位置） */
+        .pagination li.current {}
+            .pagination li.current a {}
+        /* 省略記号 */
+        .pagination li.ellipsis {}
+            .pagination li.ellipsis span {}
+
+    /* ページ情報（現在のページ番号と最大数） */
+    .pagination .page-info {}

@@ -1,20 +1,16 @@
 version: "3"
 services:
     web:
-        build:
-            context: .
-            # deploy:
-            # replicas: 2
+        image: u1and0/locate-server:latest
         ports:
-            - 8082:8080
+            - 8081:8080
         depends_on:
             - db
         volumes:
             - db:/var/lib/mlocate
-            - /home/u1and0:/home/u1and0
         environment:
-            # - LOCATE_PATH=/var/lib/mlocate/mlocate.db
             - TZ=Asia/Tokyo
+        working_dir: /var/www
         entrypoint: /usr/bin/locate-server
         # command: [-s, -r, \\gr.jp\DFS]
         #
@@ -34,21 +30,15 @@ services:
     db:
         image: busybox
         volumes:
-            # - /ShareUsers:/ShareUsers
             - /var/lib/mlocate:/var/lib/mlocate
-              # - /home/u1and0:/home/u1and0
 
-    app: 
+    app:
         build:
              context: ./app
         depends_on:
             - db
         volumes:
             - db:/var/lib/mlocate
-            - /home/u1and0:/home/u1and0
-        environment:
-            - UPDATEDB_PATH=/home/u1and0
-            - OUTPUT=mlocate.db
       ## app関連その他ディレクトリ
       # personal:
       #     build:

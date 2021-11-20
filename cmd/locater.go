@@ -1,7 +1,6 @@
 package locater
 
 import (
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -13,20 +12,20 @@ type (
 	Locater struct {
 		SearchWords  []string `json:"searchWords"`  // 検索キーワード
 		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
-		Args `json:"args"`
+		Args         `json:"args"`
 		// -- Result struct
 		Paths `json:"paths"`
 		Stats `json:"stats"`
 	}
 
 	// Args is command line option
-	Args struct{
-		Dbpath       string   `json:"dbpath"`       // 検索対象DBパス /path/to/database:/path/to/another
-		Limit        int      `json:"limit"`        // 検索結果HTML表示制限数
-		PathSplitWin bool     `json:"pathSplitWin"` // TrueでWindowsパスセパレータを使用する
-		Root         string   `json:"root"`         // 追加するドライブパス名
-		Trim         string   `json:"trim"`         // 削除するドライブパス名
-		Debug        bool     `json:"debug"`        // Debugフラグ
+	Args struct {
+		Dbpath       string `json:"dbpath"`       // 検索対象DBパス /path/to/database:/path/to/another
+		Limit        int    `json:"limit"`        // 検索結果HTML表示制限数
+		PathSplitWin bool   `json:"pathSplitWin"` // TrueでWindowsパスセパレータを使用する
+		Root         string `json:"root"`         // 追加するドライブパス名
+		Trim         string `json:"trim"`         // 削除するドライブパス名
+		Debug        bool   `json:"debug"`        // Debugフラグ
 	}
 
 	// Paths locate command result
@@ -133,68 +132,4 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 		log.Debugf("Execute command %v", pipeline)
 	}
 	return
-}
-
-// Cmd : locate検索し、
-// 結果をPathMapのスライス(最大l.Limit件(limit = default 1000))にして返す
-// 更に検索結果数、あれば検索時のエラーを返す
-func (l *Locater) Cmd() ([]PathMap, uint64, error) {
-	results := make([]PathMap, 0, l.Limit)
-	var resultsNum uint64
-
-	out, err := pipeline.Output(l.CmdGen()...)
-	if err != nil {
-		return results, resultsNum, err
-	}
-	outslice := strings.Split(string(out), "\n")
-	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
-	resultsNum = uint64(len(outslice))
-
-	/* Why not array but slice?
-	検索結果の数だけ要素を持ったスライスを返したい
-	検索結果がなければ0要素のスライスを返したい
-	そのため、要素数の決まった配列を使えない
-
-	> 後で空の要素は削除して結果に表示しないようにしないといけない
-	最大の要素数はlimit(デフォルト1000件)になるように表示する
-	*/
-	for i, file := range outslice {
-		// l.Limit件までresultsとして返す
-		if i >= l.Limit {
-			break
-		}
-
-		/* 親ディレクトリ */
-		dir := filepath.Dir(file)
-
-		/* オプションによる結果の変換
-		1. UNIXドライブパスを取り除いて
-		2. Windowsパスセパレータ(\)に変換して
-		3. Windows or UNIX ルートドライブパスを取り付ける
-		順番は大事
-		*/
-		if l.Trim != "" { // Trim drive path
-			file = strings.TrimPrefix(file, l.Trim)
-			dir = strings.TrimPrefix(dir, l.Trim)
-		}
-		if l.PathSplitWin { // Transfer separator
-			file = strings.ReplaceAll(file, "/", "\\")
-			dir = strings.ReplaceAll(dir, "/", "\\")
-		}
-		if l.Root != "" { // Insert drive path
-			file = l.Root + file
-			dir = l.Root + dir
-		}
-
-		/* 検索キーワードをハイライト */
-		highlight := highlightString(file, l.SearchWords)
-
-		/* 最終的な表示結果をresultsに代入
-		見つかった結果の分だけsliceを拡張する
-		*/
-		results = append(results, PathMap{file, dir, highlight})
-	}
-
-	// Max 1000 result & number of all result
-	return results, resultsNum, err
 }

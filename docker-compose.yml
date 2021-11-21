@@ -1,44 +1,29 @@
 version: "3"
 services:
     web:
-        image: u1and0/locate-server:latest
+        # image: u1and0/locate-server:latest
+        build:
+            context: .
         ports:
-            - 8081:8080
-        depends_on:
-            - db
+          - 8081:8080
         volumes:
-            - db:/var/lib/mlocate
+            - /var/lib/mlocate:/var/lib/mlocate
         environment:
             - TZ=Asia/Tokyo
         working_dir: /var/www
         entrypoint: /usr/bin/locate-server
-        # command: [-s, -r, \\gr.jp\DFS]
-        #
-        # restart_policy:
-        #     condition: on-failure
-        #     delay: 5s
-        #     max_attempts: 3
-        #     window: 120s
-        # resources:
-        #     limits:
-        #         cpus: '0.5'
-        #         memory: 100M
-        #     reservations:
-        #         cpus: '0.25'
-        #         memory: 50M
+        # command: ["-p", "8081"]
 
-    db:
-        image: busybox
-        volumes:
-            - /var/lib/mlocate:/var/lib/mlocate
+    # db:
+    #     image: busybox
+    #     volumes:
+    #         - /var/lib/mlocate:/var/lib/mlocate
 
     app:
         build:
              context: ./app
-        depends_on:
-            - db
         volumes:
-            - db:/var/lib/mlocate
+            - /var/lib/mlocate:/var/lib/mlocate
       ## app関連その他ディレクトリ
       # personal:
       #     build:
@@ -54,21 +39,21 @@ services:
       #     backup:
       #         build:
       #             context: ./backup
-      #
-    stalker: # locate-serverのログ監視
-        image: busybox:latest
-        volumes:
-            - db:/var/lib/mlocate
-        command: [tail, -f, /var/lib/mlocate/locate.log]
 
-    observer:
-        build:
-             context: ./app
-        environment:
-            - TZ=Asia/Tokyo
-        volumes:
-            - db:/var/lib/mlocate
-        command: [watch, -n10, ls, -ltrAh, /var/lib/mlocate]
+    # stalker: # locate-serverのログ監視
+    #     image: busybox:latest
+    #     volumes:
+    #         - db:/var/lib/mlocate
+    #     command: [tail, -f, /var/lib/mlocate/locate.log]
+    #
+    # observer:
+    #     build:
+    #          context: ./app
+    #     environment:
+    #         - TZ=Asia/Tokyo
+    #     volumes:
+    #         - db:/var/lib/mlocate
+    #     command: [watch, -n10, ls, -ltrAh, /var/lib/mlocate]
 
 volumes:
     db:

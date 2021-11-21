@@ -49,7 +49,9 @@ async function fetchJSONPath(url){
     const jsonURL = url.href.replace("search", "json");
     const locaterJSON = await fetchLocatePath(jsonURL);
     const locater = new Locater(locaterJSON);
-    console.log(locater);
+    if (locater.args.debug){
+      console.log(locater);
+    }
     const hitCount = `ヒット数: ${locater.paths.length}件`;
     Locater.displayStats(hitCount);
     const searchTime = `${locater.stats.searchTime.toFixed(3)}msec で\

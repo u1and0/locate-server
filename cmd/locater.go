@@ -64,11 +64,11 @@ func (l *Locater) Normalize() string {
 // split from Locater.Cmd()
 func (l *Locater) Locate() (Paths, error) {
 	out, err := pipeline.Output(l.CmdGen()...)
-	if l.Debug {
-		log.Debugf("gocate result %v", out)
-	}
 	outslice := strings.Split(string(out), "\n")
 	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
+	if l.Debug {
+		log.Debugf("gocate result %v", outslice)
+	}
 	return outslice, err
 }
 

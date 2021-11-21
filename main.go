@@ -44,6 +44,12 @@ func main() {
 		return // versionを表示して終了
 	}
 
+	// Release mode
+	fmt.Println("locater.Args.Debug", locater.Args.Debug)
+	if !locater.Args.Debug {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	// Log setting
 	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	defer logfile.Close()

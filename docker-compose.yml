@@ -7,12 +7,12 @@ services:
         ports:
           - 8081:8080
         volumes:
-            - /var/lib/mlocate:/var/lib/mlocate
+            - db:/var/lib/mlocate
         environment:
             - TZ=Asia/Tokyo
         working_dir: /var/www
         entrypoint: /usr/bin/locate-server
-        # command: ["-p", "8081"]
+        # command: ["-debug"]
 
     # db:
     #     image: busybox
@@ -23,7 +23,7 @@ services:
         build:
              context: ./app
         volumes:
-            - /var/lib/mlocate:/var/lib/mlocate
+            - db:/var/lib/mlocate
       ## app関連その他ディレクトリ
       # personal:
       #     build:

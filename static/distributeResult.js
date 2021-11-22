@@ -83,12 +83,6 @@ async function fetchJSONPath(url){
   }
 }
 
-// $("result").on("scroll", function() {
-//   if($(window).scrollTop() + $(window).innerHeight() >= $(this).[0].scrollHeight) {
-//     alert("end reach");
-//   }
-// });
-
 // fetchの返り値のPromiseを返す
 function fetchLocatePath(url){
   return fetch(url)

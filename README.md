@@ -2,7 +2,7 @@
 ブラウザ経由でファイルパスを検索し、結果を最大1000件まで表示します。
 
 ## ***DEMO***
-![demo](demo)
+![out](https://user-images.githubusercontent.com/16408916/143503512-6e172a98-f973-4c80-b1dc-99ea0ede0a71.gif)
 
 ## Description
 ウェブブラウザからの入力で指定ディレクトリ下にあるファイル内の文字列に対してlocateコマンドを使用した正規表現検索を行い、結果をhtmlにしてウェブブラウザに表示します。

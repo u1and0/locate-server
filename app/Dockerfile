@@ -20,7 +20,7 @@ RUN apk --update --no-cache add mlocate tzdata git &&\
 ARG TASK="/etc/crontabs/root"
 RUN echo "SHELL=/bin/sh" > $TASK &&\
     echo "PATH=/sbin:/bin:/usr/sbin:/usr/bin" >> $TASK &&\
-    echo "* */12 * * * gocate -init" >> $TASK
+    echo "3 0 * * * gocate -init" >> $TASK
 # ${UPDATEDB_PATH}以下のディレクトリを定期的にデータベース化
 # 指定しない場合${UPDATEDB_PATH}のデフォルトは/
 

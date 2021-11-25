@@ -49,7 +49,9 @@ async function fetchJSONPath(url){
     const jsonURL = url.href.replace("search", "json");
     const locaterJSON = await fetchLocatePath(jsonURL);
     const locater = new Locater(locaterJSON);
-    console.log(locater);
+    if (locater.args.debug){
+      console.log(locater);
+    }
     const hitCount = `ヒット数: ${locater.paths.length}件`;
     Locater.displayStats(hitCount);
     const searchTime = `${locater.stats.searchTime.toFixed(3)}msec で\
@@ -80,12 +82,6 @@ async function fetchJSONPath(url){
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }
 }
-
-// $("result").on("scroll", function() {
-//   if($(window).scrollTop() + $(window).innerHeight() >= $(this).[0].scrollHeight) {
-//     alert("end reach");
-//   }
-// });
 
 // fetchの返り値のPromiseを返す
 function fetchLocatePath(url){

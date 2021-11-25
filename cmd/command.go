@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -78,26 +77,4 @@ func Ambiguous(n uint64) (s string) {
 		s = strconv.FormatUint(n, 10)
 	}
 	return
-}
-
-// sの文字列中にあるwordsの背景を黄色にハイライトしたhtmlを返す
-func highlightString(s string, words []string) string {
-	for _, w := range words {
-		re := regexp.MustCompile(`((?i)` + w + `)`)
-		/* Replace only a word
-		全て変える
-		re.ReplaceAll(s, "<span style=\"background-color:#FFCC00;\">$1</span>")
-		は削除
-		*/
-		color := "style=\"background-color:#FFCC00;\">"
-		found := re.FindString(s)
-		if found != "" {
-			s = strings.Replace(s,
-				found,
-				"<span "+color+found+"</span>",
-				1)
-			// [BUG] キーワード順にハイライトされない
-		}
-	}
-	return s
 }

@@ -53,6 +53,20 @@ or use docker
 $ docker pull u1and0/locate-server
 ```
 
+## GLIBC not found
+locate-server実行時にglibcが必要
+
+```
+./locate-server: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.32' not found (required by ./locate-server)
+```
+
+cgoを無効にしてビルドすれば解決。
+
+```
+CGO_ENABLED=0 go build
+```
+
+
 ## Test
 
 ```
@@ -81,9 +95,9 @@ $ go test
 	* 例: **gobook pdf$ **=>**gobook**を含み、**pdf**が行末につくファイルを検索します。
 
 ### ファイル/フォルダ表示機能
-* 検索結果はリンク付で最大1000件まで表示します。
+* 検索結果はリンク付で最大1000件まで表示します。(v2.X.Xまで)
 * リンクをクリックするとファイルが開きます。
-* **<<** マークをクリックするとそのファイルがあるフォルダが開きます。
+* **<<** マークあるいはフォルダアイコンをクリックするとそのファイルがあるフォルダが開きます。
 
 ### ブラウザ履歴機能との連携
 ページタイトルに検索ワードが付属するので、ブラウザの**戻る**を長押ししたときに検索履歴が表示されます。
@@ -124,7 +138,89 @@ URLを送られた人はリンクをクリックするだけで検索バーに�
 [Local Filesystem Links](https://addons.mozilla.org/ja/firefox/addon/local-filesystem-links/?src=search)
 
 
+# Deploy
+Dockerコンテナによるシステム構成
+
+## data volume用のコンテナdbを作る
+```
+docker create --name db -v /var/lib/mlocate -v /ShareUsers:/ShareUsers:ro busybox
+```
+
+このコマンドではdbコンテナの`/varlib/mlocate`を外部に晒して、
+ホストのShareUsersをdbコンテナにマウントする。
+ShareUsersが`locate`コマンドをかける対象のディレクトリ。
+
+
+## updatedb用のコンテナappを作る
+
+```
+docker run --name app\
+    --volumes-from db\
+    -e UPDATEDB_PATH=/ShareUsers/<path to the db root>\
+    -e OUTPUT=mlocatepersonal.db\
+    u1and0/upadtedb
+```
+
+このコマンドではdbコンテナのボリュームを参照し、
+`updatedb`をかけるパスを`UPDATEDB_PATH`で指定している。
+dbでマウントしているのでこのコンテナで再度マウントする必要はない。
+環境変数`OUTPUT`は出力するファイル名を指定する。
+ディレクトリは`/var/lib/mlocate`に固定される。
+
+
+## locateコマンドでファイル検索するコンテナwebを作る
+
+`docker run --name web --volumes-from db u1and0/locate-server [OPTIONS]`
+
+```
+docker run --name web --rm -t\
+   --volumes-from db\
+   -e TZ='Asia/Tokyo'\
+   -e LOCATE_PATH='/var/lib/mlocate/mlocatepersonal.db:/var/lib/mlocate/mlocatecommon.db'\
+   -p 8081:8080\
+   u1and0/locate-server -s -r '\\DFS' # オプションのみ
+```
+
+TZを指定しないとDBの更新日時がGMTになってしまう。
+`LOCATE_PATH`はappコンテナで指定したパスの数だけ`:`で区切って記述する。
+u1and0/locate-serverコンテナはENTRYPOINTで動くのでコンテナの指定後はオプションのみを記述する。
+
+### コンテナ内で有効になっている検索パス
+#### 環境変数の確認
+
+``` shell-session
+$ docker inspect --format='{{range .Config.Env}}{{println .}}{{end}}' web
+TZ=Asia/Tokyo
+LOCATE_PATH=/var/lib/mlocate/mlocatepersonal.db:/var/lib/mlocate/mlocatecommon.db:/var/lib/mlocate/mlocatecommunication.db
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+LANG=C.UTF-8
+```
+
+#### 検索パスの追加
+
+1. updatedbするコンテナを作成
+```shell-session
+docker run --name personal --volumes-from db\
+  -e TZ='Asia/Tokyo'\
+  -e UPDATEDB_PATH=/ShareUsers/UserTokki/Personal\
+  -e OUTPUT=mlocatepersonal.db\
+  -d u1and0/updatedb
+```
+
+
+2. locate-server実行コンテナに対して、環境変数`LOCATE_PATH`の内容を変更したものを再度作成( run )する
+2.1. `docker stop web`
+2.2. `docker rename web web_old`  # 今まで使っていたコンテナを退避(バックアップ)
+2.3. 新しい環境変数を設定したコンテナをrun `docker run ... -e LOCATE_PATH="..."``
+
+
 # Release Note
+## v3.0.0: REST API サーバー化
+* 検索結果をJSONとして取得し、非同期にHTMLとして描画します。
+* 検索ワードハイライト機能をサーバーサイドからクライアントサイドで実行するように変更しました。
+* 検索結果上限数の撤廃および検索結果の遅延ロード。
+* **IE非対応化**
+
 ## v2.3.2: DB ステータス表示バグ修正
 * `gocate -- -S` を使用せず、`locate -Sd "dbpathのファイル"` を使用するように変更
 
@@ -216,86 +312,13 @@ URLを送られた人はリンクをクリックするだけで検索バーに�
 > リンク右端の"<<"をクリックすると、そのファイルがあるフォルダがファイルエクスプローラーにて開きます。
 
 
-# Deploy
-Dockerコンテナによるシステム構成
-
-## data volume用のコンテナdbを作る
-```
-docker create --name db -v /var/lib/mlocate -v /ShareUsers:/ShareUsers:ro busybox
-```
-
-このコマンドではdbコンテナの`/varlib/mlocate`を外部に晒して、
-ホストのShareUsersをdbコンテナにマウントする。
-ShareUsersが`locate`コマンドをかける対象のディレクトリ。
-
-
-## updatedb用のコンテナappを作る
-
-```
-docker run --name app\
-    --volumes-from db\
-    -e UPDATEDB_PATH=/ShareUsers/<path to the db root>\
-    -e OUTPUT=mlocatepersonal.db\
-    u1and0/upadtedb
-```
-
-このコマンドではdbコンテナのボリュームを参照し、
-`updatedb`をかけるパスを`UPDATEDB_PATH`で指定している。
-dbでマウントしているのでこのコンテナで再度マウントする必要はない。
-環境変数`OUTPUT`は出力するファイル名を指定する。
-ディレクトリは`/var/lib/mlocate`に固定される。
-
-
-## locateコマンドでファイル検索するコンテナwebを作る
-
-`docker run --name web --volumes-from db u1and0/locate-server [OPTIONS]`
-
-```
-docker run --name web --rm -t\
-   --volumes-from db\
-   -e TZ='Asia/Tokyo'\
-   -e LOCATE_PATH='/var/lib/mlocate/mlocatepersonal.db:/var/lib/mlocate/mlocatecommon.db'\
-   -p 8081:8080\
-   u1and0/locate-server -s -r '\\DFS' # オプションのみ
-```
-
-TZを指定しないとDBの更新日時がGMTになってしまう。
-`LOCATE_PATH`はappコンテナで指定したパスの数だけ`:`で区切って記述する。
-u1and0/locate-serverコンテナはENTRYPOINTで動くのでコンテナの指定後はオプションのみを記述する。
-
-### コンテナ内で有効になっている検索パス
-#### 環境変数の確認
-
-``` shell-session
-$ docker inspect --format='{{range .Config.Env}}{{println .}}{{end}}' web
-TZ=Asia/Tokyo
-LOCATE_PATH=/var/lib/mlocate/mlocatepersonal.db:/var/lib/mlocate/mlocatecommon.db:/var/lib/mlocate/mlocatecommunication.db
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-LANG=C.UTF-8
-```
-
-#### 検索パスの追加
-
-1. updatedbするコンテナを作成
-```shell-session
-docker run --name personal --volumes-from db\
-  -e TZ='Asia/Tokyo'\
-  -e UPDATEDB_PATH=/ShareUsers/UserTokki/Personal\
-  -e OUTPUT=mlocatepersonal.db\
-  -d u1and0/updatedb
-```
-
-
-2. locate-server実行コンテナに対して、環境変数`LOCATE_PATH`の内容を変更したものを再度作成( run )する
-2.1. `docker stop web`
-2.2. `docker rename web web_old`  # 今まで使っていたコンテナを退避(バックアップ)
-2.3. 新しい環境変数を設定したコンテナをrun `docker run ... -e LOCATE_PATH="..."``
-
 # Bugs
 既知のバグ報告。
 
-* 検索ワードハイライトが検索順序を守らない。
-  * 内部的にString.ReplaceAll()を使用しているため。
+## 検索ワードハイライトが検索順序を守らない。
+内部的にString.ReplaceAll()を使用しているため。
+
+
 
 # Authors
 u1and0<e01.ando60@gmail.com>

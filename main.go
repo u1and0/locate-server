@@ -17,7 +17,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "2.3.2r"
+	VERSION = "3.0.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locate (gocate) search db path
@@ -42,6 +42,12 @@ func main() {
 	if showVersion {
 		fmt.Println("locate-server version", VERSION)
 		return // versionを表示して終了
+	}
+
+	// Release mode
+	fmt.Println("locater.Args.Debug", locater.Args.Debug)
+	if !locater.Args.Debug {
+		gin.SetMode(gin.ReleaseMode)
 	}
 
 	// Log setting

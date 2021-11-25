@@ -19,26 +19,11 @@ func TestLocater_Normalize(t *testing.T) {
 	}
 }
 
-func TestLocater_highlightString(t *testing.T) {
-	s := "/home/vagrant/Program/hoge3/program_boot.pdf"
-	words := []string{"program", "pdf"}
-	actual := highlightString(s, words)
-	p := "<span style=\"background-color:#FFCC00;\">"
-	q := "</span>"
-	expected := "/home/vagrant/" +
-		p + "Program" + q +
-		"/hoge3/program_boot." +
-		p + "pdf" + q
-	if actual != expected {
-		t.Fatalf("got: %v want: %v", actual, expected)
-	}
-}
-
 func TestLocater_CmdGen(t *testing.T) {
 	l := Locater{
 		SearchWords:  []string{"the", "path", "for", "search"},
 		ExcludeWords: []string{"exclude", "paths"},
-		Dbpath:       "../test/mlocatetest.db:../test/mlocatetest1.db",
+		Args:         Args{Dbpath: "../test"},
 	}
 	actual := l.CmdGen()
 	expected := [][]string{

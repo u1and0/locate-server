@@ -16,12 +16,14 @@ COPY ./cmd /go/src/github.com/u1and0/locate-server/cmd
 RUN go build -o /go/bin/locate-server
 
 FROM frolvlad/alpine-glibc:alpine-3.14_glibc-2.33
+RUN apk --update --no-cache add mlocate tzdata
+WORKDIR /var/www
 COPY --from=go_official /go/bin/locate-server /usr/bin/locate-server
 COPY --from=go_official /go/bin/gocate /usr/bin/gocate
-COPY ./js /usr/bin/js
-RUN apk --update --no-cache add mlocate tzdata
+COPY ./static /var/www/static
+COPY ./templates /var/www/templates
 ENTRYPOINT ["/usr/bin/locate-server"]
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
-      description="Running locate-server"\
-      version="v2.3.1"
+      description="Run locate-server"\
+      version="v3.0.0"

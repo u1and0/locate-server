@@ -19,27 +19,36 @@ MacOS 未テスト
 ```
 Usage of ./locate-server:
   -d string
-    	Path of locate database file (ex: /path/something.db:/path/another.db) (default "/var/lib/mlocate/mlocate.db")
+      Path of locate database directory (default "/var/lib/mlocate")
   -debug
-    	Debug mode
-  -l int
-    	Maximum limit for results (default 1000)
+    Debug mode
+  -dir string
+    Path of locate database directory (default "/var/lib/mlocate")
+  -p string
+    Server port number. Default access to http://localhost:8080/ (default "8080")
+  -port string
+    Server port number. Default access to http://localhost:8080/ (default "8080")
   -r string
-    	DB insert prefix for directory path
-  -s	OS path split windows backslash
+    DB insert prefix for directory path
+  -root string
+    DB insert prefix for directory path
+  -s    OS path split windows backslash
   -t string
-    	DB trim prefix for directory path
-  -v	show version
+    DB trim prefix for directory path
+  -trim string
+    DB trim prefix for directory path
+  -v    show version
   -version
-    	show version
+    show version
+  -windows-path-separate
+    OS path separate windows backslash
 ```
 
 ```
 $ locate-server \
-  -d $(paste -sd: <(find /var/lib/mlocate -name '*.db')) \
-  -s \
-  -t '\\gr.jp\share' \
-  -l 2000 \
+  -d /home/mydir/mlocate \
+  -windows-path-separate \
+  -trim '\\gr.jp\share' \
 ```
 
 ## Installation
@@ -52,6 +61,7 @@ or use docker
 ```
 $ docker pull u1and0/locate-server
 ```
+
 
 ## GLIBC not found
 locate-server実行時にglibcが必要
@@ -317,12 +327,3 @@ docker run --name personal --volumes-from db\
 
 ## 検索ワードハイライトが検索順序を守らない。
 内部的にString.ReplaceAll()を使用しているため。
-
-
-
-# Authors
-u1and0<e01.ando60@gmail.com>
-
-# License
-This project is licensed under the MIT License - see the LICENSE.md file for details
-このプロジェクトは MIT ライセンスの元にライセンスされています。

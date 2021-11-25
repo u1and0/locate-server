@@ -1,5 +1,5 @@
 # Locate Server
-ブラウザ経由でファイルパスを検索し、結果を最大1000件まで表示します。
+ファイルパスを検索し結果をJSONで返すサーバーを立て、ブラウザに表示するファイルを配信します。
 
 ## ***DEMO***
 ![out](https://user-images.githubusercontent.com/16408916/143503512-6e172a98-f973-4c80-b1dc-99ea0ede0a71.gif)
@@ -9,6 +9,7 @@
 
 ## Requirement
 * mlocate
+* [gocate](https://github.com/u1and0/gocate)
 
 Windows, Linux OK
 
@@ -53,7 +54,7 @@ $ locate-server \
 
 ## Installation
 ```
-$ go get github.com/u1and0/locate-server
+$ go install github.com/u1and0/locate-server@latest
 ```
 
 or use docker
@@ -224,6 +225,13 @@ docker run --name personal --volumes-from db\
 2.3. 新しい環境変数を設定したコンテナをrun `docker run ... -e LOCATE_PATH="..."``
 
 
+# Bugs
+既知のバグ報告。
+
+## 検索ワードハイライトが検索順序を守らない。
+内部的にString.ReplaceAll()を使用しているため。
+
+
 # Release Note
 ## v3.0.0: REST API サーバー化
 * 検索結果をJSONとして取得し、非同期にHTMLとして描画します。
@@ -320,10 +328,3 @@ docker run --name personal --volumes-from db\
 * 前回の検索履歴がアクセスした人すべてに見られてしまいます。(改善予定)
 * フォルダジャンプ機能に対応しました。
 > リンク右端の"<<"をクリックすると、そのファイルがあるフォルダがファイルエクスプローラーにて開きます。
-
-
-# Bugs
-既知のバグ報告。
-
-## 検索ワードハイライトが検索順序を守らない。
-内部的にString.ReplaceAll()を使用しているため。

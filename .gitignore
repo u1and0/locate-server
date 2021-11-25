@@ -1,5 +1,6 @@
 Session.vim
 /log/
+!/test/locate.log
 /doc/
 /script/
 /misc/

@@ -9,17 +9,18 @@
 #   -e OUTPUT=mlocatework.db\
 #   u1and0/updatedb
 
-FROM alpine
+FROM golang:1.17.0-alpine3.14 AS go_official
 
 # locate, updatedbコマンドを使用可能にする
 # tzdataは環境変数ENVを変えるとUTCから変更される
 # ex) docker run -d -e TZ='Asia/Tokyo' u1and0/updatedb
-RUN apk --update --no-cache add mlocate tzdata
+RUN apk --update --no-cache add mlocate tzdata git &&\
+    go install github.com/u1and0/gocate@v0.3.0
 
 ARG TASK="/etc/crontabs/root"
 RUN echo "SHELL=/bin/sh" > $TASK &&\
     echo "PATH=/sbin:/bin:/usr/sbin:/usr/bin" >> $TASK &&\
-    echo "* */12 * * * updatedb -U \${UPDATEDB_PATH:-/} --output=/var/lib/mlocate/\${OUTPUT:-mlocate.db}" >> $TASK
+    echo "3 0 * * * gocate -init" >> $TASK
 # ${UPDATEDB_PATH}以下のディレクトリを定期的にデータベース化
 # 指定しない場合${UPDATEDB_PATH}のデフォルトは/
 
@@ -34,4 +35,4 @@ CMD ["crond", "&&", "tail", "-f"]
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
       description="make database regularly by `updatedb` command"\
-      version="u1and0/updatedb:v1.0.3"
+      version="u1and0/updatedb:v1.1.0"

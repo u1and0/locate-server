@@ -12,11 +12,7 @@
         <!-- 検索窓 -->
         <input type="text" name="q" value="{{ .query }}" size="50" list="search-history" placeholder="検索キーワードを入力">
         <!-- 検索履歴 Frecency リスト -->
-        <datalist id="search-history">
-            {{ range .datalist }}
-                <option>{{ .Word }}</option>
-            {{ end }}
-        </datalist>
+        <datalist id="search-history"></datalist>
         <!-- 検索ボタン -->
         <input type="submit" id="submit" value="&#xf002;" class="fas">
         <input type="button" onclick="toggleMenu('hidden-explain')" value="&#xf05a;" class=fas title="Help"> <!--// Help折りたたみ展開ボタン -->

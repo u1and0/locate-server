@@ -98,10 +98,6 @@ func main() {
 	// Result view
 	route.GET("/search", func(c *gin.Context) {
 		// HTML
-		datalist, err := cmd.Datalist(LOGFILE)
-		if err != nil {
-			log.Error(err)
-		}
 		query := c.Request.URL.Query()
 		q := strings.Join(query["q"], " ")
 		// JSON
@@ -134,22 +130,22 @@ func main() {
 			gin.H{
 				"title":          q,
 				"lastUpdateTime": locater.Stats.LastUpdateTime,
-				"datalist":       datalist,
 				"query":          q,
 			})
 	})
 
 	// API
-	route.GET("/history", func(c *gin.Context) {
+	route.GET("/json", func(c *gin.Context) {
 		locater.SearchHistory, err = cmd.Datalist(LOGFILE)
 		if err != nil {
 			locater.Error = err
 			log.Error(err)
+			c.JSON(404, locater)
 		}
-		c.JSON(http.StatusOK, locater)
-	})
+		if locater.Args.Debug {
+			log.Debug(locater.SearchHistory)
+		}
 
-	route.GET("/json", func(c *gin.Context) {
 		q := c.Query("q")
 		sw, ew, err := cmd.QueryParser(q)
 		if err != nil {
@@ -159,6 +155,10 @@ func main() {
 			return
 		}
 		locater.SearchWords, locater.ExcludeWords = sw, ew
+		if len(sw) == 0 {
+			c.JSON(404, locater)
+			return
+		}
 
 		// Execute locate command
 		st := time.Now()

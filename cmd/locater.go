@@ -10,9 +10,9 @@ import (
 type (
 	// Locater : queryから読み取った検索ワードと無視するワード
 	Locater struct {
-		SearchWords   []string     `json:"searchWords"`  // 検索キーワード
-		ExcludeWords  []string     `json:"excludeWords"` // 検索から取り除くキーワード
-		SearchHistory FrecencyList `json:"searchHistory"`
+		SearchWords   []string `json:"searchWords"`  // 検索キーワード
+		ExcludeWords  []string `json:"excludeWords"` // 検索から取り除くキーワード
+		SearchHistory `json:"searchHistory"`
 		Args          `json:"args"`
 		// -- Result struct
 		Paths `json:"paths"`

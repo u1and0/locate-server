@@ -3,9 +3,6 @@ main()
 function main(){
   const url = new URL(window.location.href);
   const query = url.searchParams.get("q");
-  if (!query) { // queryが""やnullや<empty string>のときは何もしない
-    return
-  }
   fetchJSONPath(url);
 }
 
@@ -16,6 +13,7 @@ class Locater {
     this.stats = json.stats;
     this.searchWords = json.searchWords;
     this.excludeWords = json.excludeWords;
+    this.searchHistory = json.searchHistory;
   }
 
   static displayStats(str){
@@ -25,6 +23,15 @@ class Locater {
     divElem.appendChild(newElem);
     const br = document.createElement("br");
     divElem.appendChild(br);
+  }
+
+  // 検索キーワード履歴のdatalist <id=search-history>を埋める
+  fillSearchHistory(){
+    this.searchHistory.forEach((h) =>{
+      if (h.word) {
+        $("#search-history").append("<option>" + h.word + "</option>");
+      }
+    });
   }
 
   // 検索パス表示
@@ -46,12 +53,18 @@ class Locater {
 
 async function fetchJSONPath(url){
   try {
-    const jsonURL = url.href.replace("search", "json");
+    let jsonURL;
+    if (url.href.indexOf("search") > -1){
+      jsonURL = url.href.replace("search", "json");
+    } else {
+      jsonURL = url.href + "json";
+    }
     const locaterJSON = await fetchLocatePath(jsonURL);
     const locater = new Locater(locaterJSON);
     if (locater.args.debug){
-      console.log(locater);
+      console.dir(locater);
     }
+    locater.fillSearchHistory();  // 検索キーワード履歴のdatalist <id=search-history>を埋める
     const hitCount = `ヒット数: ${locater.paths.length}件`;
     Locater.displayStats(hitCount);
     const searchTime = `${locater.stats.searchTime.toFixed(3)}msec で\

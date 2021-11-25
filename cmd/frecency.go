@@ -16,11 +16,11 @@ type (
 
 	// Frecency : A coined word of "frequently" + "recency"
 	Frecency struct {
-		Word  string
-		Score int
+		Word  string `json:"word"`
+		Score int    `json:"score"`
 	}
-	// FrecencyList : List of Frecency sorted by Frecency.Score
-	FrecencyList []Frecency
+	// SearchHistory : List of Frecency sorted by Frecency.Score
+	SearchHistory []Frecency
 )
 
 // LogWord extract search word from logfile
@@ -113,9 +113,9 @@ func ScoreSum(tl []time.Time) (score int) {
 }
 
 // RankByScore : 履歴から頻出度リストを生成する
-func (history History) RankByScore() FrecencyList {
+func (history History) RankByScore() SearchHistory {
 	var i int
-	l := make(FrecencyList, len(history))
+	l := make(SearchHistory, len(history))
 	for k, v := range history {
 		l[i] = Frecency{k, ScoreSum(v)}
 		i++
@@ -124,12 +124,12 @@ func (history History) RankByScore() FrecencyList {
 	return l
 }
 
-func (fl FrecencyList) Len() int           { return len(fl) }
-func (fl FrecencyList) Less(i, j int) bool { return fl[i].Score > fl[j].Score }
-func (fl FrecencyList) Swap(i, j int)      { fl[i], fl[j] = fl[j], fl[i] }
+func (fl SearchHistory) Len() int           { return len(fl) }
+func (fl SearchHistory) Less(i, j int) bool { return fl[i].Score > fl[j].Score }
+func (fl SearchHistory) Swap(i, j int)      { fl[i], fl[j] = fl[j], fl[i] }
 
 // Datalist throw list of searched words sorted by score
-func Datalist(f string) (FrecencyList, error) {
+func Datalist(f string) (SearchHistory, error) {
 	historymap, err := LogWord(f)
 	wordList := historymap.RankByScore()
 	return wordList, err

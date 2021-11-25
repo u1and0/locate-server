@@ -72,39 +72,7 @@ func (l *Locater) Locate() (Paths, error) {
 	return outslice, err
 }
 
-// Convert modify Paths by command line Args
-// split from Locater.Cmd()
-func (l *Locater) Convert(p Paths) Paths {
-	q := make(Paths, len(p))
-	for i, file := range p {
-		/* オプションによる結果の変換
-		1. UNIXドライブパスを取り除いて
-		2. Windowsパスセパレータ(\)に変換して
-		3. Windows or UNIX ルートドライブパスを取り付ける
-		順番は大事
-		*/
-		if l.Trim != "" { // Trim drive path
-			file = strings.TrimPrefix(file, l.Trim)
-		}
-		if l.PathSplitWin { // Transfer separator
-			file = strings.ReplaceAll(file, "/", "\\")
-		}
-		if l.Root != "" { // Insert drive path
-			file = l.Root + file
-		}
-		q[i] = file
-	}
-	return q
-}
-
 // CmdGen : shell実行用パイプラインコマンドを発行する
-//
-// Process = 1のとき
-// locate 検索語 | grep -v 除外語 | grep -v 除外語...
-//
-// Process = 1以外のとき
-// マルチプロセスlocateを発行する
-// echo $LOCATE_PATH | tr :, \n | xargs -P0 -I@ locate 検索語 | grep -v 除外語 | grep -v 除外語...
 func (l *Locater) CmdGen() (pipeline [][]string) {
 	locate := []string{
 		"gocate",               // locate command path

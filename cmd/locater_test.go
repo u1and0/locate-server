@@ -30,7 +30,7 @@ func TestLocater_CmdGen(t *testing.T) {
 		{
 			"gocate",
 			"--database",
-			"../test/mlocatetest.db:../test/mlocatetest1.db",
+			"../test",
 			"--",
 			"--ignore-case",
 			"--quiet",

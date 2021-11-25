@@ -66,7 +66,7 @@ func (l *Locater) Locate() (Paths, error) {
 	out, err := pipeline.Output(l.CmdGen()...)
 	outslice := strings.Split(string(out), "\n")
 	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
-	if l.Debug {
+	if l.Args.Debug {
 		log.Debugf("gocate result %v", outslice)
 	}
 	return outslice, err
@@ -96,7 +96,7 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 		// COMMAND | grep -ivE EXCLUDE1 | grep -ivE EXCLUDE2
 		pipeline = append(pipeline, []string{"grep", "-ivE", ex})
 	}
-	if l.Debug {
+	if l.Args.Debug {
 		log.Debugf("Execute command %v", pipeline)
 	}
 	return

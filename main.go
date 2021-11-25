@@ -191,10 +191,13 @@ func main() {
 // Parse command line option
 func parse() (l cmd.Locater) {
 	flag.StringVar(&l.Args.Dbpath, "d", LOCATEDIR, "Path of locate database directory")
-	flag.IntVar(&l.Args.Limit, "l", 1000, "Maximum limit for results")
+	flag.StringVar(&l.Args.Dbpath, "dir", LOCATEDIR, "Path of locate database directory")
 	flag.BoolVar(&l.Args.PathSplitWin, "s", false, "OS path split windows backslash")
+	flag.BoolVar(&l.Args.PathSplitWin, "windows-path-separate", false, "OS path separate windows backslash")
 	flag.StringVar(&l.Args.Root, "r", "", "DB insert prefix for directory path")
+	flag.StringVar(&l.Args.Root, "root", "", "DB insert prefix for directory path")
 	flag.StringVar(&l.Args.Trim, "t", "", "DB trim prefix for directory path")
+	flag.StringVar(&l.Args.Trim, "trim", "", "DB trim prefix for directory path")
 	flag.BoolVar(&l.Args.Debug, "debug", false, "Debug mode")
 	flag.StringVar(&port, "p", "8080", "Server port number. Default access to http://localhost:8080/")
 	flag.StringVar(&port, "port", "8080", "Server port number. Default access to http://localhost:8080/")

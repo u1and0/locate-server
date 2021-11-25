@@ -10,9 +10,9 @@
       <form name="form1" method="get" action="/search">
         <a href=/ class="fas fa-home" title="Locate Server Home"></a>
         <!-- 検索窓 -->
-        <input type="text" name="q" value="{{ .query }}" size="50" list="searched-words" placeholder="検索キーワードを入力">
+        <input type="text" name="q" value="{{ .query }}" size="50" list="search-history" placeholder="検索キーワードを入力">
         <!-- 検索履歴 Frecency リスト -->
-        <datalist id="searched-words">
+        <datalist id="search-history">
             {{ range .datalist }}
                 <option>{{ .Word }}</option>
             {{ end }}

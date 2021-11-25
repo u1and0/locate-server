@@ -140,6 +140,15 @@ func main() {
 	})
 
 	// API
+	route.GET("/history", func(c *gin.Context) {
+		locater.SearchHistory, err = cmd.Datalist(LOGFILE)
+		if err != nil {
+			locater.Error = err
+			log.Error(err)
+		}
+		c.JSON(http.StatusOK, locater)
+	})
+
 	route.GET("/json", func(c *gin.Context) {
 		q := c.Query("q")
 		sw, ew, err := cmd.QueryParser(q)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,7 +30,7 @@ const (
 var (
 	log         = logging.MustGetLogger("main")
 	showVersion bool
-	port        string
+	port        int
 )
 
 func main() {
@@ -192,7 +193,7 @@ func main() {
 	})
 
 	// Listen and serve on 0.0.0.0:8080
-	route.Run(":" + port)
+	route.Run(":" + strconv.Itoa(port)) // => :8080
 }
 
 // Parse command line option
@@ -206,8 +207,8 @@ func parse() (l cmd.Locater) {
 	flag.StringVar(&l.Args.Trim, "t", "", "DB trim prefix for directory path")
 	flag.StringVar(&l.Args.Trim, "trim", "", "DB trim prefix for directory path")
 	flag.BoolVar(&l.Args.Debug, "debug", false, "Debug mode")
-	flag.StringVar(&port, "p", "8080", "Server port number. Default access to http://localhost:8080/")
-	flag.StringVar(&port, "port", "8080", "Server port number. Default access to http://localhost:8080/")
+	flag.IntVar(&port, "p", 8080, "Server port number. Default access to http://localhost:8080/")
+	flag.IntVar(&port, "port", 8080, "Server port number. Default access to http://localhost:8080/")
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()

@@ -135,17 +135,19 @@ func main() {
 	})
 
 	// API
-	route.GET("/json", func(c *gin.Context) {
-		locater.SearchHistory, err = cmd.Datalist(LOGFILE)
+	route.GET("/history", func(c *gin.Context) {
+		searchHistory, err := cmd.Datalist(LOGFILE)
 		if err != nil {
-			locater.Error = err
 			log.Error(err)
-			c.JSON(404, locater)
+			c.JSON(404, searchHistory)
 		}
 		if locater.Args.Debug {
-			log.Debug(locater.SearchHistory)
+			log.Debug(searchHistory)
 		}
+		c.JSON(http.StatusOK, searchHistory)
+	})
 
+	route.GET("/json", func(c *gin.Context) {
 		q := c.Query("q")
 		sw, ew, err := cmd.QueryParser(q)
 		if err != nil {
@@ -155,20 +157,16 @@ func main() {
 			return
 		}
 		locater.SearchWords, locater.ExcludeWords = sw, ew
-		if len(sw) == 0 {
-			c.JSON(404, locater)
-			return
-		}
 
 		// Execute locate command
-		st := time.Now()
+		start := time.Now()
 		result, ok, err := cache.Traverse(&locater)
 		getpushLog := "PUSH result to cache"
 		if ok {
 			getpushLog = "GET result from cache"
 		}
-		locater.Stats.SearchTime =
-			float64((time.Since(st)).Nanoseconds()) / float64(time.Millisecond)
+		end := (time.Since(start)).Nanoseconds()
+		locater.Stats.SearchTime = float64(end) / float64(time.Millisecond)
 
 		if err != nil {
 			locater.Stats.Response = 404

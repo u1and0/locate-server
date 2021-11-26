@@ -2,8 +2,11 @@ main()
 
 function main(){
   const url = new URL(window.location.href);
+  fetchSearchHistory(url.origin + "/history");
   const query = url.searchParams.get("q");
-  fetchJSONPath(url);
+  if (query){  // queryがなければ終了,あればサーバーからJSON呼び出し
+    fetchJSONPath(url.href.replace("search", "json"));
+  }
 }
 
 class Locater {
@@ -13,7 +16,6 @@ class Locater {
     this.stats = json.stats;
     this.searchWords = json.searchWords;
     this.excludeWords = json.excludeWords;
-    this.searchHistory = json.searchHistory;
   }
 
   static displayStats(str){
@@ -25,25 +27,16 @@ class Locater {
     divElem.appendChild(br);
   }
 
-  // 検索キーワード履歴のdatalist <id=search-history>を埋める
-  fillSearchHistory(){
-    this.searchHistory.forEach((h) =>{
-      if (h.word) {
-        $("#search-history").append("<option>" + h.word + "</option>");
-      }
-    });
-  }
-
   // 検索パス表示
   displayRoll(n, shift){
     const folderIcon = '<i class="far fa-folder-open" title="クリックでフォルダを開く"></i>';
     const sep = this.args.pathSplitWin ? "\\" : "/";
-    let dataArray = this.paths.slice(n, n + shift);
+    const dataArray = this.paths.slice(n, n + shift);
     // $.each(dataArray, function(i){
     dataArray.forEach((p) =>{
-      let modified = pathModify(p, this.args);
-      let highlight = highlightRegex(modified, this.searchWords);
-      let dir = dirname(modified, sep);
+      const modified = pathModify(p, this.args);
+      const highlight = highlightRegex(modified, this.searchWords);
+      const dir = dirname(modified, sep);
       let result = `<a href="file://${modified}">${highlight}</a>`;
       result += `<a href="file://${dir}"> ${folderIcon} </a>`;
       $("#result").append("<tr><td>" + result + "</td></tr>");
@@ -51,20 +44,24 @@ class Locater {
   }
 }
 
+async function fetchSearchHistory(url){
+  try{
+    const searchHistoryJSON = await fetchLocatePath(url);
+    console.dir(searchHistoryJSON)
+    fillSearchHistory(searchHistoryJSON)
+  } catch(error) {
+    console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
+  }
+}
+
 async function fetchJSONPath(url){
   try {
-    let jsonURL;
-    if (url.href.indexOf("search") > -1){
-      jsonURL = url.href.replace("search", "json");
-    } else {
-      jsonURL = url.href + "json";
-    }
-    const locaterJSON = await fetchLocatePath(jsonURL);
+    const locaterJSON = await fetchLocatePath(url);
     const locater = new Locater(locaterJSON);
     if (locater.args.debug){
       console.dir(locater);
     }
-    locater.fillSearchHistory();  // 検索キーワード履歴のdatalist <id=search-history>を埋める
+    // locater.fillSearchHistory();  // 検索キーワード履歴のdatalist <id=search-history>を埋める
     const hitCount = `ヒット数: ${locater.paths.length}件`;
     Locater.displayStats(hitCount);
     const searchTime = `${locater.stats.searchTime.toFixed(3)}msec で\
@@ -75,15 +72,18 @@ async function fetchJSONPath(url){
     const shift = 100;
     locater.displayRoll(n, shift);
     $(window).on("scroll", function(){ // scrollで下限近くまで来ると次をロード
-      let inner = $(window).innerHeight();
-      let outer = $(window).outerHeight();
-      let bottom = inner - outer;
-      let tp = $(window).scrollTop();
-      let ob = {
+      const inner = $(window).innerHeight();
+      const outer = $(window).outerHeight();
+      const bottom = inner - outer;
+      const tp = $(window).scrollTop();
+      const ob = {
         "inner": inner,
         "outer": outer,
         "bottom": bottom,
         "tp": tp,
+      }
+      if (locater.args.debug){
+        console.log("scroll position: ", ob);
       }
       if (tp * 1.05 >= bottom) {
         //スクロールの位置が下部5%の範囲に来た場合
@@ -123,7 +123,7 @@ function pathModify(str, args){
 
 function highlightRegex(str, searchWords){
   searchWords.forEach((q) =>{
-    let re = new RegExp(q, "i"); // second arg "i" for ignore case
+    const re = new RegExp(q, "i"); // second arg "i" for ignore case
     // $&はreのマッチ結果
     str = str.replace(re, "<span style='background-color:#FFCC00;'>$&</span>");
   })
@@ -133,4 +133,13 @@ function highlightRegex(str, searchWords){
 function dirname(str, sep){
   const idx = str.lastIndexOf(sep); // sep == "/" or "\\"
   return str.slice(0,idx);
+}
+
+// 検索キーワード履歴のdatalist <id=search-history>を埋める
+function fillSearchHistory(json){
+  json.forEach((h) =>{
+    if (h.word) {
+      $("#search-history").append("<option>" + h.word + "</option>");
+    }
+  });
 }

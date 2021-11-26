@@ -55,6 +55,7 @@ func QueryParser(query string) (sn, en []string, err error) {
 	}() {
 		message := "検索文字数が足りません : "
 		err = errors.New(message + strings.Join(sn, " "))
+		return
 	}
 	// snとenに重複する語が入っていたらerror
 	if e := func() string {
@@ -69,6 +70,7 @@ func QueryParser(query string) (sn, en []string, err error) {
 	}(); e != "" {
 		message := "検索キーワードの中に無視するキーワードが入っています : "
 		err = errors.New(message + e)
+		return
 	}
 	return
 }

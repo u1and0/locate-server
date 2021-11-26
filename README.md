@@ -1,14 +1,15 @@
 # Locate Server
-ブラウザ経由でファイルパスを検索し、結果を最大1000件まで表示します。
+ファイルパスを検索し結果をJSONで返すサーバーを立て、ブラウザに表示するファイルを配信します。
 
 ## ***DEMO***
-![demo](demo)
+![out](https://user-images.githubusercontent.com/16408916/143503512-6e172a98-f973-4c80-b1dc-99ea0ede0a71.gif)
 
 ## Description
 ウェブブラウザからの入力で指定ディレクトリ下にあるファイル内の文字列に対してlocateコマンドを使用した正規表現検索を行い、結果をhtmlにしてウェブブラウザに表示します。
 
 ## Requirement
 * mlocate
+* [gocate](https://github.com/u1and0/gocate)
 
 Windows, Linux OK
 
@@ -19,32 +20,41 @@ MacOS 未テスト
 ```
 Usage of ./locate-server:
   -d string
-    	Path of locate database file (ex: /path/something.db:/path/another.db) (default "/var/lib/mlocate/mlocate.db")
+      Path of locate database directory (default "/var/lib/mlocate")
   -debug
-    	Debug mode
-  -l int
-    	Maximum limit for results (default 1000)
+    Debug mode
+  -dir string
+    Path of locate database directory (default "/var/lib/mlocate")
+  -p string
+    Server port number. Default access to http://localhost:8080/ (default "8080")
+  -port string
+    Server port number. Default access to http://localhost:8080/ (default "8080")
   -r string
-    	DB insert prefix for directory path
-  -s	OS path split windows backslash
+    DB insert prefix for directory path
+  -root string
+    DB insert prefix for directory path
+  -s    OS path split windows backslash
   -t string
-    	DB trim prefix for directory path
-  -v	show version
+    DB trim prefix for directory path
+  -trim string
+    DB trim prefix for directory path
+  -v    show version
   -version
-    	show version
+    show version
+  -windows-path-separate
+    OS path separate windows backslash
 ```
 
 ```
 $ locate-server \
-  -d $(paste -sd: <(find /var/lib/mlocate -name '*.db')) \
-  -s \
-  -t '\\gr.jp\share' \
-  -l 2000 \
+  -d /home/mydir/mlocate \
+  -windows-path-separate \
+  -trim '\\gr.jp\share' \
 ```
 
 ## Installation
 ```
-$ go get github.com/u1and0/locate-server
+$ go install github.com/u1and0/locate-server@latest
 ```
 
 or use docker
@@ -52,6 +62,7 @@ or use docker
 ```
 $ docker pull u1and0/locate-server
 ```
+
 
 ## GLIBC not found
 locate-server実行時にglibcが必要
@@ -214,6 +225,13 @@ docker run --name personal --volumes-from db\
 2.3. 新しい環境変数を設定したコンテナをrun `docker run ... -e LOCATE_PATH="..."``
 
 
+# Bugs
+既知のバグ報告。
+
+## 検索ワードハイライトが検索順序を守らない。
+内部的にString.ReplaceAll()を使用しているため。
+
+
 # Release Note
 ## v3.0.0: REST API サーバー化
 * 検索結果をJSONとして取得し、非同期にHTMLとして描画します。
@@ -310,19 +328,3 @@ docker run --name personal --volumes-from db\
 * 前回の検索履歴がアクセスした人すべてに見られてしまいます。(改善予定)
 * フォルダジャンプ機能に対応しました。
 > リンク右端の"<<"をクリックすると、そのファイルがあるフォルダがファイルエクスプローラーにて開きます。
-
-
-# Bugs
-既知のバグ報告。
-
-## 検索ワードハイライトが検索順序を守らない。
-内部的にString.ReplaceAll()を使用しているため。
-
-
-
-# Authors
-u1and0<e01.ando60@gmail.com>
-
-# License
-This project is licensed under the MIT License - see the LICENSE.md file for details
-このプロジェクトは MIT ライセンスの元にライセンスされています。

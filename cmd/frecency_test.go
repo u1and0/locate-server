@@ -11,9 +11,6 @@ func Test_LogWord(t *testing.T) {
 		"load bash": []time.Time{
 			time.Date(2020, 6, 28, 20, 59, 13, 0, time.UTC),
 		},
-		"yay package": []time.Time{
-			time.Date(2020, 6, 28, 20, 59, 33, 0, time.UTC),
-		},
 		"etc pacman new": []time.Time{
 			time.Date(2020, 6, 28, 21, 35, 15, 0, time.UTC),
 			time.Date(2020, 6, 28, 21, 41, 25, 0, time.UTC),
@@ -74,7 +71,6 @@ func Test_Datalist(t *testing.T) {
 		Frecency{"etc pacman new", 4},
 		Frecency{"usr pac", 3},
 		Frecency{"load bash", 1},
-		Frecency{"yay package", 1},
 	}
 	for i, e := range expected {
 		if e != actual[i] {

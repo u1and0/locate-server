@@ -67,7 +67,7 @@ func Test_ExtractKeyword(t *testing.T) {
 
 func Test_Datalist(t *testing.T) {
 	actual, _ := Datalist("../test/locate.log")
-	expected := FrecencyList{
+	expected := SearchHistory{
 		Frecency{"etc pacman new", 4},
 		Frecency{"usr pac", 3},
 		Frecency{"load bash", 1},

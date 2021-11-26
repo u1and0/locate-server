@@ -16,6 +16,7 @@ type (
 		// -- Result struct
 		Paths `json:"paths"`
 		Stats `json:"stats"`
+		Error error `json:"error"`
 	}
 
 	// Args is command line option

@@ -98,10 +98,6 @@ func main() {
 	// Result view
 	route.GET("/search", func(c *gin.Context) {
 		// HTML
-		datalist, err := cmd.Datalist(LOGFILE)
-		if err != nil {
-			log.Error(err)
-		}
 		query := c.Request.URL.Query()
 		q := strings.Join(query["q"], " ")
 		// JSON
@@ -134,12 +130,23 @@ func main() {
 			gin.H{
 				"title":          q,
 				"lastUpdateTime": locater.Stats.LastUpdateTime,
-				"datalist":       datalist,
 				"query":          q,
 			})
 	})
 
 	// API
+	route.GET("/history", func(c *gin.Context) {
+		searchHistory, err := cmd.Datalist(LOGFILE)
+		if err != nil {
+			log.Error(err)
+			c.JSON(404, searchHistory)
+		}
+		if locater.Args.Debug {
+			log.Debug(searchHistory)
+		}
+		c.JSON(http.StatusOK, searchHistory)
+	})
+
 	route.GET("/json", func(c *gin.Context) {
 		q := c.Query("q")
 		sw, ew, err := cmd.QueryParser(q)
@@ -152,14 +159,14 @@ func main() {
 		locater.SearchWords, locater.ExcludeWords = sw, ew
 
 		// Execute locate command
-		st := time.Now()
+		start := time.Now()
 		result, ok, err := cache.Traverse(&locater)
 		getpushLog := "PUSH result to cache"
 		if ok {
 			getpushLog = "GET result from cache"
 		}
-		locater.Stats.SearchTime =
-			float64((time.Since(st)).Nanoseconds()) / float64(time.Millisecond)
+		end := (time.Since(start)).Nanoseconds()
+		locater.Stats.SearchTime = float64(end) / float64(time.Millisecond)
 
 		if err != nil {
 			locater.Stats.Response = 404

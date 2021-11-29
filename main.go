@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -148,20 +149,40 @@ func main() {
 	})
 
 	route.GET("/json", func(c *gin.Context) {
+		// locater.Que initialize
+		locater.Que.Logging = true
+		locater.Que.Limit = 0
+
 		// Parse query
 		q := c.Query("q")
 		sw, ew, err := cmd.QueryParser(q)
 		if err != nil {
 			log.Errorf("%s [ %-50s ]", err, q)
 			locater.Stats.Response = 404
-			c.JSON(404, locater)
+			c.JSON(locater.Stats.Response, locater)
 			return
 		}
 		locater.SearchWords, locater.ExcludeWords = sw, ew
+		lm := c.Query("limit")
+		if lm != "" {
+			ln, err := strconv.Atoi(lm)
+			if err != nil {
+				log.Errorf("Error in 'limit' API", err, q)
+				locater.Stats.Response = 404
+				c.JSON(locater.Stats.Response, locater)
+				return
+			}
+			if ln > 0 { // 0未満のときは無視(initialize で既に0になっている)
+				locater.Que.Limit = ln
+			}
+		}
 
 		// Execute locate command
 		start := time.Now()
 		result, ok, err := cache.Traverse(&locater)
+		if locater.Args.Debug {
+			log.Debugf("gocate result %v", result)
+		}
 		end := (time.Since(start)).Nanoseconds()
 		locater.Stats.SearchTime = float64(end) / float64(time.Millisecond)
 
@@ -181,9 +202,12 @@ func main() {
 			// 基本的にすべての検索はログに記録する
 			// http:...&logging=falseのときだけ記録しない
 			if c.Query("logging") == "false" {
-				fmt.Printf("[NO LOGGING NOTICE]\t%8dfiles %3.3fmsec %s [ %-50s ]\n", l...) // Printfで表示はする
-			} else {
+				locater.Que.Logging = false
+			}
+			if locater.Que.Logging {
 				log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
+			} else {
+				fmt.Printf("[NO LOGGING NOTICE]\t%8dfiles %3.3fmsec %s [ %-50s ]\n", l...) // Printfで表示はする
 			}
 			c.JSON(http.StatusOK, locater)
 		}

@@ -35,9 +35,9 @@ var (
 
 func main() {
 	var (
-		locater = parse()
+		locater = parseCmdlineOption()
 		locateS []byte
-		cache   cmd.CacheMap
+		cache   = cmd.CacheMap{}
 	)
 
 	if showVersion {
@@ -149,6 +149,7 @@ func main() {
 	})
 
 	route.GET("/json", func(c *gin.Context) {
+		// Parse query
 		q := c.Query("q")
 		sw, ew, err := cmd.QueryParser(q)
 		if err != nil {
@@ -162,22 +163,29 @@ func main() {
 		// Execute locate command
 		start := time.Now()
 		result, ok, err := cache.Traverse(&locater)
-		getpushLog := "PUSH result to cache"
-		if ok {
-			getpushLog = "GET result from cache"
-		}
 		end := (time.Since(start)).Nanoseconds()
 		locater.Stats.SearchTime = float64(end) / float64(time.Millisecond)
 
+		// Response & Logging
 		if err != nil {
 			locater.Stats.Response = 404
 			log.Errorf("%s [ %-50s ]", err, q)
-			c.JSON(404, locater)
+			c.JSON(locater.Stats.Response, locater)
 		} else {
+			getpushLog := "PUSH result to cache"
+			if ok {
+				getpushLog = "GET result from cache"
+			}
 			locater.Paths = result
 			locater.Stats.Response = http.StatusOK
-			log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]",
-				len(locater.Paths), locater.Stats.SearchTime, getpushLog, q)
+			l := []interface{}{len(locater.Paths), locater.Stats.SearchTime, getpushLog, q}
+			// 基本的にすべての検索はログに記録する
+			// http:...&logging=falseのときだけ記録しない
+			if c.Query("logging") == "false" {
+				fmt.Printf("[NO LOGGING NOTICE]\t%8dfiles %3.3fmsec %s [ %-50s ]\n", l...) // Printfで表示はする
+			} else {
+				log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
+			}
 			c.JSON(http.StatusOK, locater)
 		}
 	})
@@ -197,7 +205,7 @@ func main() {
 }
 
 // Parse command line option
-func parse() (l cmd.Locater) {
+func parseCmdlineOption() (l cmd.Locater) {
 	flag.StringVar(&l.Args.Dbpath, "d", LOCATEDIR, "Path of locate database directory")
 	flag.StringVar(&l.Args.Dbpath, "dir", LOCATEDIR, "Path of locate database directory")
 	flag.BoolVar(&l.Args.PathSplitWin, "s", false, "OS path split windows backslash")

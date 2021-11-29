@@ -36,7 +36,7 @@ func main() {
 	var (
 		locater = parseCmdlineOption()
 		locateS []byte
-		cache   cmd.CacheMap
+		cache   = cmd.CacheMap{}
 	)
 
 	if showVersion {

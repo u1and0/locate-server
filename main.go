@@ -34,7 +34,7 @@ var (
 
 func main() {
 	var (
-		locater = parse()
+		locater = parseCmdlineOption()
 		locateS []byte
 		cache   cmd.CacheMap
 	)
@@ -196,7 +196,7 @@ func main() {
 }
 
 // Parse command line option
-func parse() (l cmd.Locater) {
+func parseCmdlineOption() (l cmd.Locater) {
 	flag.StringVar(&l.Args.Dbpath, "d", LOCATEDIR, "Path of locate database directory")
 	flag.StringVar(&l.Args.Dbpath, "dir", LOCATEDIR, "Path of locate database directory")
 	flag.BoolVar(&l.Args.PathSplitWin, "s", false, "OS path split windows backslash")

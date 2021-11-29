@@ -11,10 +11,9 @@ import (
 type (
 	// Locater : queryから読み取った検索ワードと無視するワード
 	Locater struct {
-		SearchWords  []string `json:"searchWords"`  // 検索キーワード
-		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
-		Args         `json:"args"`
-		Que          `json:"que"`
+		Version string `json:"version"`
+		Args    `json:"args"`
+		Que     `json:"que"`
 		// -- Result struct
 		Paths `json:"paths"`
 		Stats `json:"stats"`
@@ -33,8 +32,10 @@ type (
 
 	// Que : URL で指定されてくるAPIオプション
 	Que struct {
-		Logging bool `json:"logging"`
-		Limit   int  `json:"limit"`
+		SearchWords  []string `json:"searchWords"`  // 検索キーワード
+		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
+		Logging      bool     `json:"logging"`
+		Limit        int      `json:"limit"`
 	}
 
 	// Paths locate command result

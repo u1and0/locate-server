@@ -19,6 +19,8 @@ import (
 const (
 	// VERSION : version
 	VERSION = "3.0.0r"
+	// APIVERSION : api version
+	APIVERSION = "0.1.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locate (gocate) search db path
@@ -39,6 +41,7 @@ func main() {
 		locateS []byte
 		cache   = cmd.CacheMap{}
 	)
+	locater.Version = APIVERSION
 
 	if showVersion {
 		fmt.Println("locate-server version", VERSION)
@@ -167,7 +170,7 @@ func main() {
 		if lm != "" {
 			ln, err := strconv.Atoi(lm)
 			if err != nil {
-				log.Errorf("Error in 'limit' API", err, q)
+				log.Errorf("Error in 'limit' API: %s", err)
 				locater.Stats.Response = 404
 				c.JSON(locater.Stats.Response, locater)
 				return

@@ -148,6 +148,7 @@ func main() {
 	})
 
 	route.GET("/json", func(c *gin.Context) {
+		// Parse query
 		q := c.Query("q")
 		sw, ew, err := cmd.QueryParser(q)
 		if err != nil {
@@ -161,18 +162,19 @@ func main() {
 		// Execute locate command
 		start := time.Now()
 		result, ok, err := cache.Traverse(&locater)
-		getpushLog := "PUSH result to cache"
-		if ok {
-			getpushLog = "GET result from cache"
-		}
 		end := (time.Since(start)).Nanoseconds()
 		locater.Stats.SearchTime = float64(end) / float64(time.Millisecond)
 
+		// Response & Logging
 		if err != nil {
 			locater.Stats.Response = 404
 			log.Errorf("%s [ %-50s ]", err, q)
-			c.JSON(404, locater)
+			c.JSON(locater.Stats.Response, locater)
 		} else {
+			getpushLog := "PUSH result to cache"
+			if ok {
+				getpushLog = "GET result from cache"
+			}
 			locater.Paths = result
 			locater.Stats.Response = http.StatusOK
 			l := []interface{}{len(locater.Paths), locater.Stats.SearchTime, getpushLog, q}

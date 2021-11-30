@@ -33,15 +33,32 @@ var (
 	log         = logging.MustGetLogger("main")
 	showVersion bool
 	port        string
+	locater     cmd.Locater
 )
+
+func init() {
+	flag.StringVar(&locater.Args.Dbpath, "d", LOCATEDIR, "Path of locate database directory")
+	flag.StringVar(&locater.Args.Dbpath, "dir", LOCATEDIR, "Path of locate database directory")
+	flag.BoolVar(&locater.Args.PathSplitWin, "s", false, "OS path split windows backslash")
+	flag.BoolVar(&locater.Args.PathSplitWin, "windows-path-separate", false, "OS path separate windows backslash")
+	flag.StringVar(&locater.Args.Root, "r", "", "DB insert prefix for directory path")
+	flag.StringVar(&locater.Args.Root, "root", "", "DB insert prefix for directory path")
+	flag.StringVar(&locater.Args.Trim, "t", "", "DB trim prefix for directory path")
+	flag.StringVar(&locater.Args.Trim, "trim", "", "DB trim prefix for directory path")
+	flag.BoolVar(&locater.Args.Debug, "debug", false, "Debug mode")
+	flag.StringVar(&port, "p", "8080", "Server port number. Default access to http://localhost:8080/")
+	flag.StringVar(&port, "port", "8080", "Server port number. Default access to http://localhost:8080/")
+	flag.BoolVar(&showVersion, "v", false, "show version")
+	flag.BoolVar(&showVersion, "version", false, "show version")
+	flag.Parse()
+	locater.Version = APIVERSION
+}
 
 func main() {
 	var (
-		locater = parseCmdlineOption()
 		locateS []byte
 		cache   = cmd.CacheMap{}
 	)
-	locater.Version = APIVERSION
 
 	if showVersion {
 		fmt.Println("locate-server version", VERSION)
@@ -152,9 +169,9 @@ func main() {
 	})
 
 	route.GET("/json", func(c *gin.Context) {
-		// locater.Que initialize
-		locater.Que.Logging = true
-		locater.Que.Limit = 0
+		// locater.Query initialize
+		locater.Query.Logging = true
+		locater.Query.Limit = 0
 
 		// Parse query
 		q := c.Query("q")
@@ -165,7 +182,7 @@ func main() {
 			c.JSON(locater.Stats.Response, locater)
 			return
 		}
-		locater.SearchWords, locater.ExcludeWords = sw, ew
+		locater.Query.SearchWords, locater.Query.ExcludeWords = sw, ew
 		lm := c.Query("limit")
 		if lm != "" {
 			ln, err := strconv.Atoi(lm)
@@ -176,7 +193,7 @@ func main() {
 				return
 			}
 			if ln > 0 { // 0未満のときは無視(initialize で既に0になっている)
-				locater.Que.Limit = ln
+				locater.Query.Limit = ln
 			}
 		}
 
@@ -205,9 +222,9 @@ func main() {
 			// 基本的にすべての検索はログに記録する
 			// http:...&logging=falseのときだけ記録しない
 			if c.Query("logging") == "false" {
-				locater.Que.Logging = false
+				locater.Query.Logging = false
 			}
-			if locater.Que.Logging {
+			if locater.Query.Logging {
 				log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
 			} else {
 				fmt.Printf("[NO LOGGING NOTICE]\t%8dfiles %3.3fmsec %s [ %-50s ]\n", l...) // Printfで表示はする
@@ -228,25 +245,6 @@ func main() {
 
 	// Listen and serve on 0.0.0.0:8080
 	route.Run(":" + port)
-}
-
-// Parse command line option
-func parseCmdlineOption() (l cmd.Locater) {
-	flag.StringVar(&l.Args.Dbpath, "d", LOCATEDIR, "Path of locate database directory")
-	flag.StringVar(&l.Args.Dbpath, "dir", LOCATEDIR, "Path of locate database directory")
-	flag.BoolVar(&l.Args.PathSplitWin, "s", false, "OS path split windows backslash")
-	flag.BoolVar(&l.Args.PathSplitWin, "windows-path-separate", false, "OS path separate windows backslash")
-	flag.StringVar(&l.Args.Root, "r", "", "DB insert prefix for directory path")
-	flag.StringVar(&l.Args.Root, "root", "", "DB insert prefix for directory path")
-	flag.StringVar(&l.Args.Trim, "t", "", "DB trim prefix for directory path")
-	flag.StringVar(&l.Args.Trim, "trim", "", "DB trim prefix for directory path")
-	flag.BoolVar(&l.Args.Debug, "debug", false, "Debug mode")
-	flag.StringVar(&port, "p", "8080", "Server port number. Default access to http://localhost:8080/")
-	flag.StringVar(&port, "port", "8080", "Server port number. Default access to http://localhost:8080/")
-	flag.BoolVar(&showVersion, "v", false, "show version")
-	flag.BoolVar(&showVersion, "version", false, "show version")
-	flag.Parse()
-	return
 }
 
 // setLogger is printing out log message to STDOUT and LOGFILE

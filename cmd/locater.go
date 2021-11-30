@@ -13,7 +13,7 @@ type (
 	Locater struct {
 		Version string `json:"version"`
 		Args    `json:"args"`
-		Que     `json:"que"`
+		Query   `json:"query"`
 		// -- Result struct
 		Paths `json:"paths"`
 		Stats `json:"stats"`
@@ -23,19 +23,18 @@ type (
 	// Args is command line option
 	Args struct {
 		Dbpath       string `json:"dbpath"`       // 検索対象DBパス /path/to/database:/path/to/another
-		Limit        int    `json:"limit"`        // 検索結果HTML表示制限数
 		PathSplitWin bool   `json:"pathSplitWin"` // TrueでWindowsパスセパレータを使用する
 		Root         string `json:"root"`         // 追加するドライブパス名
 		Trim         string `json:"trim"`         // 削除するドライブパス名
 		Debug        bool   `json:"debug"`        // Debugフラグ
 	}
 
-	// Que : URL で指定されてくるAPIオプション
-	Que struct {
+	// Query : URL で指定されてくるAPIオプション
+	Query struct {
 		SearchWords  []string `json:"searchWords"`  // 検索キーワード
 		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
-		Logging      bool     `json:"logging"`
-		Limit        int      `json:"limit"`
+		Logging      bool     `json:"logging"`      // LOGFILEに検索記録を残すか default ture
+		Limit        int      `json:"limit"`        // 検索結果上限数
 	}
 
 	// Paths locate command result
@@ -54,7 +53,7 @@ type (
 // SearchWordsは小文字にする
 // ExcludeWordsは小文字にした上で
 // ソートして、頭に-をつける
-func (l *Locater) Normalize() string {
+func (l *Query) Normalize() string {
 	se := l.SearchWords
 	ex := l.ExcludeWords
 
@@ -94,19 +93,19 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 
 	// Include PATTERNs
 	// -> locate --ignore-case --quiet --regex hoge.*my.*name
-	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))
+	locate = append(locate, "--regex", strings.Join(l.Query.SearchWords, ".*"))
 
 	pipeline = append(pipeline, locate)
 
 	// Exclude PATTERNs
-	for _, ex := range l.ExcludeWords {
+	for _, ex := range l.Query.ExcludeWords {
 		// COMMAND | grep -ivE EXCLUDE1 | grep -ivE EXCLUDE2
 		pipeline = append(pipeline, []string{"grep", "-ivE", ex})
 	}
 
 	// Limit option
-	if l.Que.Limit > 0 {
-		pipeline = append(pipeline, []string{"head", "-n", strconv.Itoa(l.Que.Limit)})
+	if l.Query.Limit > 0 {
+		pipeline = append(pipeline, []string{"head", "-n", strconv.Itoa(l.Query.Limit)})
 	}
 
 	if l.Args.Debug {

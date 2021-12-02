@@ -33,31 +33,32 @@ var (
 	log         = logging.MustGetLogger("main")
 	showVersion bool
 	port        string
-	locater     cmd.Locater
 )
 
-func init() {
-	flag.StringVar(&locater.Args.Dbpath, "d", LOCATEDIR, "Path of locate database directory")
-	flag.StringVar(&locater.Args.Dbpath, "dir", LOCATEDIR, "Path of locate database directory")
-	flag.BoolVar(&locater.Args.PathSplitWin, "s", false, "OS path split windows backslash")
-	flag.BoolVar(&locater.Args.PathSplitWin, "windows-path-separate", false, "OS path separate windows backslash")
-	flag.StringVar(&locater.Args.Root, "r", "", "DB insert prefix for directory path")
-	flag.StringVar(&locater.Args.Root, "root", "", "DB insert prefix for directory path")
-	flag.StringVar(&locater.Args.Trim, "t", "", "DB trim prefix for directory path")
-	flag.StringVar(&locater.Args.Trim, "trim", "", "DB trim prefix for directory path")
-	flag.BoolVar(&locater.Args.Debug, "debug", false, "Debug mode")
+func parseCmdlineOption() (l cmd.Locater) {
+	flag.StringVar(&l.Args.Dbpath, "d", LOCATEDIR, "Path of locate database directory")
+	flag.StringVar(&l.Args.Dbpath, "dir", LOCATEDIR, "Path of locate database directory")
+	flag.BoolVar(&l.Args.PathSplitWin, "s", false, "OS path split windows backslash")
+	flag.BoolVar(&l.Args.PathSplitWin, "windows-path-separate", false, "OS path separate windows backslash")
+	flag.StringVar(&l.Args.Root, "r", "", "DB insert prefix for directory path")
+	flag.StringVar(&l.Args.Root, "root", "", "DB insert prefix for directory path")
+	flag.StringVar(&l.Args.Trim, "t", "", "DB trim prefix for directory path")
+	flag.StringVar(&l.Args.Trim, "trim", "", "DB trim prefix for directory path")
+	flag.BoolVar(&l.Args.Debug, "debug", false, "Debug mode")
 	flag.StringVar(&port, "p", "8080", "Server port number. Default access to http://localhost:8080/")
 	flag.StringVar(&port, "port", "8080", "Server port number. Default access to http://localhost:8080/")
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()
-	locater.Version = APIVERSION
+	l.Version = APIVERSION
+	return
 }
 
 func main() {
 	var (
 		locateS []byte
 		cache   = cmd.CacheMap{}
+		locater = parseCmdlineOption()
 	)
 
 	if showVersion {
@@ -170,66 +171,67 @@ func main() {
 
 	route.GET("/json", func(c *gin.Context) {
 		// locater.Query initialize
-		locater.Query.Logging = true
-		locater.Query.Limit = 0
+		local := locater // Shallow copy
+		local.Query.Logging = true
+		local.Query.Limit = 0
 
 		// Parse query
 		q := c.Query("q")
 		sw, ew, err := cmd.QueryParser(q)
 		if err != nil {
 			log.Errorf("%s [ %-50s ]", err, q)
-			locater.Stats.Response = 404
-			c.JSON(locater.Stats.Response, locater)
+			local.Stats.Response = 404
+			c.JSON(local.Stats.Response, local)
 			return
 		}
-		locater.Query.SearchWords, locater.Query.ExcludeWords = sw, ew
+		local.Query.SearchWords, local.Query.ExcludeWords = sw, ew
 		lm := c.Query("limit")
 		if lm != "" {
 			ln, err := strconv.Atoi(lm)
 			if err != nil {
 				log.Errorf("Error in 'limit' API: %s", err)
-				locater.Stats.Response = 404
-				c.JSON(locater.Stats.Response, locater)
+				local.Stats.Response = 404
+				c.JSON(local.Stats.Response, local)
 				return
 			}
 			if ln > 0 { // 0未満のときは無視(initialize で既に0になっている)
-				locater.Query.Limit = ln
+				local.Query.Limit = ln
 			}
 		}
 
 		// Execute locate command
 		start := time.Now()
-		result, ok, err := cache.Traverse(&locater)
-		if locater.Args.Debug {
+		result, ok, err := cache.Traverse(&local)
+		if local.Args.Debug {
 			log.Debugf("gocate result %v", result)
 		}
 		end := (time.Since(start)).Nanoseconds()
-		locater.Stats.SearchTime = float64(end) / float64(time.Millisecond)
+		local.Stats.SearchTime = float64(end) / float64(time.Millisecond)
 
 		// Response & Logging
 		if err != nil {
-			locater.Stats.Response = 404
+			local.Stats.Response = 404
 			log.Errorf("%s [ %-50s ]", err, q)
-			c.JSON(locater.Stats.Response, locater)
+			c.JSON(local.Stats.Response, local)
 		} else {
 			getpushLog := "PUSH result to cache"
 			if ok {
 				getpushLog = "GET result from cache"
 			}
-			locater.Paths = result
-			locater.Stats.Response = http.StatusOK
-			l := []interface{}{len(locater.Paths), locater.Stats.SearchTime, getpushLog, q}
+			local.Paths = result
+			local.Stats.Response = http.StatusOK
+			l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, q}
 			// 基本的にすべての検索はログに記録する
 			// http:...&logging=falseのときだけ記録しない
 			if c.Query("logging") == "false" {
-				locater.Query.Logging = false
+				local.Query.Logging = false
 			}
-			if locater.Query.Logging {
+			if local.Query.Logging {
 				log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
 			} else {
 				fmt.Printf("[NO LOGGING NOTICE]\t%8dfiles %3.3fmsec %s [ %-50s ]\n", l...) // Printfで表示はする
 			}
-			c.JSON(http.StatusOK, locater)
+			c.JSON(http.StatusOK, local)
 		}
 	})
 

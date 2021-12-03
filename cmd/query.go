@@ -16,12 +16,12 @@ type (
 		SearchWords  []string `form:"searchWords"`  // 検索キーワード
 		ExcludeWords []string `form:"excludeWords"` // 検索から取り除くキーワード
 		Logging      bool     `form:"logging"`      // LOGFILEに検索記録を残すか default ture
-		Limit        int      `form:"limit"`        // 検索結果上限数
+		Limit        uint64   `form:"limit"`        // 検索結果上限数
 	}
 )
 
 // New : constructor
-func New() *Query {
+func (q *Query) New() *Query {
 	return &Query{}
 }
 
@@ -55,37 +55,7 @@ func (q *Query) Parser(c *gin.Context) (err error) {
 	if err = q.WordParser(c.Query("q")); err != nil {
 		return
 	}
-	// if err = q.LimitParser(c.DefaultQuery("limit", "0")); err != nil {
-	q.LimitParser(c.GetInt("limit"))
-	if err = q.LoggingParser(c.DefaultQuery("logging", "false")); err != nil {
-		return
-	}
 	return
-}
-
-func (q *Query) LoggingParser(s string) error {
-	// 基本的にすべての検索はログに記録する
-	// http:...&logging=falseのときだけ記録しない
-	q.Logging = true
-	if strings.ToLower(s) == "false" {
-		q.Logging = false
-		return nil
-	} else if strings.ToLower(s) == "false" {
-		q.Logging = true
-		return nil
-	}
-	message := "error: &logging = true or false or undef : "
-	return errors.New(message + s)
-}
-
-// LimitParser : parse &limit as Int
-func (q *Query) LimitParser(n int) { // s == "0"||Int like string
-	// n, err := strconv.Atoi(s)
-	if n < 0 {
-		n = 0
-	}
-	q.Limit = n
-	// return err
 }
 
 // WordParser :

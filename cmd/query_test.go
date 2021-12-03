@@ -26,42 +26,104 @@ func TestToLowerExceptAll(t *testing.T) {
 	}
 }
 
-// func TestQuery_LimitParser(t *testing.T) {
-// 	ginContext, _ := gin.CreateTestContext(httptest.NewRecorder())
-// 	req, _ := http.NewRequest("GET", "/json?limit=25", nil)
-// 	ginContext.Request = req
-//
-// 	actual := ginContext.GetInt("limit")
-// 	expect := 24
-// 	if expect != actual {
-// 		t.Fatalf("got: %v want: %v", actual, expect)
-// 	}
-// }
+func TestQuery_Parser_Test(t *testing.T) {
+	var (
+		ginContext, _ = gin.CreateTestContext(httptest.NewRecorder())
+		err           error
+	)
 
-func TestQuery_Parser2_Test(t *testing.T) {
-	ginContext, _ := gin.CreateTestContext(httptest.NewRecorder())
-	req, _ := http.NewRequest("GET", "/json?q=search+go&logging=false&limit=25", nil)
+	/* Succsess test */
+	// Typical URL request
+	req, _ := http.NewRequest("GET", "/json?q=search+Go&logging=false&limit=25", nil)
 	ginContext.Request = req
-
 	q := Query{}
-	err := ginContext.ShouldBind(&q)
-	if err != nil {
-		t.Fatalf("error: %v", err)
+	if err = ginContext.ShouldBind(&q); err != nil {
+		t.Fatalf("error: %#v", err)
 	}
 	actual := q
 	expected := Query{
-		Q:       "search go",
+		Q:       "search Go",
 		Logging: false,
 		Limit:   25,
 	}
 	if actual.Q != expected.Q {
-		t.Fatalf("got: %v want: %v", actual, expected)
+		t.Fatalf("got: %#v want: %#v", actual, expected)
 	}
 	if actual.Logging != expected.Logging {
-		t.Fatalf("got: %v want: %v", actual, expected)
+		t.Fatalf("got: %#v want: %#v", actual, expected)
 	}
 	if actual.Limit != expected.Limit {
-		t.Fatalf("got: %v want: %v", actual, expected)
+		t.Fatalf("got: %#v want: %#v", actual, expected)
+	}
+
+	// Large Case
+	req, _ = http.NewRequest("GET", "/json?q=&logging=TRUE", nil)
+	ginContext.Request = req
+	q = Query{}
+	if err = ginContext.ShouldBind(&q); err != nil {
+		t.Fatalf("error: %#v", err)
+	}
+	actual = q
+	expected = Query{
+		Q:       "",
+		Logging: true,
+		Limit:   0,
+	}
+	if actual.Q != expected.Q {
+		t.Fatalf("got: %#v want: %#v", actual, expected)
+	}
+	if actual.Logging != expected.Logging {
+		t.Fatalf("got: %#v want: %#v", actual, expected)
+	}
+	if actual.Limit != expected.Limit {
+		t.Fatalf("got: %#v want: %#v", actual, expected)
+	}
+
+	// Ommit query
+	// Default value is q="", logging=false, limit=0
+	req, _ = http.NewRequest("GET", "/json?q=", nil)
+	ginContext.Request = req
+	q = Query{}
+	if err = ginContext.ShouldBind(&q); err != nil {
+		t.Fatalf("error: %#v", err)
+	}
+	actual = q
+	expected = Query{
+		Q:       "",
+		Logging: false,
+		Limit:   0,
+	}
+	if actual.Q != expected.Q {
+		t.Fatalf("got: %#v want: %#v", actual, expected)
+	}
+	if actual.Logging != expected.Logging {
+		t.Fatalf("got: %#v want: %#v", actual, expected)
+	}
+	if actual.Limit != expected.Limit {
+		t.Fatalf("got: %#v want: %#v", actual, expected)
+	}
+
+	/* Error test */
+	// Uint out of range
+	req, _ = http.NewRequest("GET", "/json?q=search+Go&limit=-1", nil)
+	ginContext.Request = req
+	q = Query{}
+	if err = ginContext.ShouldBind(&q); err == nil {
+		t.Errorf(
+			"This test must fail by %s",
+			`error: &strconv.NumError{Func:"ParseUint", Num:"-1", Err:(*errors.errorString)`,
+		)
+	}
+
+	// Invalid boolian
+	req, _ = http.NewRequest("GET", "/json?q=search+Go&logging=hoge", nil)
+	ginContext.Request = req
+	q = Query{}
+	if err = ginContext.ShouldBind(&q); err == nil {
+		t.Errorf(
+			"This test must fail by %s",
+			`error: &strconv.NumError{Func:"ParseBool", Num:"hoge", Err:(*errors.errorString)`,
+		)
 	}
 }
 

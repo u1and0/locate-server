@@ -7,7 +7,7 @@ type (
 	// Key : Key for CacheMap
 	Key struct {
 		Word  string
-		Limit int
+		Limit uint64
 	}
 )
 

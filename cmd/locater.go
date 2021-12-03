@@ -76,7 +76,7 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 
 	// Limit option
 	if l.Query.Limit > 0 {
-		pipeline = append(pipeline, []string{"head", "-n", strconv.Itoa(l.Query.Limit)})
+		pipeline = append(pipeline, []string{"head", "-n", strconv.FormatUint(l.Query.Limit, 10)})
 	}
 
 	if l.Args.Debug {

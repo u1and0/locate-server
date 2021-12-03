@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
@@ -185,7 +184,7 @@ func main() {
 			return
 		}
 		// query.SearchWords, query.ExcludeWords = sw, ew
-		local.Query = cmd.Query{sw, ex, ln, lg}
+		local.Query = query
 
 		// Execute locate command
 		start := time.Now()
@@ -197,6 +196,7 @@ func main() {
 		local.Stats.SearchTime = float64(end) / float64(time.Millisecond)
 
 		// Response & Logging
+		q := c.Query("q")
 		if err != nil {
 			local.Stats.Response = 404
 			log.Errorf("%s [ %-50s ]", err, q)

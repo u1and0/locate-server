@@ -3,7 +3,6 @@ package locater
 import (
 	"errors"
 	"sort"
-	"strconv"
 	"strings"
 	"unicode"
 
@@ -13,13 +12,15 @@ import (
 type (
 	// Query : URL で指定されてくるAPIオプション
 	Query struct {
-		SearchWords  []string `json:"searchWords"`  // 検索キーワード
-		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
-		Logging      bool     `json:"logging"`      // LOGFILEに検索記録を残すか default ture
-		Limit        int      `json:"limit"`        // 検索結果上限数
+		Q            string   `form:"q"`
+		SearchWords  []string `form:"searchWords"`  // 検索キーワード
+		ExcludeWords []string `form:"excludeWords"` // 検索から取り除くキーワード
+		Logging      bool     `form:"logging"`      // LOGFILEに検索記録を残すか default ture
+		Limit        int      `form:"limit"`        // 検索結果上限数
 	}
 )
 
+// New : constructor
 func New() *Query {
 	return &Query{}
 }
@@ -44,14 +45,18 @@ func ToLowerExceptAll(s string, r rune) string {
 	return strings.Join(st, "\\")
 }
 
-// QueryParser : prefixがあるstringとないstringに分類してそれぞれのスライスで返す
+// Parser2 : prefixがあるstringとないstringに分類してそれぞれのスライスで返す
+func (q *Query) Parser2(c *gin.Context) error {
+	return c.ShouldBind(&q)
+}
+
+// Parser : prefixがあるstringとないstringに分類してそれぞれのスライスで返す
 func (q *Query) Parser(c *gin.Context) (err error) {
 	if err = q.WordParser(c.Query("q")); err != nil {
 		return
 	}
-	if err = q.LimitParser(c.DefaultQuery("limit", "0")); err != nil {
-		return
-	}
+	// if err = q.LimitParser(c.DefaultQuery("limit", "0")); err != nil {
+	q.LimitParser(c.GetInt("limit"))
 	if err = q.LoggingParser(c.DefaultQuery("logging", "false")); err != nil {
 		return
 	}
@@ -74,13 +79,13 @@ func (q *Query) LoggingParser(s string) error {
 }
 
 // LimitParser : parse &limit as Int
-func (q *Query) LimitParser(s string) error { // s == "0"||Int like string
-	n, err := strconv.Atoi(s)
+func (q *Query) LimitParser(n int) { // s == "0"||Int like string
+	// n, err := strconv.Atoi(s)
 	if n < 0 {
 		n = 0
 	}
 	q.Limit = n
-	return err
+	// return err
 }
 
 // WordParser :

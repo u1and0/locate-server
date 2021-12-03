@@ -81,6 +81,9 @@ func TestQuery_Parser_Test(t *testing.T) {
 
 	// Ommit query
 	// Default value is q="", logging=false, limit=0
+	// q=="" => Should Error
+	// logging==false => Should be true
+	// limit==0 => Should be -1
 	req, _ = http.NewRequest("GET", "/json?q=", nil)
 	ginContext.Request = req
 	q = Query{}
@@ -104,14 +107,14 @@ func TestQuery_Parser_Test(t *testing.T) {
 	}
 
 	/* Error test */
-	// Uint out of range
-	req, _ = http.NewRequest("GET", "/json?q=search+Go&limit=-1", nil)
+	// Int out of range
+	req, _ = http.NewRequest("GET", "/json?q=search+Go&limit=0.1", nil)
 	ginContext.Request = req
 	q = Query{}
 	if err = ginContext.ShouldBind(&q); err == nil {
 		t.Errorf(
 			"This test must fail by %s",
-			`error: &strconv.NumError{Func:"ParseUint", Num:"-1", Err:(*errors.errorString)`,
+			`error: &strconv.NumError{Func:"ParseInt", Num:"0.1", Err:(*errors.errorString)`,
 		)
 	}
 

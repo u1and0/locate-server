@@ -16,7 +16,10 @@ type (
 		SearchWords  []string `form:"searchWords"`  // 検索キーワード
 		ExcludeWords []string `form:"excludeWords"` // 検索から取り除くキーワード
 		Logging      bool     `form:"logging"`      // LOGFILEに検索記録を残すか default ture
-		Limit        uint64   `form:"limit"`        // 検索結果上限数
+		// 検索結果上限数
+		// LimitをUintにしなかったのは、head の-nオプションが負の整数も受け付けるため。
+		// 負の整数を受け付けた場合は、-n=-1と同じく、制限なしに検索結果を出力する
+		Limit int `form:"limit"`
 	}
 )
 

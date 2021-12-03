@@ -171,33 +171,21 @@ func main() {
 
 	route.GET("/json", func(c *gin.Context) {
 		// locater.Query initialize
-		local := locater // Shallow copy
-		local.Query.Logging = true
-		local.Query.Limit = 0
+		// Shallow copy locater to local
+		// for blocking to rewrite
+		// locater{} struct while searching
+		local := locater
 
 		// Parse query
-		q := c.Query("q")
-		sw, ew, err := cmd.QueryParser(q)
-		if err != nil {
-			log.Errorf("%s [ %-50s ]", err, q)
+		query := cmd.Query{}
+		if err := query.Parser(c); err != nil {
+			log.Errorf("error: %s query: %v", err, query)
 			local.Stats.Response = 404
 			c.JSON(local.Stats.Response, local)
 			return
 		}
-		local.Query.SearchWords, local.Query.ExcludeWords = sw, ew
-		lm := c.Query("limit")
-		if lm != "" {
-			ln, err := strconv.Atoi(lm)
-			if err != nil {
-				log.Errorf("Error in 'limit' API: %s", err)
-				local.Stats.Response = 404
-				c.JSON(local.Stats.Response, local)
-				return
-			}
-			if ln > 0 { // 0未満のときは無視(initialize で既に0になっている)
-				local.Query.Limit = ln
-			}
-		}
+		// query.SearchWords, query.ExcludeWords = sw, ew
+		local.Query = cmd.Query{sw, ex, ln, lg}
 
 		// Execute locate command
 		start := time.Now()
@@ -221,12 +209,7 @@ func main() {
 			local.Paths = result
 			local.Stats.Response = http.StatusOK
 			l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, q}
-			// 基本的にすべての検索はログに記録する
-			// http:...&logging=falseのときだけ記録しない
-			if c.Query("logging") == "false" {
-				local.Query.Logging = false
-			}
-			if local.Query.Logging {
+			if query.Logging {
 				log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
 			} else {
 				fmt.Printf("[NO LOGGING NOTICE]\t%8dfiles %3.3fmsec %s [ %-50s ]\n", l...) // Printfで表示はする

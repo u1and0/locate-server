@@ -1,7 +1,6 @@
 package locater
 
 import (
-	"sort"
 	"strconv"
 	"strings"
 
@@ -29,14 +28,6 @@ type (
 		Debug        bool   `json:"debug"`        // Debugフラグ
 	}
 
-	// Query : URL で指定されてくるAPIオプション
-	Query struct {
-		SearchWords  []string `json:"searchWords"`  // 検索キーワード
-		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
-		Logging      bool     `json:"logging"`      // LOGFILEに検索記録を残すか default ture
-		Limit        int      `json:"limit"`        // 検索結果上限数
-	}
-
 	// Paths locate command result
 	Paths []string
 
@@ -48,26 +39,6 @@ type (
 		Response       int     `json:"response"`       // httpレスポンス　成功で200
 	}
 )
-
-// Normalize : SearchWordsとExcludeWordsを合わせる
-// SearchWordsは小文字にする
-// ExcludeWordsは小文字にした上で
-// ソートして、頭に-をつける
-func (l *Query) Normalize() string {
-	se := l.SearchWords
-	ex := l.ExcludeWords
-
-	// Sort
-	sort.Slice(ex, func(i, j int) bool { return ex[i] < ex[j] })
-	// Add prefix "-"
-	strs := append(se, func() (d []string) {
-		for _, ex := range ex {
-			d = append(d, "-"+ex)
-		}
-		return
-	}()...)
-	return strings.Join(strs, " ")
-}
 
 // Locate excute locate (or gocate) command
 // split from Locater.Cmd()

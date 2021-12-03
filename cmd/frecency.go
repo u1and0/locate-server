@@ -34,7 +34,7 @@ func LogWord(logfile string) (History, error) {
 	reader := bufio.NewReader(fp)
 	for {
 		var (
-			loc   Locater
+			q     Query
 			line  []byte
 			event time.Time
 		)
@@ -52,11 +52,10 @@ func LogWord(logfile string) (History, error) {
 			continue // ERROR行 INFO行を無視
 		}
 		// 検索エラーのない文字列だけfrecencyに追加する
-		loc.SearchWords, loc.ExcludeWords, err = QueryParser(ExtractKeyword(lines))
-		if err != nil {
+		if err := q.WordParser(ExtractKeyword(lines)); err != nil {
 			continue // Ignore QueryParser() Error
 		}
-		word := loc.Normalize()
+		word := q.Normalize()
 		event, err = ExtractDatetime(lines)
 		if err != nil {
 			continue // Ignore time.Parse() Error

@@ -20,11 +20,12 @@ func TestToLowerExceptAll(t *testing.T) {
 	}
 }
 
-func TestQueryParserError_Test(t *testing.T) {
+func TestQuery_ParserError_Test(t *testing.T) {
 	receiveValue := "Dropbox -012 34 Program PYTHON -Go -Joker -99 \\Tas\\Wgo -ab\\D\\d"
 	se := []string{"dropbox", "34", "program", "python", "\\Tas\\Wgo"} // バックスラッシュ後はlowerしない
 	ex := []string{"012", "go", "joker", "99", "ab\\D\\d"}             // QueryParserはsortしない
-	ase, aex, _ := QueryParser(receiveValue)
+	query := Query{se, ex, false, 0}
+	ase, aex, _ := query.Parser(receiveValue)
 
 	for i, s := range se {
 		if ase[i] != s {

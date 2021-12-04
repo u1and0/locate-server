@@ -2,20 +2,15 @@ package locater
 
 import (
 	"errors"
-	"sort"
 	"strings"
 	"unicode"
-
-	"github.com/gin-gonic/gin"
 )
 
 type (
 	// Query : URL で指定されてくるAPIオプション
 	Query struct {
-		Q            string   `form:"q"`
-		SearchWords  []string `form:"searchWords"`  // 検索キーワード
-		ExcludeWords []string `form:"excludeWords"` // 検索から取り除くキーワード
-		Logging      bool     `form:"logging"`      // LOGFILEに検索記録を残すか default ture
+		Q       string `form:"q"`
+		Logging bool   `form:"logging"` // LOGFILEに検索記録を残すか default ture
 		// 検索結果上限数
 		// LimitをUintにしなかったのは、head の-nオプションが負の整数も受け付けるため。
 		// 負の整数を受け付けた場合は、-n=-1と同じく、制限なしに検索結果を出力する
@@ -52,25 +47,11 @@ func ToLowerExceptAll(s string, r rune) string {
 	return strings.Join(st, "\\")
 }
 
-// Parser2 : prefixがあるstringとないstringに分類してそれぞれのスライスで返す
-func (q *Query) Parser2(c *gin.Context) error {
-	return c.ShouldBind(&q)
-}
-
-// Parser : prefixがあるstringとないstringに分類してそれぞれのスライスで返す
-func (q *Query) Parser(c *gin.Context) (err error) {
-	if err = q.WordParser(c.Query("q")); err != nil {
-		return
-	}
-	return
-}
-
 // WordParser :
-func (q *Query) WordParser(s string) error {
-	var sn, en []string
+func QueryParser(ss string) (sn, en []string, err error) {
 	// s <- "hoge my -your name\D"
 	// バックスラッシュの後の1文字以外は小文字化
-	for _, s := range strings.Fields(s) { // -> [hoge my -your name\D]
+	for _, s := range strings.Fields(ss) { // -> [hoge my -your name\D]
 		if strings.Contains(s, "\\") {
 			s = ToLowerExceptAll(s, '\\')
 		} else {
@@ -94,42 +75,26 @@ func (q *Query) WordParser(s string) error {
 		return true
 	}() {
 		message := "検索文字数が足りません : "
-		return errors.New(message + strings.Join(sn, " "))
+		err = errors.New(message + strings.Join(sn, " "))
+		return
 	}
 	// snとenに重複する語が入っていたらerror
-	if e := func() string {
-		for _, s := range sn {
-			for _, e := range en {
-				if s == e {
-					return s
-				}
-			}
-		}
-		return ""
-	}(); e != "" {
+	if e := sliceIn(sn, en); e != "" {
 		message := "検索キーワードの中に無視するキーワードが入っています : "
-		return errors.New(message + e)
+		err = errors.New(message + e)
+		return
 	}
-	q.SearchWords, q.ExcludeWords = sn, en
-	return nil
+	return
 }
 
-// Normalize : SearchWordsとExcludeWordsを合わせる
-// SearchWordsは小文字にする
-// ExcludeWordsは小文字にした上で
-// ソートして、頭に-をつける
-func (q *Query) Normalize() string {
-	se := q.SearchWords
-	ex := q.ExcludeWords
-
-	// Sort
-	sort.Slice(ex, func(i, j int) bool { return ex[i] < ex[j] })
-	// Add prefix "-"
-	strs := append(se, func() (d []string) {
-		for _, ex := range ex {
-			d = append(d, "-"+ex)
+// sliceIn : 2つのslice中の重複要素を返す
+func sliceIn(a, b []string) string {
+	for _, e1 := range a {
+		for _, e2 := range b {
+			if e1 == e2 {
+				return e1
+			}
 		}
-		return
-	}()...)
-	return strings.Join(strs, " ")
+	}
+	return ""
 }

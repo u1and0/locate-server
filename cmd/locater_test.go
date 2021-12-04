@@ -7,10 +7,8 @@ import (
 func TestLocater_Normalize(t *testing.T) {
 	// QueryParserによってSearchWordsとExcludeWordsは小文字に正規化されている
 	l := Locater{
-		Query: Query{
-			SearchWords:  []string{"dropbox", "program", "34"},        // Should be lower
-			ExcludeWords: []string{"543", "python", "12", "go", "漢字"}, // Should be sort & lower
-		},
+		SearchWords:  []string{"dropbox", "program", "34"},        // Should be lower
+		ExcludeWords: []string{"543", "python", "12", "go", "漢字"}, // Should be sort & lower
 	}
 
 	actual := l.Normalize()
@@ -23,11 +21,9 @@ func TestLocater_Normalize(t *testing.T) {
 
 func TestLocater_CmdGen(t *testing.T) {
 	l := Locater{
-		Query: Query{
-			SearchWords:  []string{"the", "path", "for", "search"},
-			ExcludeWords: []string{"exclude", "paths"},
-		},
-		Args: Args{Dbpath: "../test"},
+		SearchWords:  []string{"the", "path", "for", "search"},
+		ExcludeWords: []string{"exclude", "paths"},
+		Args:         Args{Dbpath: "../test"},
 	}
 	actual := l.CmdGen()
 	expected := [][]string{

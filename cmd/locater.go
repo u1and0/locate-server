@@ -1,6 +1,7 @@
 package locater
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -10,9 +11,10 @@ import (
 type (
 	// Locater : queryから読み取った検索ワードと無視するワード
 	Locater struct {
-		Version string `json:"version"`
-		Args    `json:"args"`
-		Query   `json:"query"`
+		Args         `json:"args"`
+		SearchWords  []string `json:"searchWords"`  // 検索キーワード
+		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
+		Query        `json:"query"`
 		// -- Result struct
 		Paths `json:"paths"`
 		Stats `json:"stats"`
@@ -40,6 +42,26 @@ type (
 	}
 )
 
+// Normalize : SearchWordsとExcludeWordsを合わせる
+// SearchWordsは小文字にする
+// ExcludeWordsは小文字にした上で
+// ソートして、頭に-をつける
+func (l *Locater) Normalize() string {
+	se := l.SearchWords
+	ex := l.ExcludeWords
+
+	// Sort
+	sort.Slice(ex, func(i, j int) bool { return ex[i] < ex[j] })
+	// Add prefix "-"
+	strs := append(se, func() (d []string) {
+		for _, ex := range ex {
+			d = append(d, "-"+ex)
+		}
+		return
+	}()...)
+	return strings.Join(strs, " ")
+}
+
 // Locate excute locate (or gocate) command
 // split from Locater.Cmd()
 func (l *Locater) Locate() (Paths, error) {
@@ -64,12 +86,12 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 
 	// Include PATTERNs
 	// -> locate --ignore-case --quiet --regex hoge.*my.*name
-	locate = append(locate, "--regex", strings.Join(l.Query.SearchWords, ".*"))
+	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))
 
 	pipeline = append(pipeline, locate)
 
 	// Exclude PATTERNs
-	for _, ex := range l.Query.ExcludeWords {
+	for _, ex := range l.ExcludeWords {
 		// COMMAND | grep -ivE EXCLUDE1 | grep -ivE EXCLUDE2
 		pipeline = append(pipeline, []string{"grep", "-ivE", ex})
 	}

@@ -18,8 +18,6 @@ import (
 const (
 	// VERSION : version
 	VERSION = "3.0.0r"
-	// APIVERSION : api version
-	APIVERSION = "0.1.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locate (gocate) search db path
@@ -49,7 +47,6 @@ func parseCmdlineOption() (l cmd.Locater) {
 	flag.BoolVar(&showVersion, "v", false, "show version")
 	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()
-	l.Version = APIVERSION
 	return
 }
 
@@ -118,10 +115,6 @@ func main() {
 
 	// Result view
 	route.GET("/search", func(c *gin.Context) {
-		// HTML
-		query := c.Request.URL.Query()
-		q := strings.Join(query["q"], " ")
-		// JSON
 		// 検索文字数チェックOK
 		/* LocateStats()の結果が前と異なっていたら
 		locateS更新
@@ -146,6 +139,9 @@ func main() {
 			locater.Stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
 		}
 		// Response
+		// query := c.Request.URL.Query()
+		// q := strings.Join(query["q"], " ")
+		q := c.Query("q")
 		c.HTML(http.StatusOK,
 			"index.tmpl",
 			gin.H{
@@ -176,15 +172,22 @@ func main() {
 		local := locater
 
 		// Parse query
-		query := cmd.Query{}
-		if err := query.Parser(c); err != nil {
+		var queryDefault cmd.Query
+		query := queryDefault.New()
+		if err := c.ShouldBind(&query); err != nil {
 			log.Errorf("error: %s query: %v", err, query)
 			local.Stats.Response = 404
 			c.JSON(local.Stats.Response, local)
 			return
 		}
-		// query.SearchWords, query.ExcludeWords = sw, ew
-		local.Query = query
+		sw, ew, err := cmd.QueryParser(query.Q)
+		if err != nil {
+			log.Errorf("error %v", err)
+		}
+		local.SearchWords, local.ExcludeWords = sw, ew
+		local.Query.Q = query.Q
+		local.Query.Logging = query.Logging
+		local.Query.Limit = query.Limit
 
 		// Execute locate command
 		start := time.Now()
@@ -196,10 +199,9 @@ func main() {
 		local.Stats.SearchTime = float64(end) / float64(time.Millisecond)
 
 		// Response & Logging
-		q := c.Query("q")
 		if err != nil {
 			local.Stats.Response = 404
-			log.Errorf("%s [ %-50s ]", err, q)
+			log.Errorf("%s [ %-50s ]", err, query.Q)
 			c.JSON(local.Stats.Response, local)
 		} else {
 			getpushLog := "PUSH result to cache"
@@ -208,7 +210,7 @@ func main() {
 			}
 			local.Paths = result
 			local.Stats.Response = http.StatusOK
-			l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, q}
+			l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q}
 			if query.Logging {
 				log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
 			} else {

@@ -30,17 +30,17 @@ func TestQuery_Parser_Test(t *testing.T) {
 	var (
 		ginContext, _ = gin.CreateTestContext(httptest.NewRecorder())
 		err           error
+		query         Query
 	)
 
 	/* Succsess test */
 	// Typical URL request
 	req, _ := http.NewRequest("GET", "/json?q=search+Go&logging=false&limit=25", nil)
 	ginContext.Request = req
-	q := Query{}
-	if err = ginContext.ShouldBind(&q); err != nil {
+	actual := query.New()
+	if err = ginContext.ShouldBind(&actual); err != nil {
 		t.Fatalf("error: %#v", err)
 	}
-	actual := q
 	expected := Query{
 		Q:       "search Go",
 		Logging: false,
@@ -59,11 +59,10 @@ func TestQuery_Parser_Test(t *testing.T) {
 	// Large Case
 	req, _ = http.NewRequest("GET", "/json?q=&logging=TRUE", nil)
 	ginContext.Request = req
-	q = Query{}
-	if err = ginContext.ShouldBind(&q); err != nil {
+	actual = query.New()
+	if err = ginContext.ShouldBind(&actual); err != nil {
 		t.Fatalf("error: %#v", err)
 	}
-	actual = q
 	expected = Query{
 		Q:       "",
 		Logging: true,
@@ -86,15 +85,14 @@ func TestQuery_Parser_Test(t *testing.T) {
 	// limit==0 => Should be -1
 	req, _ = http.NewRequest("GET", "/json?q=", nil)
 	ginContext.Request = req
-	q = Query{}
-	if err = ginContext.ShouldBind(&q); err != nil {
+	actual = query.New()
+	if err = ginContext.ShouldBind(&actual); err != nil {
 		t.Fatalf("error: %#v", err)
 	}
-	actual = q
 	expected = Query{
 		Q:       "",
-		Logging: false,
-		Limit:   0,
+		Logging: true,
+		Limit:   -1,
 	}
 	if actual.Q != expected.Q {
 		t.Fatalf("got: %#v want: %#v", actual, expected)
@@ -110,8 +108,8 @@ func TestQuery_Parser_Test(t *testing.T) {
 	// Int out of range
 	req, _ = http.NewRequest("GET", "/json?q=search+Go&limit=0.1", nil)
 	ginContext.Request = req
-	q = Query{}
-	if err = ginContext.ShouldBind(&q); err == nil {
+	actual = query.New()
+	if err = ginContext.ShouldBind(&actual); err == nil {
 		t.Errorf(
 			"This test must fail by %s",
 			`error: &strconv.NumError{Func:"ParseInt", Num:"0.1", Err:(*errors.errorString)`,
@@ -121,8 +119,8 @@ func TestQuery_Parser_Test(t *testing.T) {
 	// Invalid boolian
 	req, _ = http.NewRequest("GET", "/json?q=search+Go&logging=hoge", nil)
 	ginContext.Request = req
-	q = Query{}
-	if err = ginContext.ShouldBind(&q); err == nil {
+	actual = query.New()
+	if err = ginContext.ShouldBind(&actual); err == nil {
 		t.Errorf(
 			"This test must fail by %s",
 			`error: &strconv.NumError{Func:"ParseBool", Num:"hoge", Err:(*errors.errorString)`,

@@ -23,9 +23,13 @@ type (
 	}
 )
 
-// New : constructor
+// New : Query constructor
+// Default value Logging: ture <= always log search query
+//									if ommited URL request &logging
+// Default value Limit: -1 <= dump all result
+//									if ommited URL request &limit
 func (q *Query) New() *Query {
-	return &Query{}
+	return &Query{Logging: true, Limit: -1}
 }
 
 // ToLowerExceptFirst : To lower except first of runes

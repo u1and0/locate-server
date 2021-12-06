@@ -136,10 +136,43 @@ func main() {
 
 	// API
 	route.GET("/history", func(c *gin.Context) {
-		searchHistory, err := cmd.Datalist(LOGFILE)
+		history, err := cmd.Datalist(LOGFILE)
 		if err != nil {
 			log.Error(err)
-			c.JSON(404, searchHistory)
+			c.JSON(404, history)
+		}
+		// Query check
+		gt, ok := c.GetQuery("gt")
+		var gti int
+		var historyGt cmd.SearchHistory
+		if ok {
+			gti, err = strconv.Atoi(gt)
+			if err != nil {
+				log.Error(err, c.Request.URL.Query())
+				c.JSON(404, c.Request.URL.Query())
+			}
+		}
+		// Greater than
+		for _, h := range history {
+			if h.Score > gti {
+				historyGt = append(historyGt, h)
+			}
+		}
+		lt, ok := c.GetQuery("lt")
+		var lti int
+		var searchHistory cmd.SearchHistory
+		if ok {
+			lti, err = strconv.Atoi(lt)
+			if err != nil {
+				log.Error(err, c.Request.URL.Query())
+				c.JSON(404, c.Request.URL.Query())
+			}
+		}
+		// Less than
+		for _, h := range historyGt {
+			if h.Score < lti {
+				searchHistory = append(searchHistory, h)
+			}
 		}
 		if locater.Args.Debug {
 			log.Debug(searchHistory)

@@ -2,6 +2,7 @@ package locater
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 
 	pipeline "github.com/mattn/go-pipeline"
@@ -10,10 +11,13 @@ import (
 type (
 	// Locater : queryから読み取った検索ワードと無視するワード
 	Locater struct {
+		// Input
+		Args         `json:"args"`
+		Query        `json:"query"`
+		// Extract
 		SearchWords  []string `json:"searchWords"`  // 検索キーワード
 		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
-		Args         `json:"args"`
-		// -- Result struct
+		// Output
 		Paths `json:"paths"`
 		Stats `json:"stats"`
 		Error error `json:"error"`
@@ -22,7 +26,6 @@ type (
 	// Args is command line option
 	Args struct {
 		Dbpath       string `json:"dbpath"`       // 検索対象DBパス /path/to/database:/path/to/another
-		Limit        int    `json:"limit"`        // 検索結果HTML表示制限数
 		PathSplitWin bool   `json:"pathSplitWin"` // TrueでWindowsパスセパレータを使用する
 		Root         string `json:"root"`         // 追加するドライブパス名
 		Trim         string `json:"trim"`         // 削除するドライブパス名
@@ -67,9 +70,6 @@ func (l *Locater) Locate() (Paths, error) {
 	out, err := pipeline.Output(l.CmdGen()...)
 	outslice := strings.Split(string(out), "\n")
 	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
-	if l.Args.Debug {
-		log.Debugf("gocate result %v", outslice)
-	}
 	return outslice, err
 }
 
@@ -97,6 +97,12 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 		// COMMAND | grep -ivE EXCLUDE1 | grep -ivE EXCLUDE2
 		pipeline = append(pipeline, []string{"grep", "-ivE", ex})
 	}
+
+	// Limit option
+	if l.Query.Limit > 0 {
+		pipeline = append(pipeline, []string{"head", "-n", strconv.Itoa(l.Query.Limit)})
+	}
+
 	if l.Args.Debug {
 		log.Debugf("Execute command %v", pipeline)
 	}

@@ -35,9 +35,9 @@ var (
 
 func main() {
 	var (
-		locater = parseCmdlineOption()
 		locateS []byte
 		cache   = cmd.CacheMap{}
+		locater = parseCmdlineOption()
 	)
 
 	if showVersion {
@@ -98,10 +98,6 @@ func main() {
 
 	// Result view
 	route.GET("/search", func(c *gin.Context) {
-		// HTML
-		query := c.Request.URL.Query()
-		q := strings.Join(query["q"], " ")
-		// JSON
 		// 検索文字数チェックOK
 		/* LocateStats()の結果が前と異なっていたら
 		locateS更新
@@ -126,6 +122,9 @@ func main() {
 			locater.Stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
 		}
 		// Response
+		// query := c.Request.URL.Query()
+		// q := strings.Join(query["q"], " ")
+		q := c.Query("q")
 		c.HTML(http.StatusOK,
 			"index.tmpl",
 			gin.H{
@@ -149,44 +148,59 @@ func main() {
 	})
 
 	route.GET("/json", func(c *gin.Context) {
+		// locater.Query initialize
+		// Shallow copy locater to local
+		// for blocking to rewrite
+		// locater{} struct while searching
+		local := locater
+
 		// Parse query
-		q := c.Query("q")
-		sw, ew, err := cmd.QueryParser(q)
-		if err != nil {
-			log.Errorf("%s [ %-50s ]", err, q)
-			locater.Stats.Response = 404
-			c.JSON(404, locater)
+		var queryDefault cmd.Query
+		query := queryDefault.New()
+		if err := c.ShouldBind(&query); err != nil {
+			log.Errorf("error: %s query: %v", err, query)
+			local.Stats.Response = 404
+			c.JSON(local.Stats.Response, local)
 			return
 		}
-		locater.SearchWords, locater.ExcludeWords = sw, ew
+		sw, ew, err := cmd.QueryParser(query.Q)
+		if err != nil {
+			log.Errorf("error %v", err)
+		}
+		local.SearchWords = sw
+		local.ExcludeWords = ew
+		local.Query.Q = query.Q
+		local.Query.Logging = query.Logging
+		local.Query.Limit = query.Limit
 
 		// Execute locate command
 		start := time.Now()
-		result, ok, err := cache.Traverse(&locater)
+		result, ok, err := cache.Traverse(&local)
+		if local.Args.Debug {
+			log.Debugf("gocate result %v", result)
+		}
 		end := (time.Since(start)).Nanoseconds()
-		locater.Stats.SearchTime = float64(end) / float64(time.Millisecond)
+		local.Stats.SearchTime = float64(end) / float64(time.Millisecond)
 
 		// Response & Logging
 		if err != nil {
-			locater.Stats.Response = 404
-			log.Errorf("%s [ %-50s ]", err, q)
-			c.JSON(locater.Stats.Response, locater)
+			local.Stats.Response = 404
+			log.Errorf("%s [ %-50s ]", err, query.Q)
+			c.JSON(local.Stats.Response, local)
 		} else {
 			getpushLog := "PUSH result to cache"
 			if ok {
 				getpushLog = "GET result from cache"
 			}
-			locater.Paths = result
-			locater.Stats.Response = http.StatusOK
-			l := []interface{}{len(locater.Paths), locater.Stats.SearchTime, getpushLog, q}
-			// 基本的にすべての検索はログに記録する
-			// http:...&logging=falseのときだけ記録しない
-			if c.Query("logging") == "false" {
-				fmt.Printf("[NO LOGGING NOTICE]\t%8dfiles %3.3fmsec %s [ %-50s ]\n", l...) // Printfで表示はする
-			} else {
+			local.Paths = result
+			local.Stats.Response = http.StatusOK
+			l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q}
+			if query.Logging {
 				log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
+			} else {
+				fmt.Printf("[NO LOGGING NOTICE]\t%8dfiles %3.3fmsec %s [ %-50s ]\n", l...) // Printfで表示はする
 			}
-			c.JSON(http.StatusOK, locater)
+			c.JSON(http.StatusOK, local)
 		}
 	})
 

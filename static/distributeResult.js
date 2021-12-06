@@ -11,11 +11,13 @@ function main(){
 
 class Locater {
   constructor(json){
-    this.paths = json.paths;
-    this.args = json.args;
-    this.stats = json.stats;
-    this.searchWords = json.searchWords;
-    this.excludeWords = json.excludeWords;
+    this.args = json.args;  // command line argument
+    this.query = json.query;  // API args
+    this.searchWords = json.searchWords;  // search word for searching
+    this.excludeWords = json.excludeWords;  // exclude word for searching
+    this.paths = json.paths;  // result of locate command
+    this.stats = json.stats;  // stats info at database
+    this.error = json.error; // Error message
   }
 
   static displayStats(str){

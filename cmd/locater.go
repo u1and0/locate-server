@@ -11,11 +11,13 @@ import (
 type (
 	// Locater : queryから読み取った検索ワードと無視するワード
 	Locater struct {
+		// Input
 		Args         `json:"args"`
+		Query        `json:"query"`
+		// Extract
 		SearchWords  []string `json:"searchWords"`  // 検索キーワード
 		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
-		Query        `json:"query"`
-		// -- Result struct
+		// Output
 		Paths `json:"paths"`
 		Stats `json:"stats"`
 		Error error `json:"error"`

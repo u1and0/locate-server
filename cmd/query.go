@@ -9,7 +9,7 @@ import (
 type (
 	// Query : URL で指定されてくるAPIオプション
 	Query struct {
-		Q       string `form:"q"`
+		Q       string `form:"q"`       // 検索キーワード,除外キーワードクエリ
 		Logging bool   `form:"logging"` // LOGFILEに検索記録を残すか default ture
 		// 検索結果上限数
 		// LimitをUintにしなかったのは、head の-nオプションが負の整数も受け付けるため。
@@ -47,7 +47,7 @@ func ToLowerExceptAll(s string, r rune) string {
 	return strings.Join(st, "\\")
 }
 
-// WordParser :
+// QueryParser : prefixがあるstringとないstringに分類してそれぞれのスライスで返す
 func QueryParser(ss string) (sn, en []string, err error) {
 	// s <- "hoge my -your name\D"
 	// バックスラッシュの後の1文字以外は小文字化

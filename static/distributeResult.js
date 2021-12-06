@@ -11,10 +11,13 @@ function main(){
 
 class Locater {
   constructor(json){
-    this.paths = json.paths;  // result of locate command
     this.args = json.args;  // command line argument
+    this.query = json.query;  // API args
+    this.searchWords = json.searchWords;  // search word for searching
+    this.excludeWords = json.excludeWords;  // exclude word for searching
+    this.paths = json.paths;  // result of locate command
     this.stats = json.stats;  // stats info at database
-    this.query = json.query;  // query for
+    this.error = json.error; // Error message
   }
 
   static displayStats(str){
@@ -55,7 +58,7 @@ class Locater {
   }
 
   highlightRegex(str){
-    this.query.searchWords.forEach((q) =>{
+    this.searchWords.forEach((q) =>{
       const re = new RegExp(q, "i"); // second arg "i" for ignore case
       // $&はreのマッチ結果
       str = str.replace(re, "<span style='background-color:#FFCC00;'>$&</span>");

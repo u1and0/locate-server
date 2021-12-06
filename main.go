@@ -184,7 +184,8 @@ func main() {
 		if err != nil {
 			log.Errorf("error %v", err)
 		}
-		local.SearchWords, local.ExcludeWords = sw, ew
+		local.SearchWords = sw
+		local.ExcludeWords = ew
 		local.Query.Q = query.Q
 		local.Query.Logging = query.Logging
 		local.Query.Limit = query.Limit

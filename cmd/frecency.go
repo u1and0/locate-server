@@ -135,3 +135,23 @@ func Datalist(f string) (SearchHistory, error) {
 	wordList := historymap.RankByScore()
 	return wordList, err
 }
+
+func (sh *SearchHistory) Filter(n int, method string) (shh SearchHistory) {
+	if n <= 0 {
+		return *sh
+	}
+	for _, h := range *sh {
+		if method == "gt" {
+			if h.Score > n {
+				shh = append(shh, h)
+			}
+		} else if method == "lt" {
+			if h.Score < n {
+				shh = append(shh, h)
+			}
+		} else {
+			return *sh
+		}
+	}
+	return shh
+}

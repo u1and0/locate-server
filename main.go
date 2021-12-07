@@ -136,15 +136,13 @@ func main() {
 
 	// API
 	route.GET("/history", func(c *gin.Context) {
-		history, err := cmd.Datalist(LOGFILE)
+		searchHistory, err := cmd.Datalist(LOGFILE)
 		if err != nil {
 			log.Error(err)
 			c.JSON(404, history)
 		}
 		// Query check
-		gt, ok := c.GetQuery("gt")
-		var gti int
-		var historyGt cmd.SearchHistory
+		gt:= cmd.HistoryQueryParser(c, "gt")
 		if ok {
 			gti, err = strconv.Atoi(gt)
 			if err != nil {

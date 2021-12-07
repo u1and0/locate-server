@@ -66,7 +66,7 @@ func TestQuery_Parser_Test(t *testing.T) {
 	expected = Query{
 		Q:       "",
 		Logging: true,
-		Limit:   0,
+		Limit:   -1,
 	}
 	if actual.Q != expected.Q {
 		t.Fatalf("got: %#v want: %#v", actual, expected)

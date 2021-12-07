@@ -78,3 +78,62 @@ func Test_Datalist(t *testing.T) {
 		}
 	}
 }
+
+func TestSearchHistory_Filter(t *testing.T) {
+	sh := SearchHistory{
+		Frecency{"foo", 1},
+		Frecency{"bar", 10},
+		Frecency{"foobar", 100},
+	}
+	// Greater than
+	actual := sh.Filter(10, "gt")
+	expected := SearchHistory{Frecency{"foobar", 100}}
+	for i, e := range expected {
+		if actual[i] != e {
+			t.Fatalf("got: %v want: %v", actual, expected)
+		}
+	}
+	// Less than
+	actual = sh.Filter(10, "lt")
+	expected = SearchHistory{Frecency{"foo", 1}}
+	for i, e := range expected {
+		if actual[i] != e {
+			t.Fatalf("got: %v want: %v", actual, expected)
+		}
+	}
+	// Error key word
+	actual = sh.Filter(10, "other key word")
+	expected = SearchHistory{
+		Frecency{"foo", 1},
+		Frecency{"bar", 10},
+		Frecency{"foobar", 100},
+	}
+	for i, e := range expected {
+		if actual[i] != e {
+			t.Fatalf("got: %v want: %v", actual, expected)
+		}
+	}
+	// Error score
+	actual = sh.Filter(-1, "lt")
+	expected = SearchHistory{
+		Frecency{"foo", 1},
+		Frecency{"bar", 10},
+		Frecency{"foobar", 100},
+	}
+	for i, e := range expected {
+		if actual[i] != e {
+			t.Fatalf("got: %v want: %v", actual, expected)
+		}
+	}
+	actual = sh.Filter(0, "gt")
+	expected = SearchHistory{
+		Frecency{"foo", 1},
+		Frecency{"bar", 10},
+		Frecency{"foobar", 100},
+	}
+	for i, e := range expected {
+		if actual[i] != e {
+			t.Fatalf("got: %v want: %v", actual, expected)
+		}
+	}
+}

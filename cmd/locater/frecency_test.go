@@ -25,7 +25,7 @@ func Test_LogWord(t *testing.T) {
 			time.Date(2020, 9, 27, 7, 47, 05, 0, time.UTC),
 		},
 	}
-	actual, err := LogWord("../test/locate.log")
+	actual, err := logWord("../../test/locate.log")
 	if err != nil {
 		t.Errorf("error: %v", err)
 	}
@@ -68,7 +68,7 @@ func Test_ExtractKeyword(t *testing.T) {
 }
 
 func Test_Datalist(t *testing.T) {
-	actual, _ := Datalist("../test/locate.log")
+	actual, _ := Datalist("../../test/locate.log")
 	expected := History{
 		Frecency{"etc pacman new", 4},
 		Frecency{"usr pac", 3},

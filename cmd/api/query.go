@@ -1,4 +1,4 @@
-package locater
+package api
 
 import (
 	"errors"

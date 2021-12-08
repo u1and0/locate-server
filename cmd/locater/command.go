@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -77,4 +78,21 @@ func Ambiguous(n uint64) (s string) {
 		s = strconv.FormatUint(n, 10)
 	}
 	return
+}
+
+// Normalize : SearchWordsとExcludeWordsを合わせる
+// SearchWordsは小文字にする
+// ExcludeWordsは小文字にした上で
+// ソートして、頭に-をつける
+func Normalize(se, ex []string) string {
+	// Sort
+	sort.Slice(ex, func(i, j int) bool { return ex[i] < ex[j] })
+	// Add prefix "-"
+	strs := append(se, func() (d []string) {
+		for _, ex := range ex {
+			d = append(d, "-"+ex)
+		}
+		return
+	}()...)
+	return strings.Join(strs, " ")
 }

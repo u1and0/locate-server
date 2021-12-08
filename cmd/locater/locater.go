@@ -1,19 +1,19 @@
 package locater
 
 import (
-	"sort"
 	"strconv"
 	"strings"
 
 	pipeline "github.com/mattn/go-pipeline"
+	api "github.com/u1and0/locate-server/cmd/api"
 )
 
 type (
 	// Locater : queryから読み取った検索ワードと無視するワード
 	Locater struct {
 		// Input
-		Args         `json:"args"`
-		Query        `json:"query"`
+		Args      `json:"args"`
+		api.Query `json:"query"`
 		// Extract
 		SearchWords  []string `json:"searchWords"`  // 検索キーワード
 		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
@@ -43,26 +43,6 @@ type (
 		Response       int     `json:"response"`       // httpレスポンス　成功で200
 	}
 )
-
-// Normalize : SearchWordsとExcludeWordsを合わせる
-// SearchWordsは小文字にする
-// ExcludeWordsは小文字にした上で
-// ソートして、頭に-をつける
-func (l *Locater) Normalize() string {
-	se := l.SearchWords
-	ex := l.ExcludeWords
-
-	// Sort
-	sort.Slice(ex, func(i, j int) bool { return ex[i] < ex[j] })
-	// Add prefix "-"
-	strs := append(se, func() (d []string) {
-		for _, ex := range ex {
-			d = append(d, "-"+ex)
-		}
-		return
-	}()...)
-	return strings.Join(strs, " ")
-}
 
 // Locate excute locate (or gocate) command
 // split from Locater.Cmd()

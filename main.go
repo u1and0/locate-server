@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	cmd "github.com/u1and0/locate-server/cmd"
 	api "github.com/u1and0/locate-server/cmd/api"
+	cmd "github.com/u1and0/locate-server/cmd/locater"
 
 	"github.com/gin-gonic/gin"
 	"github.com/op/go-logging"
@@ -84,7 +84,6 @@ func main() {
 
 	// Top page
 	route.GET("/", func(c *gin.Context) {
-		datalist, err := cmd.Datalist(LOGFILE)
 		if err != nil {
 			log.Error(err)
 		}
@@ -93,7 +92,6 @@ func main() {
 			gin.H{
 				"title":          "",
 				"lastUpdateTime": locater.Stats.LastUpdateTime,
-				"datalist":       datalist,
 				"query":          "",
 			})
 	})
@@ -165,7 +163,7 @@ func main() {
 		local := locater
 
 		// Parse query
-		var queryDefault cmd.Query
+		var queryDefault api.Query
 		query := queryDefault.New()
 		if err := c.ShouldBind(&query); err != nil {
 			log.Errorf("error: %s query: %v", err, query)
@@ -173,7 +171,7 @@ func main() {
 			c.JSON(local.Stats.Response, local)
 			return
 		}
-		sw, ew, err := cmd.QueryParser(query.Q)
+		sw, ew, err := api.QueryParser(query.Q)
 		if err != nil {
 			log.Errorf("error %v", err)
 		}

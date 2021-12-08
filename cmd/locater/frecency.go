@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	api "github.com/u1and0/locate-server/cmd/api"
 )
 
 type (
@@ -23,8 +25,8 @@ type (
 	History []Frecency
 )
 
-// LogWord extract search word from logfile
-func LogWord(logfile string) (historyMap, error) {
+// logWord extract search word from logfile
+func logWord(logfile string) (historyMap, error) {
 	history := make(historyMap, 100)
 	fp, err := os.Open(logfile)
 	if err != nil {
@@ -34,7 +36,6 @@ func LogWord(logfile string) (historyMap, error) {
 	reader := bufio.NewReader(fp)
 	for {
 		var (
-			l     Locater
 			line  []byte
 			event time.Time
 		)
@@ -52,12 +53,12 @@ func LogWord(logfile string) (historyMap, error) {
 			continue // ERROR行 INFO行を無視
 		}
 		// 検索エラーのない文字列だけfrecencyに追加する
-		sw, ew, err := QueryParser(ExtractKeyword(lines))
+		sw, ew, err := api.QueryParser(ExtractKeyword(lines))
 		if err != nil {
 			continue // Ignore QueryParser() Error
 		}
-		l.SearchWords, l.ExcludeWords = sw, ew
-		word := l.Normalize()
+
+		word := Normalize(sw, ew)
 		event, err = ExtractDatetime(lines)
 		if err != nil {
 			continue // Ignore time.Parse() Error
@@ -131,7 +132,7 @@ func (his History) Swap(i, j int)      { his[i], his[j] = his[j], his[i] }
 
 // Datalist throw list of searched words sorted by score
 func Datalist(f string) (History, error) {
-	history, err := LogWord(f)
+	history, err := logWord(f)
 	wordList := history.RankByScore()
 	return wordList, err
 }

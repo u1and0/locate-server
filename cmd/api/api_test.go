@@ -10,10 +10,10 @@ import (
 
 func TestHistoryQueryParser(t *testing.T) {
 	var ginContext, _ = gin.CreateTestContext(httptest.NewRecorder())
-
-	req, _ := http.NewRequest("GET", "/history?lt=10", nil)
+	req, _ := http.NewRequest("GET", "/history?gt=10&lt=100", nil)
 	ginContext.Request = req
-	actual, err := HistoryQueryParser(ginContext, "lt")
+
+	actual, err := HistoryQueryParser(ginContext, "gt")
 	if err != nil {
 		t.Fatalf("%v, %v", err, ginContext.Request)
 	}
@@ -22,16 +22,12 @@ func TestHistoryQueryParser(t *testing.T) {
 		t.Fatalf("got: %v want: %v, %v", actual, expected, ginContext.Request)
 	}
 
-	var gginContext, _ = gin.CreateTestContext(httptest.NewRecorder())
-	req, _ = http.NewRequest("GET", "/history?gt=10", nil)
-	gginContext.Request = req
-	actual, err = HistoryQueryParser(gginContext, "gt")
+	actual, err = HistoryQueryParser(ginContext, "lt")
 	if err != nil {
-		t.Fatalf("%v, %v", err, gginContext.Request)
+		t.Fatalf("%v, %v", err, ginContext.Request)
 	}
-	expected = 10
+	expected = 100
 	if actual != expected {
-		t.Fatalf("got: %v want: %v, %v", actual, expected, gginContext.Request)
+		t.Fatalf("got: %v want: %v, %v", actual, expected, ginContext.Request)
 	}
-
 }

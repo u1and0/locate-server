@@ -130,11 +130,11 @@ func (his History) Len() int           { return len(his) }
 func (his History) Less(i, j int) bool { return his[i].Score > his[j].Score }
 func (his History) Swap(i, j int)      { his[i], his[j] = his[j], his[i] }
 
-// Datalist throw list of searched words sorted by score
+// Datalist throw map of searched words sorted by score
 func Datalist(f string) (History, error) {
-	history, err := logWord(f)
-	wordList := history.RankByScore()
-	return wordList, err
+	historyMap, err := logWord(f)
+	history := historyMap.RankByScore()
+	return history, err
 }
 
 // Filter returns gt (greter than) and lt (less than) score of history

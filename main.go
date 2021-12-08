@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	cmd "github.com/u1and0/locate-server/cmd"
+	api "github.com/u1and0/locate-server/cmd/api"
 
 	"github.com/gin-gonic/gin"
 	"github.com/op/go-logging"
@@ -136,15 +138,23 @@ func main() {
 
 	// API
 	route.GET("/history", func(c *gin.Context) {
-		searchHistory, err := cmd.Datalist(LOGFILE)
+		history, err := cmd.Datalist(LOGFILE)
 		if err != nil {
 			log.Error(err)
-			c.JSON(404, searchHistory)
+			c.JSON(404, history)
 		}
-		if locater.Args.Debug {
-			log.Debug(searchHistory)
+		gt := api.IntQuery(c, "gt") // history?gt=10 => gt==10
+		lt := api.IntQuery(c, "lt") // history?lt=100 => lt==100
+		// lt default value is infinity
+		if lt == 0 {
+			lt = math.MaxInt64
 		}
-		c.JSON(http.StatusOK, searchHistory)
+		// if designated query gt & lt then filter the history
+		// No query gt nor lt then nothing to do
+		if gt != 0 || lt != math.MaxInt64 {
+			history = history.Filter(gt, lt)
+		}
+		c.JSON(http.StatusOK, history)
 	})
 
 	route.GET("/json", func(c *gin.Context) {

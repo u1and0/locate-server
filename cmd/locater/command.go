@@ -46,16 +46,16 @@ func LocateStats(s string) ([]byte, error) {
 }
 
 // LocateStatsSum : locateされるファイル数をDB情報から合計する
-func LocateStatsSum(b []byte) (uint64, error) {
+func LocateStatsSum(b []byte) (int, error) {
 	var (
-		sum, ni uint64
+		sum, ni int
 		err     error
 	)
 	for i, w := range strings.Split(string(b), "\n") { // 改行区切り => 221,453 ファイル
 		if i%5 == 2 {
-			ns := strings.Fields(w)[0]             // => 221,453
-			ns = strings.ReplaceAll(ns, ",", "")   // => 221453
-			ni, err = strconv.ParseUint(ns, 10, 0) // as uint64
+			ns := strings.Fields(w)[0]           // => 221,453
+			ns = strings.ReplaceAll(ns, ",", "") // => 221453
+			ni, err = strconv.Atoi(ns)           // as int
 			if err != nil {
 				return sum, err
 			}
@@ -66,16 +66,17 @@ func LocateStatsSum(b []byte) (uint64, error) {
 }
 
 // Ambiguous : 数値を切り捨て、おおよその数字をstring型にして返す
-func Ambiguous(n uint64) (s string) {
+// 684,345(int) => 680,000+(string)
+func Ambiguous(n int) (s string) {
 	switch {
-	case n >= 1e8:
-		s = strconv.FormatUint(n/1e8, 10) + "億"
-	case n >= 1e4:
-		s = strconv.FormatUint(n/1e4, 10) + "万"
+	case n >= 1e9:
+		s = strconv.Itoa(n / 10e9)
+	case n >= 1e6:
+		s = strconv.Itoa(n / 10e6)
 	case n >= 1e3:
-		s = strconv.FormatUint(n/1e3, 10) + "千"
+		s = strconv.Itoa(n / 10e3)
 	default:
-		s = strconv.FormatUint(n, 10)
+		s = strconv.Itoa(n)
 	}
 	return
 }

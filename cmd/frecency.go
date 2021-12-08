@@ -11,21 +11,21 @@ import (
 )
 
 type (
-	// History : logfileから読み込んだ検索キーワードと検索時刻
-	History map[string][]time.Time
+	// historyMap : logfileから読み込んだ検索キーワードと検索時刻
+	historyMap map[string][]time.Time
 
 	// Frecency : A coined word of "frequently" + "recency"
 	Frecency struct {
 		Word  string `json:"word"`
 		Score int    `json:"score"`
 	}
-	// SearchHistory : List of Frecency sorted by Frecency.Score
-	SearchHistory []Frecency
+	// History : List of Frecency sorted by Frecency.Score
+	History []Frecency
 )
 
 // LogWord extract search word from logfile
-func LogWord(logfile string) (History, error) {
-	history := make(History, 100)
+func LogWord(logfile string) (historyMap, error) {
+	history := make(historyMap, 100)
 	fp, err := os.Open(logfile)
 	if err != nil {
 		return history, err
@@ -114,10 +114,10 @@ func ScoreSum(tl []time.Time) (score int) {
 }
 
 // RankByScore : 履歴から頻出度リストを生成する
-func (history History) RankByScore() SearchHistory {
+func (h historyMap) RankByScore() History {
 	var i int
-	l := make(SearchHistory, len(history))
-	for k, v := range history {
+	l := make(History, len(h))
+	for k, v := range h {
 		l[i] = Frecency{k, ScoreSum(v)}
 		i++
 	}
@@ -125,20 +125,20 @@ func (history History) RankByScore() SearchHistory {
 	return l
 }
 
-func (fl SearchHistory) Len() int           { return len(fl) }
-func (fl SearchHistory) Less(i, j int) bool { return fl[i].Score > fl[j].Score }
-func (fl SearchHistory) Swap(i, j int)      { fl[i], fl[j] = fl[j], fl[i] }
+func (his History) Len() int           { return len(his) }
+func (his History) Less(i, j int) bool { return his[i].Score > his[j].Score }
+func (his History) Swap(i, j int)      { his[i], his[j] = his[j], his[i] }
 
 // Datalist throw list of searched words sorted by score
-func Datalist(f string) (SearchHistory, error) {
-	historymap, err := LogWord(f)
-	wordList := historymap.RankByScore()
+func Datalist(f string) (History, error) {
+	history, err := LogWord(f)
+	wordList := history.RankByScore()
 	return wordList, err
 }
 
 // Filter returns gt (greter than) and lt (less than) score of history
-func (history SearchHistory) Filter(gt, lt int) (filtered SearchHistory) {
-	for _, h := range history {
+func (his History) Filter(gt, lt int) (filtered History) {
+	for _, h := range his {
 		if h.Score > gt && h.Score < lt {
 			filtered = append(filtered, h)
 		}

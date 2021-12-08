@@ -9,7 +9,7 @@ import (
 )
 
 func Test_LogWord(t *testing.T) {
-	expected := History{
+	expected := historyMap{
 		"load bash": []time.Time{
 			time.Date(2020, 6, 28, 20, 59, 13, 0, time.UTC),
 		},
@@ -69,7 +69,7 @@ func Test_ExtractKeyword(t *testing.T) {
 
 func Test_Datalist(t *testing.T) {
 	actual, _ := Datalist("../test/locate.log")
-	expected := SearchHistory{
+	expected := History{
 		Frecency{"etc pacman new", 4},
 		Frecency{"usr pac", 3},
 		Frecency{"load bash", 1},
@@ -81,8 +81,8 @@ func Test_Datalist(t *testing.T) {
 	}
 }
 
-func TestSearchHistory_Filter(t *testing.T) {
-	history := SearchHistory{
+func TestHistory_Filter(t *testing.T) {
+	history := History{
 		Frecency{"foo", 1},
 		Frecency{"bar", 10},
 		Frecency{"foobar", 100},
@@ -90,14 +90,14 @@ func TestSearchHistory_Filter(t *testing.T) {
 
 	// 1 < score < 100
 	actual := history.Filter(1, 100)
-	expected := SearchHistory{Frecency{"bar", 10}}
+	expected := History{Frecency{"bar", 10}}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("got: %v want: %v", actual, expected)
 	}
 
 	// 1 < score
 	actual = history.Filter(1, math.MaxInt64)
-	expected = SearchHistory{
+	expected = History{
 		Frecency{"bar", 10},
 		Frecency{"foobar", 100},
 	}
@@ -107,7 +107,7 @@ func TestSearchHistory_Filter(t *testing.T) {
 
 	// score < 100
 	actual = history.Filter(0, 100)
-	expected = SearchHistory{
+	expected = History{
 		Frecency{"foo", 1},
 		Frecency{"bar", 10},
 	}

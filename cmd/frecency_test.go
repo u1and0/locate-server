@@ -1,6 +1,8 @@
 package locater
 
 import (
+	"math"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -80,60 +82,42 @@ func Test_Datalist(t *testing.T) {
 }
 
 func TestSearchHistory_Filter(t *testing.T) {
-	sh := SearchHistory{
+	history := SearchHistory{
 		Frecency{"foo", 1},
 		Frecency{"bar", 10},
 		Frecency{"foobar", 100},
 	}
-	// Greater than
-	actual := sh.Filter(10, "gt")
-	expected := SearchHistory{Frecency{"foobar", 100}}
-	for i, e := range expected {
-		if actual[i] != e {
-			t.Fatalf("got: %v want: %v", actual, expected)
-		}
+
+	// 1 < score < 100
+	actual := history.Filter(1, 100)
+	expected := SearchHistory{Frecency{"bar", 10}}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("got: %v want: %v", actual, expected)
 	}
-	// Less than
-	actual = sh.Filter(10, "lt")
-	expected = SearchHistory{Frecency{"foo", 1}}
-	for i, e := range expected {
-		if actual[i] != e {
-			t.Fatalf("got: %v want: %v", actual, expected)
-		}
+
+	// 1 < score
+	actual = history.Filter(1, math.MaxInt64)
+	expected = SearchHistory{
+		Frecency{"bar", 10},
+		Frecency{"foobar", 100},
 	}
-	// Error key word
-	actual = sh.Filter(10, "other key word")
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("got: %v want: %v", actual, expected)
+	}
+
+	// score < 100
+	actual = history.Filter(0, 100)
 	expected = SearchHistory{
 		Frecency{"foo", 1},
 		Frecency{"bar", 10},
-		Frecency{"foobar", 100},
 	}
-	for i, e := range expected {
-		if actual[i] != e {
-			t.Fatalf("got: %v want: %v", actual, expected)
-		}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("got: %v want: %v", actual, expected)
 	}
-	// Error score
-	actual = sh.Filter(-1, "lt")
-	expected = SearchHistory{
-		Frecency{"foo", 1},
-		Frecency{"bar", 10},
-		Frecency{"foobar", 100},
-	}
-	for i, e := range expected {
-		if actual[i] != e {
-			t.Fatalf("got: %v want: %v", actual, expected)
-		}
-	}
-	actual = sh.Filter(0, "gt")
-	expected = SearchHistory{
-		Frecency{"foo", 1},
-		Frecency{"bar", 10},
-		Frecency{"foobar", 100},
-	}
-	for i, e := range expected {
-		if actual[i] != e {
-			t.Fatalf("got: %v want: %v", actual, expected)
-		}
+
+	// score < 1
+	actual = history.Filter(0, 1)
+	if len(actual) != 0 {
+		t.Fatalf("got: %v want: %v", actual, expected)
 	}
 }

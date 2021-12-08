@@ -8,26 +8,38 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestHistoryQueryParser(t *testing.T) {
+func TestIntQuery(t *testing.T) {
 	var ginContext, _ = gin.CreateTestContext(httptest.NewRecorder())
 	req, _ := http.NewRequest("GET", "/history?gt=10&lt=100", nil)
 	ginContext.Request = req
 
-	actual, err := HistoryQueryParser(ginContext, "gt")
-	if err != nil {
-		t.Fatalf("%v, %v", err, ginContext.Request)
-	}
+	// request gt,lt
+	actual := IntQuery(ginContext, "gt")
 	expected := 10
 	if actual != expected {
 		t.Fatalf("got: %v want: %v, %v", actual, expected, ginContext.Request)
 	}
 
-	actual, err = HistoryQueryParser(ginContext, "lt")
-	if err != nil {
-		t.Fatalf("%v, %v", err, ginContext.Request)
-	}
+	actual = IntQuery(ginContext, "lt")
 	expected = 100
 	if actual != expected {
 		t.Fatalf("got: %v want: %v, %v", actual, expected, ginContext.Request)
 	}
+
+	// no request gt,lt
+	ginContext, _ = gin.CreateTestContext(httptest.NewRecorder())
+	req, _ = http.NewRequest("GET", "/history", nil)
+	ginContext.Request = req
+
+	actual = IntQuery(ginContext, "gt")
+	expected = 0
+	if actual != expected {
+		t.Fatalf("got: %v want: %v, %v", actual, expected, ginContext.Request)
+	}
+	actual = IntQuery(ginContext, "lt")
+	expected = 0
+	if actual != expected {
+		t.Fatalf("got: %v want: %v, %v", actual, expected, ginContext.Request)
+	}
+
 }

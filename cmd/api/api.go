@@ -1,20 +1,20 @@
 package api
 
 import (
-	"errors"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-func HistoryQueryParser(c *gin.Context, q string) (int, error) {
+// IntQuery parse query as int
+func IntQuery(c *gin.Context, q string) int {
 	s, ok := c.GetQuery(q)
 	if !ok {
-		return 0, errors.New("error: no query " + q)
+		return 0
 	}
 	n, err := strconv.Atoi(s)
 	if err != nil {
-		return 0, err
+		return 0
 	}
-	return n, nil
+	return n
 }

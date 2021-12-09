@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/dustin/go-humanize"
 	"github.com/op/go-logging"
 )
 
@@ -46,16 +47,17 @@ func LocateStats(s string) ([]byte, error) {
 }
 
 // LocateStatsSum : locateされるファイル数をDB情報から合計する
-func LocateStatsSum(b []byte) (int, error) {
+func LocateStatsSum(b []byte) (int64, error) {
 	var (
-		sum, ni int
+		sum, ni int64
+		ns      string
 		err     error
 	)
 	for i, w := range strings.Split(string(b), "\n") { // 改行区切り => 221,453 ファイル
 		if i%5 == 2 {
-			ns := strings.Fields(w)[0]           // => 221,453
-			ns = strings.ReplaceAll(ns, ",", "") // => 221453
-			ni, err = strconv.Atoi(ns)           // as int
+			ns = strings.Fields(w)[0]              // => 221,453
+			ns = strings.ReplaceAll(ns, ",", "")   // => 221453
+			ni, err = strconv.ParseInt(ns, 10, 64) // as int64
 			if err != nil {
 				return sum, err
 			}
@@ -67,18 +69,22 @@ func LocateStatsSum(b []byte) (int, error) {
 
 // Ambiguous : 数値を切り捨て、おおよその数字をstring型にして返す
 // 684,345(int) => 680,000+(string)
-func Ambiguous(n int) (s string) {
+func Ambiguous(n int64) (s string) {
 	switch {
 	case n >= 1e9:
-		s = strconv.Itoa(n / 10e9)
+		s = humanize.Comma(dropDigit(n, 1_000_000_000)) + "+"
 	case n >= 1e6:
-		s = strconv.Itoa(n / 10e6)
+		s = humanize.Comma(dropDigit(n, 1_000_000)) + "+"
 	case n >= 1e3:
-		s = strconv.Itoa(n / 10e3)
+		s = humanize.Comma(dropDigit(n, 1_000)) + "+"
 	default:
-		s = strconv.Itoa(n)
+		s = humanize.Comma(n)
 	}
 	return
+}
+
+func dropDigit(n, m int64) int64 {
+	return n / m * m
 }
 
 // Normalize : SearchWordsとExcludeWordsを合わせる

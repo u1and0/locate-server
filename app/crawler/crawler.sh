@@ -17,12 +17,9 @@
 # }
 
 url="localhost:8080"
-# his=$(curl -fsSL "${url}/history?gt=100" | jq '.[] | .word')
-# echo ${his} | xargs urlencoding | xargs -I@ curl "${url}/json?q=@&logging=false"
-curl -fsSL "${url}/history?gt=1" |  # fetch history
+curl -fsSL "${url}/history?gt=100" |  # fetch history
   jq '.[] | .word' | # flatten list
   tr -d \" |  # trim double quote
-  nkf -WwMQ |  # URL encoding
-  sed -e 's/=$//g' |  # URL encoding
-  tr = % |  # URL encoding
+  tr ' ' + |  # URL encoding
   xargs -I@ curl -fsSL "${url}/json?q=@&logging=false" > /dev/null 2>&1 # cache json & trash output
+  # xargs -I@ echo "${url}/json?q=@&logging=false"  # Test

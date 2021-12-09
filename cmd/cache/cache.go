@@ -1,8 +1,12 @@
-package locater
+package cache
+
+import (
+	cmd "github.com/u1and0/locate-server/cmd/locater"
+)
 
 type (
 	// CacheMap is normalized queries key and PathMap value pair
-	CacheMap map[Key]*Paths
+	CacheMap map[Key]*cmd.Paths
 
 	// Key : Key for CacheMap
 	Key struct {
@@ -11,11 +15,16 @@ type (
 	}
 )
 
+// New : cache constructor
+func New() *CacheMap {
+	return &CacheMap{}
+}
+
 // Traverse : 検索結果をcacheの中から探し、あれば検索結果と検索数を返し、
 // なければLocater.Cmd()を走らせて検索結果と検索数を得る
-func (cache *CacheMap) Traverse(l *Locater) (paths Paths, ok bool, err error) {
-	s := Key{Normalize(l.SearchWords, l.ExcludeWords), l.Query.Limit}
-	var v *Paths
+func (cache *CacheMap) Traverse(l *cmd.Locater) (paths cmd.Paths, ok bool, err error) {
+	s := Key{cmd.Normalize(l.SearchWords, l.ExcludeWords), l.Query.Limit}
+	var v *cmd.Paths
 	if v, ok = (*cache)[s]; !ok {
 		// normalizedがcacheになければresultsをcacheに登録
 		paths, err = l.Locate()

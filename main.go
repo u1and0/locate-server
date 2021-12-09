@@ -12,6 +12,7 @@ import (
 	"time"
 
 	api "github.com/u1and0/locate-server/cmd/api"
+	cache "github.com/u1and0/locate-server/cmd/cache"
 	cmd "github.com/u1and0/locate-server/cmd/locater"
 
 	"github.com/gin-gonic/gin"
@@ -38,7 +39,7 @@ var (
 func main() {
 	var (
 		locateS []byte
-		cache   = cmd.CacheMap{}
+		caches  = cache.New()
 		locater = parseCmdlineOption()
 	)
 
@@ -110,7 +111,7 @@ func main() {
 			locateS = l // 保持するDB情報の更新
 			// Initialize cache
 			// nil map assignment errorを発生させないために必要
-			cache = cmd.CacheMap{} // Reset cache
+			caches = cache.New() // Reset cache
 			// Count number of search target files
 			var n int64
 			n, err = cmd.LocateStatsSum(locateS)
@@ -181,7 +182,7 @@ func main() {
 
 		// Execute locate command
 		start := time.Now()
-		result, ok, err := cache.Traverse(&local)
+		result, ok, err := caches.Traverse(&local)
 		if local.Args.Debug {
 			log.Debugf("gocate result %v", result)
 		}

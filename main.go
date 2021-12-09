@@ -112,7 +112,7 @@ func main() {
 			// nil map assignment errorを発生させないために必要
 			cache = cmd.CacheMap{} // Reset cache
 			// Count number of search target files
-			var n uint64
+			var n int64
 			n, err = cmd.LocateStatsSum(locateS)
 			if err != nil {
 				log.Error(err)
@@ -122,8 +122,6 @@ func main() {
 			locater.Stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
 		}
 		// Response
-		// query := c.Request.URL.Query()
-		// q := strings.Join(query["q"], " ")
 		q := c.Query("q")
 		c.HTML(http.StatusOK,
 			"index.tmpl",

@@ -179,6 +179,9 @@ func main() {
 		local.Query.Q = query.Q
 		local.Query.Logging = query.Logging
 		local.Query.Limit = query.Limit
+		if local.Args.Debug {
+			log.Debugf("local locater: %#v", local)
+		}
 
 		// Execute locate command
 		start := time.Now()

@@ -91,26 +91,32 @@ async function fetchJSONPath(url){
     if (locater.args.debug){
       console.dir(locater);
     }
-    const hitCount = `ヒット数: ${locater.paths.length}件`;
-    Locater.displayStats(hitCount);
-    const searchTime = `${locater.stats.searchTime.toFixed(3)}msec で\
-                        約${locater.stats.items}件を検索しました。`;
-    Locater.displayStats(searchTime);
-    // Rolling next data
-    let n = 0;
-    const shift = 100;
-    locater.displayRoll(n, shift);
-    $(window).on("scroll", function(){ // scrollで下限近くまで来ると次をロード
-      const inner = $(window).innerHeight();
-      const outer = $(window).outerHeight();
-      const bottom = inner - outer;
-      const tp = $(window).scrollTop();
-      if (tp * 1.05 >= bottom) {
-        //スクロールの位置が下部5%の範囲に来た場合
-        n += shift;
-        locater.displayRoll(n, shift);
-      }
-    });
+    if (!locater.error) {
+      const hitCount = `ヒット数: ${locater.paths.length}件`;
+      Locater.displayStats(hitCount);
+      const searchTime = `${locater.stats.searchTime.toFixed(3)}msec で\
+                          約${locater.stats.items}件を検索しました。`;
+      Locater.displayStats(searchTime);
+      // Rolling next data
+      let n = 0;
+      const shift = 100;
+      locater.displayRoll(n, shift);
+      $(window).on("scroll", function(){ // scrollで下限近くまで来ると次をロード
+        const inner = $(window).innerHeight();
+        const outer = $(window).outerHeight();
+        const bottom = inner - outer;
+        const tp = $(window).scrollTop();
+        if (tp * 1.05 >= bottom) {
+          //スクロールの位置が下部5%の範囲に来た場合
+          n += shift;
+          locater.displayRoll(n, shift);
+        }
+      });
+    } else {
+      console.error("error: ", locater.error);
+      const err = document.getElementById("error-view");
+      err.innerHTML = "<p>" + locater.error + "</p>";
+    }
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }

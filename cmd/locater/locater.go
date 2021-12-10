@@ -20,7 +20,7 @@ type (
 		// Output
 		Paths `json:"paths"`
 		Stats `json:"stats"`
-		Error error `json:"error"`
+		Error string `json:"error"`
 	}
 
 	// Args is command line option

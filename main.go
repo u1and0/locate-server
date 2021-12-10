@@ -173,6 +173,9 @@ func main() {
 		sw, ew, err := api.QueryParser(query.Q)
 		if err != nil {
 			log.Errorf("error %v", err)
+			local.Error = fmt.Sprintf("%v", err)
+			c.JSON(local.Stats.Response, local)
+			return
 		}
 		local.SearchWords = sw
 		local.ExcludeWords = ew

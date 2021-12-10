@@ -170,20 +170,19 @@ func main() {
 			c.JSON(local.Stats.Response, local)
 			return
 		}
-		sw, ew, err := api.QueryParser(query.Q)
+		local.Query.Q = query.Q
+		local.Query.Logging = query.Logging
+		local.Query.Limit = query.Limit
+
+		local.SearchWords, local.ExcludeWords, err = api.QueryParser(query.Q)
+		if local.Args.Debug {
+			log.Debugf("local locater: %#v", local)
+		}
 		if err != nil {
 			log.Errorf("error %v", err)
 			local.Error = fmt.Sprintf("%v", err)
 			c.JSON(local.Stats.Response, local)
 			return
-		}
-		local.SearchWords = sw
-		local.ExcludeWords = ew
-		local.Query.Q = query.Q
-		local.Query.Logging = query.Logging
-		local.Query.Limit = query.Limit
-		if local.Args.Debug {
-			log.Debugf("local locater: %#v", local)
 		}
 
 		// Execute locate command

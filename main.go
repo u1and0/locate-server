@@ -162,17 +162,20 @@ func main() {
 		local := locater
 
 		// Parse query
-		var queryDefault api.Query
-		query := queryDefault.New()
-		if err := c.ShouldBind(&query); err != nil {
-			log.Errorf("error: %s query: %v", err, query)
-			local.Stats.Response = 404
-			c.JSON(local.Stats.Response, local)
+		query, err := api.New(c)
+		local.Query = api.Query{
+			Q:       query.Q,
+			Logging: query.Logging,
+			Limit:   query.Limit,
+		}
+		if err != nil {
+			log.Errorf("error: %s query: %#v", err, query)
+			local.Error = fmt.Sprintf("%s", err)
+			c.JSON(406, local)
+			// 406 Not Acceptable:
+			// サーバ側が受付不可能な値であり提供できない状態
 			return
 		}
-		local.Query.Q = query.Q
-		local.Query.Logging = query.Logging
-		local.Query.Limit = query.Limit
 
 		local.SearchWords, local.ExcludeWords, err = api.QueryParser(query.Q)
 		if local.Args.Debug {

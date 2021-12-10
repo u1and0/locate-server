@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"unicode"
+
+	"github.com/gin-gonic/gin"
 )
 
 type (
@@ -23,8 +25,10 @@ type (
 //									if ommited URL request &logging
 // Default value Limit: -1 <= dump all result
 //									if ommited URL request &limit
-func (q *Query) New() *Query {
-	return &Query{Logging: true, Limit: -1}
+func New(c *gin.Context) (*Query, error) {
+	query := Query{Logging: true, Limit: -1}
+	err := c.ShouldBind(&query)
+	return &query, err
 }
 
 // ToLowerExceptFirst : To lower except first of runes

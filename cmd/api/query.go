@@ -49,15 +49,16 @@ func ToLowerExceptAll(s string, r rune) string {
 
 // QueryParser : prefixがあるstringとないstringに分類してそれぞれのスライスで返す
 func QueryParser(ss string) (sn, en []string, err error) {
-	// s <- "hoge my -your name\D"
-	// バックスラッシュの後の1文字以外は小文字化
-	for _, s := range strings.Fields(ss) { // -> [hoge my -your name\D]
+	// s <- "hoGe my -Your name\D"
+	for _, s := range strings.Fields(ss) {
+		// バックスラッシュの後の1文字以外は小文字化
 		if strings.Contains(s, "\\") {
 			s = ToLowerExceptAll(s, '\\')
 		} else {
 			s = strings.ToLower(s)
-		}
+		} // -> [hoge my -your name\D]
 
+		// Classify SearchWords or ExcludeWords
 		// 文字列頭に"-"がついていたらExcludeWords, そうでなければSearchWords
 		if strings.HasPrefix(s, "-") {
 			en = append(en, strings.TrimPrefix(s, "-")) // ->[your]
@@ -65,30 +66,36 @@ func QueryParser(ss string) (sn, en []string, err error) {
 			sn = append(sn, s) // ->[hoge my name]
 		}
 	}
-	// 各検索語のどれかが2文字以上ならnot error
-	if func() bool {
-		for _, s := range sn {
-			if len([]rune(s)) > 1 {
-				return false
-			}
-		}
-		return true
-	}() {
-		message := "検索文字数が足りません : "
+	// Error case
+	if lessInput(sn) {
+		message := "less input : "
 		err = errors.New(message + strings.Join(sn, " "))
 		return
 	}
-	// snとenに重複する語が入っていたらerror
-	if e := sliceIn(sn, en); e != "" {
-		message := "検索キーワードの中に無視するキーワードが入っています : "
+	if e := duplicateWord(sn, en); e != "" {
+		message := "duplicate word : "
 		err = errors.New(message + e)
 		return
 	}
+	// Success
 	return
 }
 
-// sliceIn : 2つのslice中の重複要素を返す
-func sliceIn(a, b []string) string {
+// lessInput : 各検索語のすべてが一文字未満ならerror
+// 1ワードでも2文字以上あればnot error
+func lessInput(sn []string) bool {
+	for _, s := range sn {
+		s = strings.TrimPrefix(s, `\`)
+		if len([]rune(s)) > 1 {
+			return false
+		}
+	}
+	return true
+}
+
+// duplicateWord : 2つのslice中の重複要素を返す
+// aとbに重複する語が入っていたらerror
+func duplicateWord(a, b []string) string {
 	for _, e1 := range a {
 		for _, e2 := range b {
 			if e1 == e2 {

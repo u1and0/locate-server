@@ -1,11 +1,7 @@
 package api
 
 import (
-	"net/http"
-	"net/http/httptest"
 	"testing"
-
-	"github.com/gin-gonic/gin"
 )
 
 func TestToLowerExceptFirst(t *testing.T) {
@@ -26,105 +22,59 @@ func TestToLowerExceptAll(t *testing.T) {
 	}
 }
 
-func TestQuery_Parser_Test(t *testing.T) {
-	var (
-		ginContext, _ = gin.CreateTestContext(httptest.NewRecorder())
-		err           error
-		query         Query
-	)
+func Test_QueryParser(t *testing.T) {
+	testWord := `hoGe my -Your name\D -HeY`
+	sn, en, _ := QueryParser(testWord)
+	expectedSN := []string{"hoge", "my", `name\D`}
+	expectedEN := []string{"your", "hey"}
+	for i, actual := range sn {
+		if expectedSN[i] != actual {
+			t.Fatalf("got: %v want: %v", sn, expectedSN)
+		}
+	}
+	for i, actual := range en {
+		if expectedEN[i] != actual {
+			t.Fatalf("got: %v want: %v", en, expectedEN)
+		}
+	}
+}
+func Test_lessInput(t *testing.T) {
+	// lessInput case
+	expected := true
 
-	/* Succsess test */
-	// Typical URL request
-	req, _ := http.NewRequest("GET", "/json?q=search+Go&logging=false&limit=25", nil)
-	ginContext.Request = req
-	actual := query.New()
-	if err = ginContext.ShouldBind(&actual); err != nil {
-		t.Fatalf("error: %#v", err)
+	testWord := []string{"a", "b"}
+	actual := lessInput(testWord)
+	if actual != expected {
+		t.Errorf("testWord: %v got: %v want: %v", testWord, actual, expected)
 	}
-	expected := Query{
-		Q:       "search Go",
-		Logging: false,
-		Limit:   25,
-	}
-	if actual.Q != expected.Q {
-		t.Fatalf("got: %#v want: %#v", actual, expected)
-	}
-	if actual.Logging != expected.Logging {
-		t.Fatalf("got: %#v want: %#v", actual, expected)
-	}
-	if actual.Limit != expected.Limit {
-		t.Fatalf("got: %#v want: %#v", actual, expected)
-	}
-
-	// Large Case
-	req, _ = http.NewRequest("GET", "/json?q=&logging=TRUE", nil)
-	ginContext.Request = req
-	actual = query.New()
-	if err = ginContext.ShouldBind(&actual); err != nil {
-		t.Fatalf("error: %#v", err)
-	}
-	expected = Query{
-		Q:       "",
-		Logging: true,
-		Limit:   -1,
-	}
-	if actual.Q != expected.Q {
-		t.Fatalf("got: %#v want: %#v", actual, expected)
-	}
-	if actual.Logging != expected.Logging {
-		t.Fatalf("got: %#v want: %#v", actual, expected)
-	}
-	if actual.Limit != expected.Limit {
-		t.Fatalf("got: %#v want: %#v", actual, expected)
+	testWord = []string{"\a", "b"}
+	actual = lessInput(testWord)
+	if actual != expected {
+		t.Errorf("testWord: %v got: %v want: %v", testWord, actual, expected)
 	}
 
-	// Ommit query
-	// Default value is q="", logging=false, limit=0
-	// q=="" => Should Error
-	// logging==false => Should be true
-	// limit==0 => Should be -1
-	req, _ = http.NewRequest("GET", "/json?q=", nil)
-	ginContext.Request = req
-	actual = query.New()
-	if err = ginContext.ShouldBind(&actual); err != nil {
-		t.Fatalf("error: %#v", err)
-	}
-	expected = Query{
-		Q:       "",
-		Logging: true,
-		Limit:   -1,
-	}
-	if actual.Q != expected.Q {
-		t.Fatalf("got: %#v want: %#v", actual, expected)
-	}
-	if actual.Logging != expected.Logging {
-		t.Fatalf("got: %#v want: %#v", actual, expected)
-	}
-	if actual.Limit != expected.Limit {
-		t.Fatalf("got: %#v want: %#v", actual, expected)
-	}
+	// NOT lessInput case
+	expected = false
 
-	/* Error test */
-	// Int out of range
-	req, _ = http.NewRequest("GET", "/json?q=search+Go&limit=0.1", nil)
-	ginContext.Request = req
-	actual = query.New()
-	if err = ginContext.ShouldBind(&actual); err == nil {
-		t.Errorf(
-			"This test must fail by %s",
-			`error: &strconv.NumError{Func:"ParseInt", Num:"0.1", Err:(*errors.errorString)`,
-		)
+	testWord = []string{"a", "bb"}
+	actual = lessInput(testWord)
+	if actual != expected {
+		t.Errorf("testWord: %v got: %v want: %v", testWord, actual, expected)
 	}
+	testWord = []string{"\a", "\bc"}
+	actual = lessInput(testWord)
+	if actual != expected {
+		t.Errorf("testWord: %v got: %v want: %v", testWord, actual, expected)
+	}
+}
 
-	// Invalid boolian
-	req, _ = http.NewRequest("GET", "/json?q=search+Go&logging=hoge", nil)
-	ginContext.Request = req
-	actual = query.New()
-	if err = ginContext.ShouldBind(&actual); err == nil {
-		t.Errorf(
-			"This test must fail by %s",
-			`error: &strconv.NumError{Func:"ParseBool", Num:"hoge", Err:(*errors.errorString)`,
-		)
+func Test_duplicateWord(t *testing.T) {
+	sn := []string{"ahoy", "book"}
+	en := []string{"ahoy"}
+	actual := duplicateWord(sn, en)
+	expected := "ahoy"
+	if actual != expected {
+		t.Fatalf("got: %v want: %v", actual, expected)
 	}
 }
 

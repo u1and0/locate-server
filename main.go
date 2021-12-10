@@ -28,6 +28,8 @@ const (
 	LOCATEDIR = "/var/lib/mlocate"
 	// REQUIRE : required commands. Separate by space.
 	REQUIRE = "locate gocate"
+	// PORT : default open server port
+	PORT = 8080
 )
 
 var (
@@ -36,17 +38,24 @@ var (
 	port        int
 )
 
+type (
+	usageText struct {
+		dir,
+		port,
+		root,
+		windowsPathSeparate,
+		trim,
+		debug,
+		showVersion string
+	}
+)
+
 func main() {
 	var (
 		locateS []byte
 		caches  = cache.New()
 		locater = parseCmdlineOption()
 	)
-
-	if showVersion {
-		fmt.Println("locate-server version", VERSION)
-		return // versionを表示して終了
-	}
 
 	// Release mode
 	fmt.Println("locater.Args.Debug", locater.Args.Debug)
@@ -184,13 +193,15 @@ func main() {
 		if err != nil {
 			log.Errorf("error %v", err)
 			local.Error = fmt.Sprintf("%v", err)
-			c.JSON(local.Stats.Response, local)
+			c.JSON(406, local)
+			// 406 Not Acceptable:
+			// サーバ側が受付不可能な値であり提供できない状態
 			return
 		}
 
 		// Execute locate command
 		start := time.Now()
-		result, ok, err := caches.Traverse(&local)
+		result, ok, err := caches.Traverse(&local) // err <- Linux command error
 		if local.Args.Debug {
 			log.Debugf("gocate result %v", result)
 		}
@@ -199,23 +210,33 @@ func main() {
 
 		// Response & Logging
 		if err != nil {
-			local.Stats.Response = 404
 			log.Errorf("%s [ %-50s ]", err, query.Q)
-			c.JSON(local.Stats.Response, local)
+			c.JSON(500, local)
+			// 500 Internal Server Error
+			// 何らかのサーバ内で起きたエラー
 		} else {
 			getpushLog := "PUSH result to cache"
 			if ok {
 				getpushLog = "GET result from cache"
 			}
 			local.Paths = result
-			local.Stats.Response = http.StatusOK
 			l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q}
 			if query.Logging {
 				log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
 			} else {
 				fmt.Printf("[NO LOGGING NOTICE]\t%8dfiles %3.3fmsec %s [ %-50s ]\n", l...) // Printfで表示はする
 			}
+			if len(local.Paths) == 0 {
+				local.Error = "no content"
+				c.JSON(204, local)
+				// 204 No Content
+				// リクエストに対して送信するコンテンツは無いが
+				// ヘッダは有用である
+				return
+			}
 			c.JSON(http.StatusOK, local)
+			// 200 OK
+			// リクエストが正常に処理できた
 		}
 	})
 
@@ -223,9 +244,8 @@ func main() {
 		l, err := cmd.LocateStats(locater.Args.Dbpath)
 		ss := strings.Split(string(l), "\n")
 		c.JSON(http.StatusOK, gin.H{
-			"result": ss,
-			"status": http.StatusOK,
-			"error":  err,
+			"locate-S": ss,
+			"error":    err,
 		})
 	})
 
@@ -235,21 +255,66 @@ func main() {
 
 // Parse command line option
 func parseCmdlineOption() (l cmd.Locater) {
-	flag.StringVar(&l.Args.Dbpath, "d", LOCATEDIR, "Path of locate database directory")
-	flag.StringVar(&l.Args.Dbpath, "dir", LOCATEDIR, "Path of locate database directory")
-	flag.BoolVar(&l.Args.PathSplitWin, "s", false, "OS path split windows backslash")
-	flag.BoolVar(&l.Args.PathSplitWin, "windows-path-separate", false, "OS path separate windows backslash")
-	flag.StringVar(&l.Args.Root, "r", "", "DB insert prefix for directory path")
-	flag.StringVar(&l.Args.Root, "root", "", "DB insert prefix for directory path")
-	flag.StringVar(&l.Args.Trim, "t", "", "DB trim prefix for directory path")
-	flag.StringVar(&l.Args.Trim, "trim", "", "DB trim prefix for directory path")
-	flag.BoolVar(&l.Args.Debug, "debug", false, "Debug mode")
-	flag.IntVar(&port, "p", 8080, "Server port number. Default access to http://localhost:8080/")
-	flag.IntVar(&port, "port", 8080, "Server port number. Default access to http://localhost:8080/")
-	flag.BoolVar(&showVersion, "v", false, "show version")
-	flag.BoolVar(&showVersion, "version", false, "show version")
+	var (
+		showVersion bool
+		usage       = usageText{
+			dir:                 `Path of locate database directory (default "/var/lib/mlocate")`,
+			port:                `Server port number. Default access to http://localhost:8080/ (default 8080)`,
+			root:                `DB insert prefix for directory path`,
+			windowsPathSeparate: `Use path separate Windows backslash`,
+			trim:                `DB trim prefix for directory path`,
+			debug:               `Run debug mode`,
+			showVersion:         `Show version`,
+		}
+	)
+	flag.StringVar(&l.Args.Dbpath, "d", LOCATEDIR, usage.dir)
+	flag.StringVar(&l.Args.Dbpath, "dir", LOCATEDIR, usage.dir)
+	flag.BoolVar(&l.Args.PathSplitWin, "s", false, usage.windowsPathSeparate)
+	flag.BoolVar(&l.Args.PathSplitWin, "windows-path-separate", false, usage.windowsPathSeparate)
+	flag.StringVar(&l.Args.Root, "r", "", usage.root)
+	flag.StringVar(&l.Args.Root, "root", "", usage.root)
+	flag.StringVar(&l.Args.Trim, "t", "", usage.trim)
+	flag.StringVar(&l.Args.Trim, "trim", "", usage.trim)
+	flag.BoolVar(&l.Args.Debug, "debug", false, usage.debug)
+	flag.IntVar(&port, "p", PORT, usage.port)
+	flag.IntVar(&port, "port", PORT, usage.port)
+	flag.BoolVar(&showVersion, "v", false, usage.showVersion)
+	flag.BoolVar(&showVersion, "version", false, usage.showVersion)
+	flag.Usage = func() {
+		usageTxt := fmt.Sprintf(`Open file search server
+
+Usage of locate-server
+	locate-server [OPTION]...
+-d, -dir
+	%s
+-p, -port
+	%s
+-r, -root
+	%s
+-s, -windows-path-separate
+	%s
+-t, -trim
+	%s
+-debug
+	%s
+-v, -version
+	%s`,
+			usage.dir,
+			usage.port,
+			usage.root,
+			usage.windowsPathSeparate,
+			usage.trim,
+			usage.debug,
+			usage.showVersion,
+		)
+		fmt.Fprintf(os.Stderr, "%s\n", usageTxt)
+	}
 	flag.Parse()
-	return
+	if showVersion {
+		fmt.Println("locate-server version", VERSION)
+		os.Exit(0) // Exit with version info
+	}
+	return l
 }
 
 // setLogger is printing out log message to STDOUT and LOGFILE

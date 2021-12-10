@@ -40,7 +40,6 @@ type (
 		LastUpdateTime string  `json:"lastUpdateTime"` // 最後のDBアップデート時刻
 		SearchTime     float64 `json:"searchTime"`     // 検索にかかった時間
 		Items          string  `json:"items"`          // 検索対象のすべてのファイル数
-		Response       int     `json:"response"`       // httpレスポンス　成功で200
 	}
 )
 

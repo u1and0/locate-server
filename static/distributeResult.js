@@ -117,19 +117,30 @@ async function fetchJSONPath(url){
       const err = document.getElementById("error-view");
       err.innerHTML = "<p>" + locater.error + "</p>";
     }
+  // 今のところcatchする例外発生ない
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
   }
 }
 
+// class LocaterError extends Error{
+//   constructor(response){
+//     const jsonobj = response.json();
+//     super(`${response.status} for ${response.url}`);
+//     console.log(jsonobj);
+//     this.msg = jsonobj.error;
+//     this.name = 'LocaterError';
+//     this.response = response;
+//   }
+// }
+
 // fetchの返り値のPromiseを返す
 function fetchLocatePath(url){
   return fetch(url)
     .then(response =>{
-      if (!response.ok) {
-        return Promise.reject(new Error(`{${response.status}: ${response.statusText}`));
-      } else{
-        return response.json(); //.then(userInfo =>  ここはmain()で解決
-      }
+      // if (!response.ok) {
+        // return Promise.reject(new Error(`{${response.status}: ${response.statusText}`));
+      // } else{
+      return response.json();
     });
 }

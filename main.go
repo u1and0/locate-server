@@ -36,6 +36,9 @@ var (
 	log         = logging.MustGetLogger("main")
 	showVersion bool
 	port        int
+	locater     = parseCmdlineOption()
+	locateS     []byte
+	caches      = cache.New()
 )
 
 type (
@@ -51,12 +54,6 @@ type (
 )
 
 func main() {
-	var (
-		locateS []byte
-		caches  = cache.New()
-		locater = parseCmdlineOption()
-	)
-
 	// Release mode
 	fmt.Println("locater.Args.Debug", locater.Args.Debug)
 	if !locater.Args.Debug {
@@ -93,164 +90,176 @@ func main() {
 	route.LoadHTMLGlob("templates/*")
 
 	// Top page
-	route.GET("/", func(c *gin.Context) {
-		if err != nil {
-			log.Error(err)
-		}
-		c.HTML(http.StatusOK,
-			"index.tmpl",
-			gin.H{
-				"title":          "",
-				"lastUpdateTime": locater.Stats.LastUpdateTime,
-				"query":          "",
-			})
-	})
+	route.GET("/", topPage)
 
 	// Result view
-	route.GET("/search", func(c *gin.Context) {
-		// 検索文字数チェックOK
-		/* LocateStats()の結果が前と異なっていたら
-		locateS更新
-		cacheを初期化 */
-		if l, err := cmd.LocateStats(locater.Dbpath); string(l) != string(locateS) {
-			// DB更新されていたら
-			if err != nil {
-				log.Error(err)
-			}
-			locateS = l // 保持するDB情報の更新
-			// Initialize cache
-			// nil map assignment errorを発生させないために必要
-			caches = cache.New() // Reset cache
-			// Count number of search target files
-			var n int64
-			n, err = cmd.LocateStatsSum(locateS)
-			if err != nil {
-				log.Error(err)
-			}
-			locater.Stats.Items = cmd.Ambiguous(n)
-			// Update LastUpdateTime for database
-			locater.Stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
-		}
-		// Response
-		q := c.Query("q")
-		c.HTML(http.StatusOK,
-			"index.tmpl",
-			gin.H{
-				"title":          q,
-				"lastUpdateTime": locater.Stats.LastUpdateTime,
-				"query":          q,
-			})
-	})
+	route.GET("/search", searchPage)
 
 	// API
-	route.GET("/history", func(c *gin.Context) {
-		history, err := cmd.Datalist(LOGFILE)
-		if err != nil {
-			log.Error(err)
-			c.JSON(404, history)
-		}
-		gt := api.IntQuery(c, "gt") // history?gt=10 => gt==10
-		lt := api.IntQuery(c, "lt") // history?lt=100 => lt==100
-		// lt default value is infinity
-		if lt == 0 {
-			lt = math.MaxInt64
-		}
-		// if designated query gt & lt then filter the history
-		// No query gt nor lt then nothing to do
-		if gt != 0 || lt != math.MaxInt64 {
-			history = history.Filter(gt, lt)
-		}
-		c.JSON(http.StatusOK, history)
-	})
-
-	route.GET("/json", func(c *gin.Context) {
-		// locater.Query initialize
-		// Shallow copy locater to local
-		// for blocking to rewrite
-		// locater{} struct while searching
-		local := locater
-
-		// Parse query
-		query, err := api.New(c)
-		local.Query = api.Query{
-			Q:       query.Q,
-			Logging: query.Logging,
-			Limit:   query.Limit,
-		}
-		if err != nil {
-			log.Errorf("error: %s query: %#v", err, query)
-			local.Error = fmt.Sprintf("%s", err)
-			c.JSON(406, local)
-			// 406 Not Acceptable:
-			// サーバ側が受付不可能な値であり提供できない状態
-			return
-		}
-
-		local.SearchWords, local.ExcludeWords, err = api.QueryParser(query.Q)
-		if local.Args.Debug {
-			log.Debugf("local locater: %#v", local)
-		}
-		if err != nil {
-			log.Errorf("error %v", err)
-			local.Error = fmt.Sprintf("%v", err)
-			c.JSON(406, local)
-			// 406 Not Acceptable:
-			// サーバ側が受付不可能な値であり提供できない状態
-			return
-		}
-
-		// Execute locate command
-		start := time.Now()
-		result, ok, err := caches.Traverse(&local) // err <- Linux command error
-		if local.Args.Debug {
-			log.Debugf("gocate result %v", result)
-		}
-		end := (time.Since(start)).Nanoseconds()
-		local.Stats.SearchTime = float64(end) / float64(time.Millisecond)
-
-		// Response & Logging
-		if err != nil {
-			log.Errorf("%s [ %-50s ]", err, query.Q)
-			c.JSON(500, local)
-			// 500 Internal Server Error
-			// 何らかのサーバ内で起きたエラー
-		} else {
-			getpushLog := "PUSH result to cache"
-			if ok {
-				getpushLog = "GET result from cache"
-			}
-			local.Paths = result
-			l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q}
-			if query.Logging {
-				log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
-			} else {
-				fmt.Printf("[NO LOGGING NOTICE]\t%8dfiles %3.3fmsec %s [ %-50s ]\n", l...) // Printfで表示はする
-			}
-			if len(local.Paths) == 0 {
-				local.Error = "no content"
-				c.JSON(204, local)
-				// 204 No Content
-				// リクエストに対して送信するコンテンツは無いが
-				// ヘッダは有用である
-				return
-			}
-			c.JSON(http.StatusOK, local)
-			// 200 OK
-			// リクエストが正常に処理できた
-		}
-	})
-
-	route.GET("/status", func(c *gin.Context) {
-		l, err := cmd.LocateStats(locater.Args.Dbpath)
-		ss := strings.Split(string(l), "\n")
-		c.JSON(http.StatusOK, gin.H{
-			"locate-S": ss,
-			"error":    err,
-		})
-	})
+	route.GET("/history", fetchHistory)
+	route.GET("/json", fetchJSON)
+	route.GET("/status", fetchStatus)
 
 	// Listen and serve on 0.0.0.0:8080
 	route.Run(":" + strconv.Itoa(port)) // => :8080
+}
+
+func topPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "index.tmpl", gin.H{
+		"title":          "",
+		"lastUpdateTime": locater.Stats.LastUpdateTime,
+		"query":          "",
+	})
+}
+
+func searchPage(c *gin.Context) {
+	// 検索文字数チェックOK
+	/* LocateStats()の結果が前と異なっていたら
+	locateS更新
+	cacheを初期化 */
+	if l, err := cmd.LocateStats(locater.Dbpath); string(l) != string(locateS) {
+		// DB更新されていたら
+		if err != nil {
+			log.Error(err)
+		}
+		locateS = l // 保持するDB情報の更新
+		// Initialize cache
+		// nil map assignment errorを発生させないために必要
+		caches = cache.New() // Reset cache
+		// Count number of search target files
+		var n int64
+		n, err = cmd.LocateStatsSum(locateS)
+		if err != nil {
+			log.Error(err)
+		}
+		locater.Stats.Items = cmd.Ambiguous(n)
+		// Update LastUpdateTime for database
+		locater.Stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
+	}
+	// Response
+	q := c.Query("q")
+	c.HTML(http.StatusOK, "index.tmpl", gin.H{
+		"title":          q,
+		"lastUpdateTime": locater.Stats.LastUpdateTime,
+		"query":          q,
+	})
+}
+
+func fetchJSON(c *gin.Context) {
+	// locater.Query initialize
+	// Shallow copy locater to local
+	// for blocking to rewrite
+	// locater{} struct while searching
+	local := locater
+
+	// Parse query
+	query, err := api.New(c)
+	local.Query = api.Query{
+		Q:       query.Q,
+		Logging: query.Logging,
+		Limit:   query.Limit,
+	}
+	if err != nil {
+		log.Errorf("error: %s query: %#v", err, query)
+		local.Error = fmt.Sprintf("%s", err)
+		c.JSON(406, local)
+		// 406 Not Acceptable:
+		// サーバ側が受付不可能な値であり提供できない状態
+		return
+	}
+
+	local.SearchWords, local.ExcludeWords, err = api.QueryParser(query.Q)
+	if local.Args.Debug {
+		log.Debugf("local locater: %#v", local)
+	}
+	if err != nil {
+		log.Errorf("error %v", err)
+		local.Error = fmt.Sprintf("%v", err)
+		c.JSON(404, local)
+		// 406 Not Acceptable:
+		// サーバ側が受付不可能な値であり提供できない状態
+		return
+	}
+
+	// Execute locate command
+	start := time.Now()
+	result, ok, err := caches.Traverse(&local) // err <- OS command error
+	if local.Args.Debug {
+		log.Debugf("gocate result %v", result)
+	}
+	end := (time.Since(start)).Nanoseconds()
+	local.Stats.SearchTime = float64(end) / float64(time.Millisecond)
+
+	// Response & Logging
+	if err != nil {
+		log.Errorf("%s [ %-50s ]", err, query.Q)
+		c.JSON(500, local)
+		// 500 Internal Server Error
+		// 何らかのサーバ内で起きたエラー
+	} else {
+		getpushLog := "PUSH result to cache"
+		if ok {
+			getpushLog = "GET result from cache"
+		}
+		local.Paths = result
+		l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q}
+		if query.Logging {
+			log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
+		} else {
+			fmt.Printf("[NO LOGGING NOTICE]\t%8dfiles %3.3fmsec %s [ %-50s ]\n", l...) // Printfで表示はする
+		}
+		if len(local.Paths) == 0 {
+			local.Error = "no content"
+			c.JSON(204, local)
+			// 204 No Content
+			// リクエストに対して送信するコンテンツは無いが
+			// ヘッダは有用である
+			return
+		}
+		c.JSON(http.StatusOK, local)
+		// 200 OK
+		// リクエストが正常に処理できた
+	}
+}
+
+func fetchHistory(c *gin.Context) {
+	history, err := cmd.Datalist(LOGFILE)
+	if err != nil {
+		log.Error(err)
+		c.JSON(404, history)
+		return
+	}
+	gt := api.IntQuery(c, "gt") // history?gt=10 => gt==10
+	lt := api.IntQuery(c, "lt") // history?lt=100 => lt==100
+	// lt default value is infinity
+	if lt == 0 {
+		lt = math.MaxInt64
+	}
+	// if designated query gt & lt then filter the history
+	// No query gt nor lt then nothing to do
+	if gt != 0 || lt != math.MaxInt64 {
+		history = history.Filter(gt, lt)
+	}
+	c.JSON(http.StatusOK, history)
+}
+
+func fetchStatus(c *gin.Context) {
+	l, err := cmd.LocateStats(locater.Args.Dbpath) // err <- OS command error
+	ss := strings.Split(string(l), "\n")
+	if err != nil {
+		log.Errorf("error: %s", err)
+		c.JSON(500, gin.H{
+			"locate-S": ss,
+			"error":    err,
+		})
+		// 500 Internal Server Error
+		// 何らかのサーバ内で起きたエラー
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"locate-S": ss,
+		"error":    err,
+	})
 }
 
 // Parse command line option

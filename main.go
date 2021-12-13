@@ -175,7 +175,7 @@ func fetchJSON(c *gin.Context) {
 	if err != nil {
 		log.Errorf("error %v", err)
 		local.Error = fmt.Sprintf("%v", err)
-		c.JSON(404, local)
+		c.JSON(406, local)
 		// 406 Not Acceptable:
 		// サーバ側が受付不可能な値であり提供できない状態
 		return

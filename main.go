@@ -196,30 +196,28 @@ func fetchJSON(c *gin.Context) {
 		c.JSON(500, local)
 		// 500 Internal Server Error
 		// 何らかのサーバ内で起きたエラー
-	} else {
-		getpushLog := "PUSH result to cache"
-		if ok {
-			getpushLog = "GET result from cache"
-		}
-		local.Paths = result
-		l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q}
-		if query.Logging {
-			log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
-		} else {
-			fmt.Printf("[NO LOGGING NOTICE]\t%8dfiles %3.3fmsec %s [ %-50s ]\n", l...) // Printfで表示はする
-		}
-		if len(local.Paths) == 0 {
-			local.Error = "no content"
-			c.JSON(204, local)
-			// 204 No Content
-			// リクエストに対して送信するコンテンツは無いが
-			// ヘッダは有用である
-			return
-		}
-		c.JSON(http.StatusOK, local)
-		// 200 OK
-		// リクエストが正常に処理できた
+		return
 	}
+	local.Paths = result
+	getpushLog := "PUSH result to cache"
+	if ok {
+		getpushLog = "GET result from cache"
+	}
+	if !query.Logging {
+		getpushLog = "NO LOGGING result"
+	}
+	log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q)
+	if len(local.Paths) == 0 {
+		local.Error = "no content"
+		c.JSON(204, local)
+		// 204 No Content
+		// リクエストに対して送信するコンテンツは無いが
+		// ヘッダは有用である
+		return
+	}
+	c.JSON(http.StatusOK, local)
+	// 200 OK
+	// リクエストが正常に処理できた
 }
 
 func fetchHistory(c *gin.Context) {

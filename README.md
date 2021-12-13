@@ -233,6 +233,16 @@ docker run --name personal --volumes-from db\
 
 
 # Release Note
+
+## v3.1.0: REST API サーバー化
+* API
+
+| 説明 | メソッド | URI | パラメータ |
+|----|------|-----|-------|
+| ファイルパスを検索する | GET | /json |  q=, logging=, limit= |
+| 検索履歴を見る | GET | /history |  gt=, lt= |
+| DBの状態確認 | GET | /status |   |
+
 ## v3.0.0: REST API サーバー化
 * 検索結果をJSONとして取得し、非同期にHTMLとして描画します。
 * 検索ワードハイライト機能をサーバーサイドからクライアントサイドで実行するように変更しました。

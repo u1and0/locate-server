@@ -21,7 +21,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "3.0.0r"
+	VERSION = "3.1.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locate (gocate) search db path

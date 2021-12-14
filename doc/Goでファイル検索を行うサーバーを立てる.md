@@ -140,25 +140,24 @@ func main() {
 
 	// API
 	route.GET("/history", fetchHistory)  //...(5)
-	route.GET("/json", fetchJSON)  //...(5)
-	route.GET("/status", fetchStatus)  //...(5)
+	route.GET("/json", fetchJSON)  //...(6)
+	route.GET("/status", fetchStatus)  //...(7)
 
 	// Listen and serve on 0.0.0.0:8080
 	route.Run(":" + strconv.Itoa(port)) // => :8080
 
 // Listen and serve on 0.0.0.0:8080
-route.Run(":" + port) //...(6)
+route.Run(":" + port) //...(7)
 ```
 
 1. フレームワークは[gin](https://github.com/gin-gonic/gin)を使っています。
 2. css, JavaScript, favicon用pngファイルはstaticに置いてあります。
 3. トップページの表示はtemplates/index.htmlに`gin.H{}`構造体の内容を埋め込んで表示します。
 4. トップページと検索ページは結果の表示がされているかどうかだけで、同じテンプレートを使用します。
-5. APIを今のところ3つ用意しています。いずれもGETメソッドです。
-* /historyは検索履歴をFrecencyスコア順にしてJSONで取得します。
-* /jsonはlocate検索を走らせて検索結果をJSONで取得します。
-* /statusはDBの`locate -S`の出力をJSONで取得します。
-6. デフォルトでは8080ポートでサーバーを公開します。
+5. APIを今のところ3つ用意しています。いずれもGETメソッドです。/historyは検索履歴をFrecencyスコア順にしてJSONで取得します。
+6. /jsonはlocate検索を走らせて検索結果をJSONで取得します。
+7. /statusはDBの`locate -S`の出力をJSONで取得します。
+8. デフォルトでは8080ポートでサーバーを公開します。
 
 
 ### 検索結果を返すページ
@@ -325,18 +324,19 @@ func (cache *Map) Traverse(l *cmd.Locater) (paths cmd.Paths, ok bool, err error)
 	k := Key{w, l.Query.Limit}  //...(1)
 	if v, ok := (*cache)[k]; !ok {  //...(2)
 		// normalizedがcacheになければresultsをcacheに登録
-		paths, err = l.Locate()
-		(*cache)[k] = &paths  //...(2)
+		paths, err = l.Locate()  //...(3)
+		(*cache)[k] = &paths  //...(3)
 	} else {
-		paths = *v  //...(3)
+		paths = *v  //...(4)
 	}
 	return
 }
 ```
 
 1. 検索語(SearchWords)と除外語(ExcludeWords)を正規化(Normalize)して、MapのKeyとします。
-2. cacheからキーワードkを探して、結果がなければlocate(gocate)コマンドで検索します。(後述)
-3. cacheからキーワードkを探して、結果があればその値vを返します。
+2. cacheからキーワードkを探します。
+3. 結果がなければlocate(gocate)コマンドで検索し、pathsをcacheに登録して返します。(後述)
+4. 結果があればその値vをpathsとして返します。
 
 
 ```go:cmd/locater/locater.go
@@ -364,59 +364,52 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 
 	// Include PATTERNs
 	// -> locate --ignore-case --quiet --regex hoge.*my.*name
-	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))  //...(2)
+	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))  //...(3)
 
 	pipeline = append(pipeline, locate)
 
 	// Exclude PATTERNs
 	for _, ex := range l.ExcludeWords {
 		// COMMAND | grep -ivE EXCLUDE1 | grep -ivE EXCLUDE2
-		pipeline = append(pipeline, []string{"grep", "-ivE", ex})  //...(3)
+		pipeline = append(pipeline, []string{"grep", "-ivE", ex})  //...(4)
 	}
 
 	// Limit option
 	if l.Query.Limit > 0 {
-		pipeline = append(pipeline, []string{"head", "-n", strconv.Itoa(l.Query.Limit)})  //...(4)
+		pipeline = append(pipeline, []string{"head", "-n", strconv.Itoa(l.Query.Limit)})  //...(5)
 	}
 
 	if l.Args.Debug {
 		log.Debugf("Execute command %v", pipeline)
 	}
-	return  // => locate ... | grep -ivE ... | head -n ... ...(5)
+	return  // => locate ... | grep -ivE ... | head -n ... ...(6)
 }
 ```
 
 1. `l.CmdGen()`でコマンド文字列の生成を行い、locate(gocate)コマンドを実行します。`pipeline.Output()`の結果は[]byteで返ってくるので、[]stringに変えて返却します。
-2. locate(gocate)コマンドの文字列を生成します。`l.SearchWords`はSliceなので、locateに渡せるように".\*"を挟みます。
-3. 除外するキーワードを`grep -v`で排除します。`-i`でignore case, `-E`で正規表現。
-4. 出力行数を`head -n`で制御します。テスト環境(Linux上のDocker)ではうまくいって、本番環境(Windows上のDocker)でうまく動いていないような...。`gocate`を改造して--limitオプション付けるか思案中。
-5. 最終的にコマンドラインに入力する文字列 `locate "検索語" | grep -ivE "除外語" | head -n "結果上限数" を返します。
+2. `locate`(`gocate`)コマンドの文字列を生成します。構造体の定義は常時つくオプションです。
+3. `l.SearchWords`はSliceなので、`locate`に渡せるように".\*"を挟みます。
+4. 除外するキーワードを`grep -v`で排除します。`-i`でignore case, `-E`で正規表現。
+5. 出力行数を`head -n`で制御します。テスト環境(Linux上のDocker)ではうまくいって、本番環境(Windows上のDocker)でうまく動いていないような...。`gocate`を改造して--limitオプション付けるか思案中。
+6. 最終的にコマンドラインに入力する文字列 `locate "検索語" | grep -ivE "除外語" | head -n "結果上限数" を返します。
 
 
 ### 検索履歴のスコアを返すAPIの実装
-> locater-server v3.1.0以降
-/historyで返す検索履歴のfrecency(Frequently+recency)
-アクセスを解析しスコアリングをリスト・オブ・オブジェクトの形式のJSONで返します。
+/historyで返す検索履歴を解析し、frecencyスコア算出、その順序でJSONオブジェクトにして返します。
+スコアはfrecency(frequently 頻繁に + recency 最近のからなる造語)を算出します。、
 
 ```go:main.go/history
 route.GET("/history", func(c *gin.Context) {
 	searchHistory, err := cmd.Datalist(LOGFILE)  //...(1)
-	if err != nil {
-		log.Error(err)
-		c.JSON(404, searchHistory)
-	}
-	if locater.Args.Debug {
-		log.Debug(searchHistory)
-	}
+	/* snip...*/
 	c.JSON(http.StatusOK, searchHistory)
 })
 ```
 
-Scoreは
 
 ```go:frecency.go
 // Scoring : 日時から頻出度を算出する
-func Scoring(t time.Time) int {
+func Scoring(t time.Time) int {  //...(2)
 	since := time.Since(t).Hours()
 	switch {
 	case since < 6:
@@ -434,31 +427,181 @@ func Scoring(t time.Time) int {
 	}
 }
 
+//ScoreSum : 履歴マップの検索日時リストからスコア合計を算出する
+func ScoreSum(tl []time.Time) (score int) {
+	for _, t := range tl {
+		score += Scoring(t)
+	}
+	return
+}
 ```
 
+1. LOGFILEを解析して、frecencyスコア順で返します。詳細は`cmd/locater/frecency.go`を参照してください。
+2. スコアの参照は現在時刻からの経過時間(Hour単位)でスコアを出し、検索回数分足し算します。
 
-### 
 
+```go:main.go/status
+func fetchStatus(c *gin.Context) {
+	l, err := cmd.LocateStats(locater.Args.Dbpath) // err <- OS command error ...(1)
+	ss := strings.Split(string(l), "\n")  //...(2)
+	/* snip...*/
+	c.JSON(http.StatusOK, gin.H{  //...(3)
+		"locate-S": ss,
+		"error":    err,
+	})
+}
+```
 
-### 
+```go:command.go
+// LocateStats : Result of `locate -S`
+func LocateStats(s string) ([]byte, error) {
+	dbs, err := filepath.Glob(s + "/*.db")  //...(4)
+	if err != nil {
+		return []byte{}, err
+	}
+	d := strings.Join(dbs, ":")  //...(5)
+	b, err := exec.Command("locate", "-Sd", d).Output()  //...(6)
+	// => locate -Sd /var/lib/mlocate/db1.db:/var/lib/mlocate/db2.db:...
+	if err != nil {
+		return b, err
+	}
+	return b, err
+}
+```
+
+1. `LocateStats()`を実行して`locate -S`の結果を得ます。
+2. []byte型なので、stringにし、改行で区切ってsliceとします。
+3. 2の結果をJSONにして送ります。
+4. dbファイルを列挙します。
+5. ":"でつなげて `locate -Sd /var/lib/mlocate/db1.db:/var/lib/mlocate/db2.db:...` のように実行します。
+
 
 ## API
+
+| 説明 | メソッド | URI | パラメータ |
+|----|------|-----|-------|
+| ファイルパスを検索する | GET | /json |  q=, logging=, limit= |
+| 検索履歴を見る | GET | /history |  gt=, lt= |
+| DBの状態確認 | GET | /status |   |
+
 
 サーバーを立ち上げた状態で
 
 ```shell-session
-$ curl -fsSL localhost:8080/search?q=u1and0+locate+go
+$ curl -fsSL localhost:8080/json?q=usr+bin+sh&limit=10&logging=false
 ```
 
-とすると、検索結果をJSONにして標準出力に表示します。
+とすると、
 
-APIについてはv3.0.0より上位で色々出来るよう拡張中です。
+* 検索上限数10
+* Frecency スコアに影響しないログ出力
+* `gocate -- --regex 'usr.*bin.*sh' `  (細かいオプションは省略)
+
+上記の条件で検索した結果をJSONにして標準出力に表示します。
 
 
+## フロントエンド
+searchページに埋め込まれるjsです。
+JavaScriptでJSONをパースします。
+
+ユーザーはトップページから検索ボタンをクリックすると/searchページに飛びます。
+ここまではサーバーサイドmain.goに書かれていること。
+/searchページに飛ぶとdistributeResult.jsの`main()`が走ります。
+
+```javascript:distributeResult.js
+function main(){
+  const url = new URL(window.location.href);
+  fetchSearchHistory(url.origin + "/history");  //...(1)
+  const query = url.searchParams.get("q");
+  if (query){  // queryがなければ終了,あればサーバーからJSON呼び出し
+    fetchJSONPath(url.href.replace("search", "json"));  //...(2)
+  }
+}
+```
+
+
+```javascript:distributeResult.js
+async function fetchSearchHistory(url){
+  try{
+    const history = await fetchLocatePath(url);
+    // 検索キーワード履歴のdatalist <id=search-history>を埋める
+    history.forEach((h) =>{
+      $("#search-history").append("<option>" + h.word + "</option>");  //...(1)
+    });
+  } catch(error) {
+    console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
+  }
+}
+```
+
+1. history APIをたたき、検索履歴を取得し、検索窓のdatalistを埋めます。
+2. searchをjsonに変えて、/json APIをたたきます。
+
+
+```javascript:distributeResult.js
+async function fetchJSONPath(url){
+  try {
+    const locaterJSON = await fetchLocatePath(url);
+    const locater = new Locater(locaterJSON);
+		/* snip...*/
+    if (!locater.error) {
+			/* snip...*/
+      // Rolling next data
+      let n = 0;
+      const shift = 100;
+      locater.displayRoll(n, shift);
+      $(window).on("scroll", function(){ // scrollで下限近くまで来ると次をロード
+        const inner = $(window).innerHeight();
+        const outer = $(window).outerHeight();
+        const bottom = inner - outer;
+        const tp = $(window).scrollTop();
+        if (tp * 1.05 >= bottom) {
+          //スクロールの位置が下部5%の範囲に来た場合
+          n += shift;
+          locater.displayRoll(n, shift);
+        }
+      });
+    } else {
+      console.error("error: ", locater.error);
+      const err = document.getElementById("error-view");
+      err.innerHTML = "<p>" + locater.error + "</p>";
+    }
+  // 今のところcatchする例外発生ない
+  } catch(error) {
+    console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
+  }
+}
+```
 
 ## デプロイ
 docker
 
+
+```dockerfile
+FROM golang:1.17.0-alpine3.14 AS go_official  #...(1)
+RUN apk --update --no-cache add git &&\
+    go install github.com/u1and0/gocate@v0.3.0
+WORKDIR /go/src/github.com/u1and0/locate-server
+# For go module using go-pipeline
+ENV GO111MODULE=on
+COPY ./main.go /go/src/github.com/u1and0/locate-server/main.go
+COPY ./go.mod /go/src/github.com/u1and0/locate-server/go.mod
+COPY ./go.sum /go/src/github.com/u1and0/locate-server/go.sum
+COPY ./cmd /go/src/github.com/u1and0/locate-server/cmd
+RUN go build -o /go/bin/locate-server
+
+FROM frolvlad/alpine-glibc:alpine-3.14_glibc-2.33  #...(4)
+RUN apk --update --no-cache add mlocate tzdata
+WORKDIR /var/www
+COPY --from=go_official /go/bin/locate-server /usr/bin/locate-server
+COPY --from=go_official /go/bin/gocate /usr/bin/gocate
+COPY ./static /var/www/static
+COPY ./templates /var/www/templates
+ENTRYPOINT ["/usr/bin/locate-server"]
+
+```
+
+1. go
 
 
 ###################

@@ -206,7 +206,8 @@ func fetchJSON(c *gin.Context) {
 	if !query.Logging {
 		getpushLog = "NO LOGGING result"
 	}
-	log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q)
+	l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q}
+	log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
 	if len(local.Paths) == 0 {
 		local.Error = "no content"
 		c.JSON(204, local)

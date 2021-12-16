@@ -8,6 +8,22 @@
 本記事は[locate-server](https://github.com/u1and0/locate-server) v3.1.0の時点のREADMEを補完するドキュメントを記事としました。
 
 
+## 必要な知識
+この記事を読むために必要な知識
+
+* Go
+	* Gin(フレームワーク)
+* ShellScript
+* HTML5
+* CSS3
+* JavaScript
+  * jQuery
+  * Ajax
+* Docker(プラットフォーム)
+	* Docker Compose
+
+どれも入門レベルの知識で済むと思います。
+
 ## 実行
 ### 前提条件
 サーバーを立ち上げるホストマシンに下記パッケージが必要です。
@@ -75,7 +91,7 @@ $ locate-server -d /home/mydir/mlocate -t '/mnt' -r '\\ns\FileShare' -s
 <!-- 私はLinuxが使えるので、ファイルサーバーをシステム上にマウントしてlocateコマンド打っていれば検索できますが、そのパスはLinuxファイルセパレータで書かれているのでコピペでそのファイルにアクセスできるわけもなく、多少便利になった程度でした。 -->
 <!--  -->
 
-## 内部動作
+## 内部動作(サーバーサイド)
 ### 動作概要
 * ウェブブラウザからの入力で指定ディレクトリ下にあるファイル内の文字列に対してlocateコマンドを使用した正規表現検索を行い、結果をJSONにしてクライアントに送ります。
 * JSONを受け取ったクライアントは、static下に配置されたJavaScriptファイルでHTMLに変換して描画します。
@@ -500,12 +516,18 @@ $ curl -fsSL localhost:8080/json?q=usr+bin+sh&limit=10&logging=false
 上記の条件で検索した結果をJSONにして標準出力に表示します。
 
 
-## フロントエンド
+## 内部動作(クライアントサイド)
+~~初めての~~フロントエンド開発していきます。
 searchページに埋め込まれるjsです。
 JavaScriptでJSONをパースします。
 
+[JavaScriptPrimer 第2部/Ajax通信](https://jsprimer.net/use-case/ajaxapp/)を参考にしました。
+
+
+### 動作
+
 ユーザーはトップページから検索ボタンをクリックすると/searchページに飛びます。
-ここまではサーバーサイドmain.goに書かれていること。
+> ここまではサーバーサイドmain.goに書かれていること。
 /searchページに飛ぶとdistributeResult.jsの`main()`が走ります。
 
 ```javascript:distributeResult.js
@@ -535,22 +557,22 @@ async function fetchSearchHistory(url){
 ```
 
 1. history APIをたたき、検索履歴を取得し、検索窓のdatalistを埋めます。
-2. searchをjsonに変えて、/json APIをたたきます。
+2. URLのsearchをjsonに変えて、/json APIをたたきます。
 
 
 ```javascript:distributeResult.js
 async function fetchJSONPath(url){
   try {
     const locaterJSON = await fetchLocatePath(url);
-    const locater = new Locater(locaterJSON);
+    const locater = new Locater(locaterJSON);  //...(1)
 		/* snip...*/
     if (!locater.error) {
 			/* snip...*/
       // Rolling next data
       let n = 0;
       const shift = 100;
-      locater.displayRoll(n, shift);
-      $(window).on("scroll", function(){ // scrollで下限近くまで来ると次をロード
+      locater.displayRoll(n, shift);  //...(2)
+      $(window).on("scroll", function(){ // scrollで下限近くまで来ると次をロード  //...(2)
         const inner = $(window).innerHeight();
         const outer = $(window).outerHeight();
         const bottom = inner - outer;
@@ -558,7 +580,7 @@ async function fetchJSONPath(url){
         if (tp * 1.05 >= bottom) {
           //スクロールの位置が下部5%の範囲に来た場合
           n += shift;
-          locater.displayRoll(n, shift);
+          locater.displayRoll(n, shift);  //...(2)
         }
       });
     } else {
@@ -573,14 +595,42 @@ async function fetchJSONPath(url){
 }
 ```
 
+1. /json APIを非同期に実行し、クラス構文でlocaterを生成します。
+2. `locater.displayRoll()`では100件ずつ(n~n+100件)の行をリンクとしてHTMLテンプレートのid=resultに追加していきます。
+
+```javascript:distributeResult.js/displayRoll()
+// 検索パス表示
+displayRoll(n, shift){
+	const folderIcon = '<i class="far fa-folder-open" title="クリックでフォルダを開く"></i>';  //...(1)
+	const sep = this.args.pathSplitWin ? "\\" : "/";
+	const dataArray = this.paths.slice(n, n + shift);  //...(2)
+	dataArray.forEach((p) =>{  //...(2)
+		const modified = this.pathModify(p);  //...(3)
+		const highlight = this.highlightRegex(modified);  //...(4)
+		const dir = Locater.dirname(modified, sep);  //...(5)
+		let result = `<a href="file://${modified}">${highlight}</a>`;
+		result += `<a href="file://${dir}"> ${folderIcon} </a>`;
+		$("#result").append("<tr><td>" + result + "</td></tr>");
+	});
+}
+```
+
+1. フォルダ―アイコンは[Font Awesome](https://fontawesome.com/v4.7/icon/folder-open)からフリーの物を選びました。
+2. n~n+shift件ずつ処理します。関数呼び出し時に0~100, 100~200, ... と増えていきます。(sliceだから0~99件目、の処理か。)
+3. (指定されていれば)パスのプレフィックスを追加、削除、パスセパレートをUNIX式からWindows式に変更します。
+4. 正規表現を用いて、検索ワードの背景を黄色くします。前方一致でハイライトしていますので、`locate`コマンドのマッチとは差異があります。(既知のバグ)
+5. ファイルの親ディレクトリをフォルダ―アイコンのリンクに指定します。
+6. id=resultに追加していきます。
+
+
+
 ## デプロイ
-docker
+Docker, Docker Composeを使用しています。
 
-
-```dockerfile
+```dockerfile:Dockerfile
 FROM golang:1.17.0-alpine3.14 AS go_official  #...(1)
 RUN apk --update --no-cache add git &&\
-    go install github.com/u1and0/gocate@v0.3.0
+    go install github.com/u1and0/gocate@v0.3.0  #...(2)
 WORKDIR /go/src/github.com/u1and0/locate-server
 # For go module using go-pipeline
 ENV GO111MODULE=on
@@ -590,90 +640,86 @@ COPY ./go.sum /go/src/github.com/u1and0/locate-server/go.sum
 COPY ./cmd /go/src/github.com/u1and0/locate-server/cmd
 RUN go build -o /go/bin/locate-server
 
-FROM frolvlad/alpine-glibc:alpine-3.14_glibc-2.33  #...(4)
+FROM frolvlad/alpine-glibc:alpine-3.14_glibc-2.33  #...(3)
 RUN apk --update --no-cache add mlocate tzdata
-WORKDIR /var/www
-COPY --from=go_official /go/bin/locate-server /usr/bin/locate-server
-COPY --from=go_official /go/bin/gocate /usr/bin/gocate
-COPY ./static /var/www/static
-COPY ./templates /var/www/templates
+WORKDIR /var/www  #...(4)
+COPY --from=go_official /go/bin/locate-server /usr/bin/locate-server  #...(5)
+COPY --from=go_official /go/bin/gocate /usr/bin/gocate  #...(5)
+COPY ./static /var/www/static  #...(4)
+COPY ./templates /var/www/templates  #...(4)
 ENTRYPOINT ["/usr/bin/locate-server"]
-
 ```
 
-1. go
+1. multistage buildでlocate-serverのバイナリをbuildします。
+2. 依存性のあるgocateもインストールします。
+3. 実行するコンテナを作成します。
+4. HTML, CSS, JS ファイルをコピーします。コマンドの実行ディレクトリと同じ場所にする必要があります。(同じ場所にしないとtemplateが見つからないエラー)
+5. goのバイナリをビルドコンテナからコピーしてきます。
 
 
-###################
+```yaml:docker-compose.yml(一例)
+version: "3"
+services:
+    web:
+        # image: u1and0/locate-server:latest  #...(1)
+        build:  #...(1)
+            context: .
+        ports:
+          - 8081:8080
+        volumes:
+            - db:/var/lib/mlocate  #...(2)
+        environment:
+            - TZ=Asia/Tokyo
+        working_dir: /var/www
+        entrypoint: /usr/bin/locate-server
+        # command: ["-debug"]  #...(3)
 
-## JavaScript 上のエラーハンドリング
+    db:
+        image: busybox
+        volumes:
+            - /var/lib/mlocate:/var/lib/mlocate  #...(2)
 
-```javascript
-function fetchLocatePath(url){
-  return fetch(url)
-    .then(response =>{
-      if (!response.ok) {
-        return Promise.reject(new Error(`{${response.status}: ${response.statusText}`));
-      } else{
-        return response.json(); //.then(userInfo =>  ここはmain()で解決
-      }
-    });
-}
+    app:
+        build:
+             context: ./app
+        volumes:
+            - db:/var/lib/mlocate  #...(2)
+
+volumes:
+    db:
 ```
 
-statusがOK(code 200)ではないときは常にPromise.rejectで拒否されます。
+| サービス名         | 説明                             |
+|---------------|--------------------------------|
+| web | locate-server実行コンテナ               |
+| db  | appとwebが共有するデータベースコンテナ  |
+| app | updatedbをcronで実行するコンテナ |
 
-response.statusでコード100~500番のコードを取得します。。
-response.statusTextにはコードの詳しい内容(404ならNot Foundとか)が書かれています。
+1. イメージをpullするか、git cloneした後のDockerfileからイメージを作成します。
+2. dbコンテナでwebとappで共有するフォルダを指定します。
+3. webコンテナのentrypointが`locate-server`なので、`locate-server`のオプションはcommandに追記します。
 
+appコンテナはホストマシンでupdatedbを行うなら不要です。
+そうするとdbも不要です。直接ホスト上の/var/lib/mlocateディレクトリでもマウントしておけばいいわけですので。
 
-[](https://ja.javascript.info/promise-error-handling?utm_source=pocket_mylist)の例に見られるように、statusをチェックしたあと、200でなければエラーをthrowするようにします。
-
-```javascript
-class HttpError extends Error { // (1)
-  constructor(response) {
-    super(`${response.status} for ${response.url}`);
-    this.name = 'HttpError';
-    this.response = response;
-  }
-}
-
-function loadJson(url) {
-  return fetch(url)
-    .then(response => {
-      if (response.status == 200) { // (2)
-        return response.json();
-      } else {
-        throw new HttpError(response);
-      }
-    })
-}
+```yaml
+web:
+    volumes:
+        - /var/lib/mlocate:/var/lib/mlocate
 ```
 
-1. HTTPerror カスタムクラス
-1. 非200ステータスをエラーとする
+appコンテナでupdatedbを定期実行させていても、dbコンテナは不要かも、と考えるかもしれません。
+appにもwebにも直接ホスト上の/var/lib/mlocateディレクトリをマウントしておけばいいわけですので。
 
-使い方は以下の(2)のところ。
+```yaml
+web:
+    volumes:
+        - /var/lib/mlocate:/var/lib/mlocate
 
-```javascript
-function demoGithubUser() {
-  let name = prompt("Enter a name?", "iliakan");
-
-  return loadJson(`https://api.github.com/users/${name}`)
-    .then(user => {
-      alert(`Full name: ${user.name}.`); // (1)
-      return user;
-    })
-    .catch(err => {
-      if (err instanceof HttpError && err.response.status == 404) { // (2)
-        alert("No such user, please reenter.");
-        return demoGithubUser();
-      } else {
-        throw err;
-      }
-    });
-}
-
-demoGithubUser();
+app:
+    volumes:
+        - /var/lib/mlocate:/var/lib/mlocate
 ```
 
+しかしながら、私の本番環境ではWindows上のVirtualboxでDockerコンテナ立てています。
+ホスト上のntfs形式のディレクトリにdb置いたら検索がとてつもなく遅くなってしまったので、あえてdb置く場所はコンテナ上にしております。

@@ -15,7 +15,6 @@
 	* Gin(フレームワーク)
 * ShellScript
 * HTML5
-* CSS3
 * JavaScript
   * jQuery
   * Ajax
@@ -24,8 +23,8 @@
 
 どれも入門レベルの知識で済むと思います。
 
-## 実行
-### 前提条件
+# 実行
+## 前提条件
 サーバーを立ち上げるホストマシンに下記パッケージが必要です。
 
 * mlocate
@@ -43,7 +42,7 @@
 `gocate`について参考: [並列実行できるlocateコマンドの実装](https://qiita.com/u1and0/items/964be5817da800b82603)
 
 
-### サーバーサイド
+## サーバーサイドの実行
 
 * Linuxファイルシステムの検索
 * /var/lib/mlocate に`updatedb`または `gocate -init` で作成したデータベースファイルが既にある
@@ -74,7 +73,7 @@ $ locate-server -d /home/mydir/mlocate -t '/mnt' -r '\\ns\FileShare' -s
 ```
 
 
-### クライアントサイド
+## クライアントサイドの実行
 サーバーサイドでサーバーを立ち上げたら、クライアントはブラウザのURL欄に `localhost:8080` と入力するとトップページが表示されます。
 
 
@@ -91,12 +90,12 @@ $ locate-server -d /home/mydir/mlocate -t '/mnt' -r '\\ns\FileShare' -s
 <!-- 私はLinuxが使えるので、ファイルサーバーをシステム上にマウントしてlocateコマンド打っていれば検索できますが、そのパスはLinuxファイルセパレータで書かれているのでコピペでそのファイルにアクセスできるわけもなく、多少便利になった程度でした。 -->
 <!--  -->
 
-## 内部動作(サーバーサイド)
-### 動作概要
+# 内部動作(サーバーサイド)
+## サーバーサイドの動作概要
 * ウェブブラウザからの入力で指定ディレクトリ下にあるファイル内の文字列に対してlocateコマンドを使用した正規表現検索を行い、結果をJSONにしてクライアントに送ります。
 * JSONを受け取ったクライアントは、static下に配置されたJavaScriptファイルでHTMLに変換して描画します。
 
-### ディレクトリ構造
+## ディレクトリ構造
 パッケージのディレクトリ構造は次のようになります。
 
 ```
@@ -131,7 +130,7 @@ locate-server
 └── docker-compose.yml
 ```
 
-### ページの表示
+## ページの表示
 
 ```go:main.go
 import (
@@ -160,10 +159,8 @@ func main() {
 	route.GET("/status", fetchStatus)  //...(7)
 
 	// Listen and serve on 0.0.0.0:8080
-	route.Run(":" + strconv.Itoa(port)) // => :8080
-
-// Listen and serve on 0.0.0.0:8080
-route.Run(":" + port) //...(7)
+	route.Run(":" + strconv.Itoa(port)) // => :8080 ...(8)
+}
 ```
 
 1. フレームワークは[gin](https://github.com/gin-gonic/gin)を使っています。
@@ -176,7 +173,63 @@ route.Run(":" + port) //...(7)
 8. デフォルトでは8080ポートでサーバーを公開します。
 
 
-### 検索結果を返すページ
+```html:template/index.tmpl
+<html>
+    <head>
+		<!-- snip -->
+    </head>
+    <body>
+
+		<!-- 1 -->
+
+      <!-- GET method URI-->
+      <form name="form1" method="get" action="/search">
+        <a href=/ class="fas fa-home" title="Locate Server Home"></a>
+        <!-- 検索窓 -->
+        <input type="text" name="q" value="{{ .query }}" size="50" list="search-history" placeholder="検索キーワードを入力">
+        <!-- 検索履歴 Frecency リスト -->
+        <datalist id="search-history"></datalist>
+        <!-- 検索ボタン -->
+        <input type="submit" id="submit" value="&#xf002;" class="fas">
+        <input type="button" onclick="toggleMenu('hidden-explain')" value="&#xf05a;" class=fas title="Help"> <!--// Help折りたたみ展開ボタン -->
+      </form>
+
+		<!-- snip -->
+
+		<!-- 2 -->
+
+      <!-- Database status -->
+      <div id="search-status">
+        <b><a href=/status>DB</a> last update: {{ .lastUpdateTime }}</b><br>
+      </div>
+
+		<!-- 3 -->
+
+      <!-- Search result -->
+      <div class="loader-wrap">
+        <div class="loader">Loading...</div>
+      </div>
+      <table id="result"></table>
+      <div id="error-view"><div>
+
+
+		<!-- 4 -->
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="text/javascript" src="/static/distributeResult.js"></script>
+    <script type="text/javascript" src="/static/tooltips.js"></script>
+    <script type="text/javascript" src="/static/datalist.js"></script>
+  </body>
+</html>
+```
+
+1. 検索フォームです。/search?q=キーワードのページに飛びます。
+2. DBのステータス表示です。
+3. 検索結果とエラーを表示します。ページを読み込むまで、ロードスピナーが回ります。
+4. 使用するJavaScriptファイルです。
+
+
+## 検索結果を返すページ
 ユーザーが主にアクセスするページです。
 topPage()はsearchPage()の簡略版なので、省略します。
 
@@ -221,7 +274,7 @@ func searchPage(c *gin.Context) {
 4. タイトルと更新時間と、ページ遷移前に検索窓に入力された文字列を検索窓に再入力してページを表示します。
 
 
-### 検索結果を返すAPIの実装
+## 検索結果を返すAPIの実装
 ```go:main.go/json
 func fetchJSON(c *gin.Context) {
 	// locater.Query initialize
@@ -410,7 +463,7 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 6. 最終的にコマンドラインに入力する文字列 `locate "検索語" | grep -ivE "除外語" | head -n "結果上限数" を返します。
 
 
-### 検索履歴のスコアを返すAPIの実装
+## 検索履歴のスコアを返すAPIの実装
 /historyで返す検索履歴を解析し、frecencyスコア算出、その順序でJSONオブジェクトにして返します。
 スコアはfrecency(frequently 頻繁に + recency 最近のからなる造語)を算出します。、
 
@@ -492,7 +545,7 @@ func LocateStats(s string) ([]byte, error) {
 5. ":"でつなげて `locate -Sd /var/lib/mlocate/db1.db:/var/lib/mlocate/db2.db:...` のように実行します。
 
 
-## API
+# API
 
 | 説明 | メソッド | URI | パラメータ |
 |----|------|-----|-------|
@@ -516,19 +569,37 @@ $ curl -fsSL localhost:8080/json?q=usr+bin+sh&limit=10&logging=false
 上記の条件で検索した結果をJSONにして標準出力に表示します。
 
 
-## 内部動作(クライアントサイド)
+# 内部動作(クライアントサイド)
 ~~初めての~~フロントエンド開発していきます。
-searchページに埋め込まれるjsです。
+
+## クライアントサイドの動作概要
+
+
+## 検索
+ユーザーはトップページから検索ボタンをクリックすると/searchページに飛びます。
+> ここまではサーバーサイドmain.goに書かれていること。
+/searchページに飛ぶとdistributeResult.jsの`main()`が走ります。
 JavaScriptでJSONをパースします。
 
 [JavaScriptPrimer 第2部/Ajax通信](https://jsprimer.net/use-case/ajaxapp/)を参考にしました。
 
 
-### 動作
+```javascript:distributeResult.js
+function main(){
+  const url = new URL(window.location.href);
+  fetchSearchHistory(url.origin + "/history");
+  const query = url.searchParams.get("q");
+  if (query){  // queryがなければ終了,あればサーバーからJSON呼び出し
+    fetchJSONPath(url.href.replace("search", "json"));  //...(1)
+  }
+}
+```
 
-ユーザーはトップページから検索ボタンをクリックすると/searchページに飛びます。
-> ここまではサーバーサイドmain.goに書かれていること。
-/searchページに飛ぶとdistributeResult.jsの`main()`が走ります。
+1. URLのsearchをjsonに変えて、/json APIをたたきます。
+
+
+## 検索キーワードサジェスト機能
+検索履歴を検索フォームに入れて以前の検索キーワードをを探しやすくします。
 
 ```javascript:distributeResult.js
 function main(){
@@ -536,7 +607,7 @@ function main(){
   fetchSearchHistory(url.origin + "/history");  //...(1)
   const query = url.searchParams.get("q");
   if (query){  // queryがなければ終了,あればサーバーからJSON呼び出し
-    fetchJSONPath(url.href.replace("search", "json"));  //...(2)
+    fetchJSONPath(url.href.replace("search", "json"));
   }
 }
 ```
@@ -556,9 +627,26 @@ async function fetchSearchHistory(url){
 }
 ```
 
-1. history APIをたたき、検索履歴を取得し、検索窓のdatalistを埋めます。
-2. URLのsearchをjsonに変えて、/json APIをたたきます。
+```javascript:datalist.js
+$("q").on('input', function () {  //...(2)
+    var val = this.value;
+    if($('#searched-words option').filter(function(){
+        return this.value.toUpperCase() === val.toUpperCase();
+    }).length) {
+        //send ajax request
+        alert(this.value);
+    }
+});
+```
 
+1. history APIをたたき、検索履歴を取得し、検索キーワード候補を検索窓に埋め込みます。
+2. 一文字打つたびに、検索履歴をFrecency スコア順に表示します。
+
+
+## 検索結果の遅延表示
+ページ下部付近にくると検索結果を100件ごとに表示します。
+なぜ遅延させているかというと、JavaScriptの正規表現が遅いことと、検索結果件数(1~数万件)によってページ読み込み時間が大幅に変わってきてしますためです。
+100件ごとに正規表現ハイライトすれば、体感的に待たされる感覚がなくなります。
 
 ```javascript:distributeResult.js
 async function fetchJSONPath(url){
@@ -598,6 +686,7 @@ async function fetchJSONPath(url){
 1. /json APIを非同期に実行し、クラス構文でlocaterを生成します。
 2. `locater.displayRoll()`では100件ずつ(n~n+100件)の行をリンクとしてHTMLテンプレートのid=resultに追加していきます。
 
+
 ```javascript:distributeResult.js/displayRoll()
 // 検索パス表示
 displayRoll(n, shift){
@@ -624,7 +713,7 @@ displayRoll(n, shift){
 
 
 
-## デプロイ
+# デプロイ
 Docker, Docker Composeを使用しています。
 
 ```dockerfile:Dockerfile
@@ -696,8 +785,8 @@ volumes:
 | app | updatedbをcronで実行するコンテナ |
 
 1. イメージをpullするか、git cloneした後のDockerfileからイメージを作成します。
-2. dbコンテナでwebとappで共有するフォルダを指定します。
-3. webコンテナのentrypointが`locate-server`なので、`locate-server`のオプションはcommandに追記します。
+2. webとappで共有するフォルダを指定します。
+3. webコンテナのentrypointが`/usr/bin/locate-server`なので、`locate-server`のオプションはcommandに追記します。
 
 appコンテナはホストマシンでupdatedbを行うなら不要です。
 そうするとdbも不要です。直接ホスト上の/var/lib/mlocateディレクトリでもマウントしておけばいいわけですので。
@@ -723,3 +812,6 @@ app:
 
 しかしながら、私の本番環境ではWindows上のVirtualboxでDockerコンテナ立てています。
 ホスト上のntfs形式のディレクトリにdb置いたら検索がとてつもなく遅くなってしまったので、あえてdb置く場所はコンテナ上にしております。
+
+
+# まとめ

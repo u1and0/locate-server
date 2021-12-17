@@ -1,3 +1,5 @@
+# はじめに
+
 ファイルパスを検索し結果をJSONで返すREST APIサーバーを立てます。
 ひとまず動きのイメージを掴むデモです。
 
@@ -8,7 +10,6 @@
 本記事は[locate-server](https://github.com/u1and0/locate-server) v3.1.0の時点のREADMEを補完するドキュメントを記事としました。
 
 
-## 必要な知識
 この記事を読むために必要な知識
 
 * Go
@@ -118,7 +119,8 @@ locate-server
 │       └── locater_test.go
 ├── static
 │   ├── datalist.js
-│   ├── distributeResult.js
+│   ├── main.js
+│   ├── locater.js
 │   ├── icons8-検索-50.png
 │   ├── search-location-solid.png
 │   ├── style.css
@@ -216,7 +218,8 @@ func main() {
 		<!-- 4 -->
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script type="text/javascript" src="/static/distributeResult.js"></script>
+    <script type="text/javascript" src="/static/locater.js"></script>
+    <script type="text/javascript" src="/static/main.js"></script>
     <script type="text/javascript" src="/static/tooltips.js"></script>
     <script type="text/javascript" src="/static/datalist.js"></script>
   </body>
@@ -545,7 +548,7 @@ func LocateStats(s string) ([]byte, error) {
 5. ":"でつなげて `locate -Sd /var/lib/mlocate/db1.db:/var/lib/mlocate/db2.db:...` のように実行します。
 
 
-# API
+## API
 
 | 説明 | メソッド | URI | パラメータ |
 |----|------|-----|-------|
@@ -578,13 +581,13 @@ $ curl -fsSL localhost:8080/json?q=usr+bin+sh&limit=10&logging=false
 ## 検索
 ユーザーはトップページから検索ボタンをクリックすると/searchページに飛びます。
 > ここまではサーバーサイドmain.goに書かれていること。
-/searchページに飛ぶとdistributeResult.jsの`main()`が走ります。
+/searchページに飛ぶとmain.jsの`main()`が走ります。
 JavaScriptでJSONをパースします。
 
 [JavaScriptPrimer 第2部/Ajax通信](https://jsprimer.net/use-case/ajaxapp/)を参考にしました。
 
 
-```javascript:distributeResult.js
+```javascript:main.js
 function main(){
   const url = new URL(window.location.href);
   fetchSearchHistory(url.origin + "/history");
@@ -601,7 +604,7 @@ function main(){
 ## 検索キーワードサジェスト機能
 検索履歴を検索フォームに入れて以前の検索キーワードをを探しやすくします。
 
-```javascript:distributeResult.js
+```javascript:main.js
 function main(){
   const url = new URL(window.location.href);
   fetchSearchHistory(url.origin + "/history");  //...(1)
@@ -610,10 +613,7 @@ function main(){
     fetchJSONPath(url.href.replace("search", "json"));
   }
 }
-```
 
-
-```javascript:distributeResult.js
 async function fetchSearchHistory(url){
   try{
     const history = await fetchLocatePath(url);
@@ -648,7 +648,7 @@ $("q").on('input', function () {  //...(2)
 なぜ遅延させているかというと、JavaScriptの正規表現が遅いことと、検索結果件数(1~数万件)によってページ読み込み時間が大幅に変わってきてしますためです。
 100件ごとに正規表現ハイライトすれば、体感的に待たされる感覚がなくなります。
 
-```javascript:distributeResult.js
+```javascript:main.js
 async function fetchJSONPath(url){
   try {
     const locaterJSON = await fetchLocatePath(url);
@@ -683,11 +683,26 @@ async function fetchJSONPath(url){
 }
 ```
 
+```javascript:locater.js
+class Locater {  //...(1)
+  constructor(json){
+    this.args = json.args;  // command line argument
+    this.query = json.query;  // API args
+    this.searchWords = json.searchWords;  // search word for searching
+    this.excludeWords = json.excludeWords;  // exclude word for searching
+    this.paths = json.paths;  // result of locate command
+    this.stats = json.stats;  // stats info at database
+    this.error = json.error; // Error message
+  }
+  /* snip...*/
+
+```
+
 1. /json APIを非同期に実行し、クラス構文でlocaterを生成します。
 2. `locater.displayRoll()`では100件ずつ(n~n+100件)の行をリンクとしてHTMLテンプレートのid=resultに追加していきます。
 
 
-```javascript:distributeResult.js/displayRoll()
+```javascript:locater.js/Locater.displayRoll()
 // 検索パス表示
 displayRoll(n, shift){
 	const folderIcon = '<i class="far fa-folder-open" title="クリックでフォルダを開く"></i>';  //...(1)

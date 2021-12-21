@@ -19,7 +19,7 @@ class Locater {
   }
 
   // 検索パス表示
-  displayRoll(n, shift){
+  lazyLoad(n, shift){
     const folderIcon = '<i class="far fa-folder-open" title="クリックでフォルダを開く"></i>';
     const sep = this.args.pathSplitWin ? "\\" : "/";
     const dataArray = this.paths.slice(n, n + shift);

@@ -49,7 +49,7 @@ async function fetchJSONPath(url){
       // Rolling next data
       let n = 0;
       const shift = 100;
-      locater.displayRoll(n, shift);
+      locater.lazyLoad(n, shift);
       $(window).on("scroll", function(){ // scrollで下限近くまで来ると次をロード
         const inner = $(window).innerHeight();
         const outer = $(window).outerHeight();
@@ -58,7 +58,7 @@ async function fetchJSONPath(url){
         if (tp * 1.05 >= bottom) {
           //スクロールの位置が下部5%の範囲に来た場合
           n += shift;
-          locater.displayRoll(n, shift);
+          locater.lazyLoad(n, shift);
         }
       });
     } else {

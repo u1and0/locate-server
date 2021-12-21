@@ -12,11 +12,13 @@
 本記事は[locate-server](https://github.com/u1and0/locate-server) v3.1.0の時点のREADMEを補完するドキュメントを記事としました。
 
 
-この記事を読むために必要な知識
+この記事を読むために必要な知識を挙げます。
 
 * Go
 	* Gin(フレームワーク)
 * ShellScript
+	* `locate`(検索エンジン)
+	* `updatedb`(データベース)
 * HTML5
 * JavaScript
   * jQuery
@@ -35,15 +37,13 @@
 
 `mlocate`は`locate`、`updatedb`を実行するパッケージです。
 普通のLinuxディストリビューションには標準で入っていると思います。
-`gocate`は`locate`と`updatedb`コマンドを並列実行できるコマンドです。この`locate-server`のために自作しました。これのおかげで検索実行時間が20秒から4秒台に縮まりました。[^2]
+`gocate`[^1]は`locate`[^2]と`updatedb`コマンドを並列実行できるコマンドです。この`locate-server`のために自作しました。これのおかげで検索実行時間が20秒から4秒台に縮まりました。[^3]
 
-[^2]: たぶんファイルシステムがntfsではなくext4だったら`locate`でも十分速いと思います。 テスト環境(Linux)でほぼ同数のファイル検索に10秒以上かかったことがありません。テスト環境のドライブがHDDではなくSSDであることも起因しているかもしれません。 テスト環境のCPUスレッド数が6に対して、本番環境(Windows)のスレッド数が24あるので、並列実行できるプロセス数は本番環境のほうが多いはずですが、パフォーマンスは本番環境のほうが悪いです。
 
-自前記事ですが、上記コマンドについて詳細をつめた際、制作したドキュメントです。
+[^1]: `locate`コマンドについて詳細をつめた際、制作したドキュメントです。[あなたの知らないlocateの世界](https://qiita.com/u1and0/items/98620f9af3dadad4ced1)
+[^2]: `gocate`コマンドについて詳細をつめた際、制作したドキュメントです。[並列実行できるlocateコマンドの実装](https://qiita.com/u1and0/items/964be5817da800b82603)
 
-`locate`について参考: [あなたの知らないlocateの世界](https://qiita.com/u1and0/items/98620f9af3dadad4ced1)
-`gocate`について参考: [並列実行できるlocateコマンドの実装](https://qiita.com/u1and0/items/964be5817da800b82603)
-
+[^3]: たぶんファイルシステムがntfsではなくext4だったら`locate`でも十分速いと思います。 テスト環境(Linux)でほぼ同数のファイル検索に10秒以上かかったことがありません。テスト環境のドライブがHDDではなくSSDであることも起因しているかもしれません。 テスト環境のCPUスレッド数が6に対して、本番環境(Windows)のスレッド数が24あるので、並列実行できるプロセス数は本番環境のほうが多いはずですが、パフォーマンスは本番環境のほうが悪いです。
 
 ## サーバーサイドの実行
 
@@ -503,23 +503,24 @@ func Scoring(t time.Time) int {  //...(2)
 
 //ScoreSum : 履歴マップの検索日時リストからスコア合計を算出する
 func ScoreSum(tl []time.Time) (score int) {
-	for _, t := range tl {
-		score += Scoring(t)
+	for _, t := range tl {  //...(3)
+		score += Scoring(t)  //...(3)
 	}
 	return
 }
 ```
 
 1. LOGFILEを解析して、frecencyスコア順で返します。詳細は`cmd/locater/frecency.go`を参照してください。
-2. スコアの参照は現在時刻からの経過時間(Hour単位)でスコアを出し、検索回数分足し算します。
+2. スコアの参照は現在時刻からの経過時間(Hour単位)でスコアを出します。
+3. 検索回数分足し算します。
 
 
 ```go:main.go/status
 func fetchStatus(c *gin.Context) {
 	l, err := cmd.LocateStats(locater.Args.Dbpath) // err <- OS command error ...(1)
-	ss := strings.Split(string(l), "\n")  //...(2)
+	ss := strings.Split(string(l), "\n")  //...(4)
 	/* snip...*/
-	c.JSON(http.StatusOK, gin.H{  //...(3)
+	c.JSON(http.StatusOK, gin.H{  //...(5)
 		"locate-S": ss,
 		"error":    err,
 	})
@@ -529,12 +530,12 @@ func fetchStatus(c *gin.Context) {
 ```go:command.go
 // LocateStats : Result of `locate -S`
 func LocateStats(s string) ([]byte, error) {
-	dbs, err := filepath.Glob(s + "/*.db")  //...(4)
+	dbs, err := filepath.Glob(s + "/*.db")  //...(2)
 	if err != nil {
 		return []byte{}, err
 	}
-	d := strings.Join(dbs, ":")  //...(5)
-	b, err := exec.Command("locate", "-Sd", d).Output()  //...(6)
+	d := strings.Join(dbs, ":")  //...(3)
+	b, err := exec.Command("locate", "-Sd", d).Output()  //...(3)
 	// => locate -Sd /var/lib/mlocate/db1.db:/var/lib/mlocate/db2.db:...
 	if err != nil {
 		return b, err
@@ -544,10 +545,10 @@ func LocateStats(s string) ([]byte, error) {
 ```
 
 1. `LocateStats()`を実行して`locate -S`の結果を得ます。
-2. []byte型なので、stringにし、改行で区切ってsliceとします。
-3. 2の結果をJSONにして送ります。
-4. dbファイルを列挙します。
-5. ":"でつなげて `locate -Sd /var/lib/mlocate/db1.db:/var/lib/mlocate/db2.db:...` のように実行します。
+2. dbファイルを列挙します。
+3. ":"でつなげて `locate -Sd /var/lib/mlocate/db1.db:/var/lib/mlocate/db2.db:...` のように実行します。
+4. []byte型なので、stringにし、改行で区切ってsliceとします。
+5. 4の結果をJSONにして送ります。
 
 
 ## API
@@ -621,7 +622,7 @@ async function fetchSearchHistory(url){
     const history = await fetchLocatePath(url);
     // 検索キーワード履歴のdatalist <id=search-history>を埋める
     history.forEach((h) =>{
-      $("#search-history").append("<option>" + h.word + "</option>");  //...(1)
+      $("#search-history").append("<option>" + h.word + "</option>");  //...(2)
     });
   } catch(error) {
     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
@@ -630,7 +631,7 @@ async function fetchSearchHistory(url){
 ```
 
 ```javascript:datalist.js
-$("q").on('input', function () {  //...(2)
+$("q").on('input', function () {  //...(3)
     var val = this.value;
     if($('#searched-words option').filter(function(){
         return this.value.toUpperCase() === val.toUpperCase();
@@ -641,14 +642,15 @@ $("q").on('input', function () {  //...(2)
 });
 ```
 
-1. history APIをたたき、検索履歴を取得し、検索キーワード候補を検索窓に埋め込みます。
-2. 一文字打つたびに、検索履歴をFrecency スコア順に表示します。
+1. history APIをたたき、検索履歴をJSONで取得します。
+2. 検索キーワード候補を検索窓に埋め込みます。(キーワード補完、「もしかして」機能)
+3. 一文字打つたびに、検索履歴をFrecency スコア順に表示します。
 
 
 ## 検索結果の遅延表示
 ページ下部付近にくると検索結果を100件ごとに表示します。
-なぜ遅延させているかというと、JavaScriptの正規表現が遅いことと、検索結果件数(1~数万件)によってページ読み込み時間が大幅に変わってきてしますためです。
-100件ごとに正規表現ハイライトすれば、体感的に待たされる感覚がなくなります。
+なぜ遅延させているかというと、JavaScriptの正規表現が遅いことと、検索結果件数(1~数万件)によってページ読み込み時間が大幅に変わってきてしまうためです。
+100件ごとに正規表現ハイライトすれば、待たされる感覚がなくなります。
 
 ```javascript:main.js
 async function fetchJSONPath(url){
@@ -661,7 +663,7 @@ async function fetchJSONPath(url){
       // Rolling next data
       let n = 0;
       const shift = 100;
-      locater.displayRoll(n, shift);  //...(2)
+      locater.lazyLoad(n, shift);  //...(2)
       $(window).on("scroll", function(){ // scrollで下限近くまで来ると次をロード  //...(2)
         const inner = $(window).innerHeight();
         const outer = $(window).outerHeight();
@@ -670,7 +672,7 @@ async function fetchJSONPath(url){
         if (tp * 1.05 >= bottom) {
           //スクロールの位置が下部5%の範囲に来た場合
           n += shift;
-          locater.displayRoll(n, shift);  //...(2)
+          locater.lazyLoad(n, shift);  //...(2)
         }
       });
     } else {
@@ -701,12 +703,12 @@ class Locater {  //...(1)
 ```
 
 1. /json APIを非同期に実行し、クラス構文でlocaterを生成します。
-2. `locater.displayRoll()`では100件ずつ(n~n+100件)の行をリンクとしてHTMLテンプレートのid=resultに追加していきます。
+2. `locater.lazyLoad()`では100件ずつ(n~n+100件)の行をリンクとしてHTMLテンプレートのid=resultに追加していきます。
 
 
-```javascript:locater.js/Locater.displayRoll()
+```javascript:locater.js/Locater.lazyLoad()
 // 検索パス表示
-displayRoll(n, shift){
+lazyLoad(n, shift){
 	const folderIcon = '<i class="far fa-folder-open" title="クリックでフォルダを開く"></i>';  //...(1)
 	const sep = this.args.pathSplitWin ? "\\" : "/";
 	const dataArray = this.paths.slice(n, n + shift);  //...(2)
@@ -758,9 +760,11 @@ ENTRYPOINT ["/usr/bin/locate-server"]
 
 1. multistage buildでlocate-serverのバイナリをbuildします。
 2. 依存性のあるgocateもインストールします。
-3. 実行するコンテナを作成します。
+3. 実行するコンテナを作成します。glibcありにしないとgo buildでエラー吐きます。[^6]
 4. HTML, CSS, JS ファイルをコピーします。コマンドの実行ディレクトリと同じ場所にする必要があります。(同じ場所にしないとtemplateが見つからないエラー)
 5. goのバイナリをビルドコンテナからコピーしてきます。
+
+[^6]: `CGO_ENABLED=0 go build`とすればエラー吐きません。
 
 
 ```yaml:docker-compose.yml(一例)
@@ -808,6 +812,7 @@ volumes:
 appコンテナはホストマシンでupdatedbを行うなら不要です。
 そうするとdbも不要です。直接ホスト上の/var/lib/mlocateディレクトリでもマウントしておけばいいわけですので。
 
+
 ```yaml
 web:
     volumes:
@@ -831,7 +836,7 @@ app:
 ホスト上のntfs形式のディレクトリにdb置いたら検索がとてつもなく遅くなってしまったので、あえてdb置く場所はコンテナ上にしております。
 
 # インストール
-Dockerを使えない場合は、`go install`
+Dockerを使えない場合は、`go install` [^6]
 
 ```shell-session
 $ go install github.com/u1and0/locate-server@latest
@@ -859,12 +864,12 @@ $ go install github.com/u1and0/locate-server@latest
 
 # まとめ
 `locate`コマンドを実行するサーバーとして、Go言語の入門中に思いついたことですが、実現してみるとぜひ他人(特に非エンジニア)に使ってもらいたいツールになりました。
-このコードを最小化して、Linuxコマンドの実行結果をブラウザに表示(JSONで返す)というフレームワークとして捉えて[^3]やると、ファイル検索以外にも用途[^4]がありそうですね。
+このコードを最小化して、Linuxコマンドの実行結果をブラウザに表示(JSONで返す)というフレームワークとして捉えて[^4]やると、ファイル検索以外にも用途[^5]がありそうですね。
 
-[^3]: `locate`, `gocate`コマンドを別のコマンドに変えてしまえば良いだけです。
-[^4]: [grep検索するサーバー](https://github.com/u1and0/grep-server)とかね
+[^4]: `locate`, `gocate`コマンドを別のコマンドに変えてしまえば良いだけです。
+[^5]: [grep検索するサーバー](https://github.com/u1and0/grep-server)とかね
 
-下記、サーバーホストのホスト名をブラウザに表示するサーバーを立ち上げるサンプルです。
+下記、サーバーマシンのホスト名をブラウザに表示するサーバーを立ち上げるサンプルです。
 わずか17行、import文とか除くとたった8行で書けてしまうんです。
 
 ```go:main.go

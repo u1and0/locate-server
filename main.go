@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"math"
@@ -209,8 +210,14 @@ func fetchJSON(c *gin.Context) {
 	l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q}
 	log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
 	if len(local.Paths) == 0 {
-		local.Error = "no content"
-		c.JSON(204, local)
+		err = errors.New("no content")
+		local.Error = fmt.Sprintf("%v", err)
+		c.JSON(200, local)
+		// c.JSON(204, local)
+		//
+		// SyntaxError: Unexpected end of JSON input
+		// がブラウザ側で出る
+		//
 		// 204 No Content
 		// リクエストに対して送信するコンテンツは無いが
 		// ヘッダは有用である

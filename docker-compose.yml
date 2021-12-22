@@ -14,10 +14,10 @@ services:
         entrypoint: /usr/bin/locate-server
         # command: ["-debug"]
 
-    # db:
-    #     image: busybox
-    #     volumes:
-    #         - /var/lib/mlocate:/var/lib/mlocate
+    db:
+        image: busybox
+        volumes:
+            - /var/lib/mlocate:/var/lib/mlocate
 
     app:
         build:

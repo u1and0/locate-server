@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"math"
@@ -21,7 +22,7 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "3.0.0r"
+	VERSION = "3.1.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locate (gocate) search db path
@@ -175,7 +176,7 @@ func fetchJSON(c *gin.Context) {
 	if err != nil {
 		log.Errorf("error %v", err)
 		local.Error = fmt.Sprintf("%v", err)
-		c.JSON(404, local)
+		c.JSON(406, local)
 		// 406 Not Acceptable:
 		// サーバ側が受付不可能な値であり提供できない状態
 		return
@@ -206,10 +207,17 @@ func fetchJSON(c *gin.Context) {
 	if !query.Logging {
 		getpushLog = "NO LOGGING result"
 	}
-	log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q)
+	l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q}
+	log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
 	if len(local.Paths) == 0 {
-		local.Error = "no content"
-		c.JSON(204, local)
+		err = errors.New("no content")
+		local.Error = fmt.Sprintf("%v", err)
+		c.JSON(200, local)
+		// c.JSON(204, local)
+		//
+		// SyntaxError: Unexpected end of JSON input
+		// がブラウザ側で出る
+		//
 		// 204 No Content
 		// リクエストに対して送信するコンテンツは無いが
 		// ヘッダは有用である

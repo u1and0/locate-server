@@ -85,5 +85,5 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 	if l.Args.Debug {
 		log.Debugf("Execute command %v", pipeline)
 	}
-	return
+	return  // => locate ... | grep -ivE ... | head -n ...
 }

@@ -7,11 +7,10 @@ import (
 type (
 	// Map is normalized queries key and PathMap value pair
 	Map map[Key]*cmd.Paths
-
-	// Key : Key for Map
+	// Key : cache Map key
 	Key struct {
-		Word  string
-		Limit int
+		Word  string // Normalized query
+		Limit int    // Number of results
 	}
 )
 
@@ -23,12 +22,12 @@ func New() *Map {
 // Traverse : 検索結果をcacheの中から探し、あれば検索結果と検索数を返し、
 // なければLocater.Cmd()を走らせて検索結果と検索数を得る
 func (cache *Map) Traverse(l *cmd.Locater) (paths cmd.Paths, ok bool, err error) {
-	s := Key{cmd.Normalize(l.SearchWords, l.ExcludeWords), l.Query.Limit}
-	var v *cmd.Paths
-	if v, ok = (*cache)[s]; !ok {
+	w := cmd.Normalize(l.SearchWords, l.ExcludeWords)
+	k := Key{w, l.Query.Limit}
+	if v, ok := (*cache)[k]; !ok {
 		// normalizedがcacheになければresultsをcacheに登録
 		paths, err = l.Locate()
-		(*cache)[s] = &paths
+		(*cache)[k] = &paths
 	} else {
 		paths = *v
 	}

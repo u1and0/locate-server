@@ -4,9 +4,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/dustin/go-humanize"
 	"github.com/op/go-logging"
 )
 
@@ -45,16 +47,17 @@ func LocateStats(s string) ([]byte, error) {
 }
 
 // LocateStatsSum : locateされるファイル数をDB情報から合計する
-func LocateStatsSum(b []byte) (uint64, error) {
+func LocateStatsSum(b []byte) (int64, error) {
 	var (
-		sum, ni uint64
+		sum, ni int64
+		ns      string
 		err     error
 	)
 	for i, w := range strings.Split(string(b), "\n") { // 改行区切り => 221,453 ファイル
 		if i%5 == 2 {
-			ns := strings.Fields(w)[0]             // => 221,453
+			ns = strings.Fields(w)[0]              // => 221,453
 			ns = strings.ReplaceAll(ns, ",", "")   // => 221453
-			ni, err = strconv.ParseUint(ns, 10, 0) // as uint64
+			ni, err = strconv.ParseInt(ns, 10, 64) // as int64
 			if err != nil {
 				return sum, err
 			}
@@ -65,16 +68,38 @@ func LocateStatsSum(b []byte) (uint64, error) {
 }
 
 // Ambiguous : 数値を切り捨て、おおよその数字をstring型にして返す
-func Ambiguous(n uint64) (s string) {
+// 684,345(int) => 680,000+(string)
+func Ambiguous(n int64) (s string) {
 	switch {
-	case n >= 1e8:
-		s = strconv.FormatUint(n/1e8, 10) + "億"
-	case n >= 1e4:
-		s = strconv.FormatUint(n/1e4, 10) + "万"
+	case n >= 1e9:
+		s = humanize.Comma(dropDigit(n, 1_000_000_000)) + "+"
+	case n >= 1e6:
+		s = humanize.Comma(dropDigit(n, 1_000_000)) + "+"
 	case n >= 1e3:
-		s = strconv.FormatUint(n/1e3, 10) + "千"
+		s = humanize.Comma(dropDigit(n, 1_000)) + "+"
 	default:
-		s = strconv.FormatUint(n, 10)
+		s = humanize.Comma(n)
 	}
 	return
+}
+
+func dropDigit(n, m int64) int64 {
+	return n / m * m
+}
+
+// Normalize : SearchWordsとExcludeWordsを合わせる
+// SearchWordsは小文字にする
+// ExcludeWordsは小文字にした上で
+// ソートして、頭に-をつける
+func Normalize(se, ex []string) string {
+	// Sort
+	sort.Slice(ex, func(i, j int) bool { return ex[i] < ex[j] })
+	// Add prefix "-"
+	strs := append(se, func() (d []string) {
+		for _, ex := range ex {
+			d = append(d, "-"+ex)
+		}
+		return
+	}()...)
+	return strings.Join(strs, " ")
 }

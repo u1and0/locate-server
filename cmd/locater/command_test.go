@@ -34,7 +34,7 @@ func TestLocateStats(t *testing.T) {
 }
 
 func TestLocateStatsSum(t *testing.T) {
-	b, err := LocateStats("../test")
+	b, err := LocateStats("../../test")
 	if err != nil {
 		t.Fatalf("LocateStats error occur %s", err)
 	}
@@ -42,7 +42,7 @@ func TestLocateStatsSum(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LocateStatsSum error occur %s", err)
 	}
-	expected := uint64(76637)
+	expected := int64(76637)
 	if actual != expected {
 		t.Fatalf("got: %v want: %v\n$ locate -S\n%v\n",
 			actual, expected, string(b))
@@ -50,12 +50,25 @@ func TestLocateStatsSum(t *testing.T) {
 }
 
 func Test_Ambiguous(t *testing.T) {
-	actual := []uint64{1000000000, 100000000, 1999999, 2345678, 30001, 4021, 56}
-	expected := []string{"10億", "1億", "199万", "234万", "3万", "4千", "56"}
+	actual := []int64{1_100_000_000, 205_000_000, 3_999_999, 434_567, 50_001, 6_021, 783, 86}
+	expected := []string{"1,000,000,000+", "205,000,000+", "3,000,000+", "434,000+", "50,000+", "6,000+", "783", "86"}
 	for i, a := range actual {
 		ag := Ambiguous(a)
 		if ag != expected[i] {
 			t.Fatalf("got: %s want: %s", ag, expected[i])
 		}
+	}
+}
+
+func TestNormalize(t *testing.T) {
+	// QueryParserによってSearchWordsとExcludeWordsは小文字に正規化されている
+	sw := []string{"dropbox", "program", "34"}        // Should be lower
+	ew := []string{"543", "python", "12", "go", "漢字"} // Should be sort & lower
+
+	actual := Normalize(sw, ew)
+	expected := "dropbox program 34 -12 -543 -go -python -漢字"
+
+	if actual != expected {
+		t.Fatalf("got: %v want: %v", actual, expected)
 	}
 }

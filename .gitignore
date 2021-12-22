@@ -1,7 +1,10 @@
 Session.vim
 /log/
 !/test/locate.log
-/doc/
+/app/crawler
+!/doc/
+/doc/*
+!/doc/Goでファイル検索を行うサーバーを立てる.md
 /script/
 /misc/
 tags

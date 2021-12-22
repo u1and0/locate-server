@@ -8,24 +8,26 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	api "github.com/u1and0/locate-server/cmd/api"
 )
 
 type (
-	// History : logfileから読み込んだ検索キーワードと検索時刻
-	History map[string][]time.Time
+	// historyMap : logfileから読み込んだ検索キーワードと検索時刻
+	historyMap map[string][]time.Time
 
 	// Frecency : A coined word of "frequently" + "recency"
 	Frecency struct {
-		Word  string
-		Score int
+		Word  string `json:"word"`
+		Score int    `json:"score"`
 	}
-	// FrecencyList : List of Frecency sorted by Frecency.Score
-	FrecencyList []Frecency
+	// History : List of Frecency sorted by Frecency.Score
+	History []Frecency
 )
 
-// LogWord extract search word from logfile
-func LogWord(logfile string) (History, error) {
-	history := make(History, 100)
+// logWord extract search word from logfile
+func logWord(logfile string) (historyMap, error) {
+	history := make(historyMap, 100)
 	fp, err := os.Open(logfile)
 	if err != nil {
 		return history, err
@@ -34,7 +36,6 @@ func LogWord(logfile string) (History, error) {
 	reader := bufio.NewReader(fp)
 	for {
 		var (
-			loc   Locater
 			line  []byte
 			event time.Time
 		)
@@ -52,11 +53,12 @@ func LogWord(logfile string) (History, error) {
 			continue // ERROR行 INFO行を無視
 		}
 		// 検索エラーのない文字列だけfrecencyに追加する
-		loc.SearchWords, loc.ExcludeWords, err = QueryParser(ExtractKeyword(lines))
+		sw, ew, err := api.QueryParser(ExtractKeyword(lines))
 		if err != nil {
 			continue // Ignore QueryParser() Error
 		}
-		word := loc.Normalize()
+
+		word := Normalize(sw, ew)
 		event, err = ExtractDatetime(lines)
 		if err != nil {
 			continue // Ignore time.Parse() Error
@@ -113,10 +115,10 @@ func ScoreSum(tl []time.Time) (score int) {
 }
 
 // RankByScore : 履歴から頻出度リストを生成する
-func (history History) RankByScore() FrecencyList {
+func (h historyMap) RankByScore() History {
 	var i int
-	l := make(FrecencyList, len(history))
-	for k, v := range history {
+	l := make(History, len(h))
+	for k, v := range h {
 		l[i] = Frecency{k, ScoreSum(v)}
 		i++
 	}
@@ -124,13 +126,23 @@ func (history History) RankByScore() FrecencyList {
 	return l
 }
 
-func (fl FrecencyList) Len() int           { return len(fl) }
-func (fl FrecencyList) Less(i, j int) bool { return fl[i].Score > fl[j].Score }
-func (fl FrecencyList) Swap(i, j int)      { fl[i], fl[j] = fl[j], fl[i] }
+func (his History) Len() int           { return len(his) }
+func (his History) Less(i, j int) bool { return his[i].Score > his[j].Score }
+func (his History) Swap(i, j int)      { his[i], his[j] = his[j], his[i] }
 
-// Datalist throw list of searched words sorted by score
-func Datalist(f string) (FrecencyList, error) {
-	historymap, err := LogWord(f)
-	wordList := historymap.RankByScore()
-	return wordList, err
+// Datalist throw map of searched words sorted by score
+func Datalist(f string) (History, error) {
+	historyMap, err := logWord(f)
+	history := historyMap.RankByScore()
+	return history, err
+}
+
+// Filter returns gt (greter than) and lt (less than) score of history
+func (his History) Filter(gt, lt int) (filtered History) {
+	for _, h := range his {
+		if h.Score > gt && h.Score < lt {
+			filtered = append(filtered, h)
+		}
+	}
+	return
 }

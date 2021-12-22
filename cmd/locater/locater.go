@@ -1,27 +1,31 @@
 package locater
 
 import (
-	"sort"
+	"strconv"
 	"strings"
 
 	pipeline "github.com/mattn/go-pipeline"
+	api "github.com/u1and0/locate-server/cmd/api"
 )
 
 type (
 	// Locater : queryから読み取った検索ワードと無視するワード
 	Locater struct {
+		// Input
+		Args      `json:"args"`
+		api.Query `json:"query"`
+		// Extract
 		SearchWords  []string `json:"searchWords"`  // 検索キーワード
 		ExcludeWords []string `json:"excludeWords"` // 検索から取り除くキーワード
-		Args         `json:"args"`
-		// -- Result struct
+		// Output
 		Paths `json:"paths"`
 		Stats `json:"stats"`
+		Error string `json:"error"`
 	}
 
 	// Args is command line option
 	Args struct {
 		Dbpath       string `json:"dbpath"`       // 検索対象DBパス /path/to/database:/path/to/another
-		Limit        int    `json:"limit"`        // 検索結果HTML表示制限数
 		PathSplitWin bool   `json:"pathSplitWin"` // TrueでWindowsパスセパレータを使用する
 		Root         string `json:"root"`         // 追加するドライブパス名
 		Trim         string `json:"trim"`         // 削除するドライブパス名
@@ -36,29 +40,8 @@ type (
 		LastUpdateTime string  `json:"lastUpdateTime"` // 最後のDBアップデート時刻
 		SearchTime     float64 `json:"searchTime"`     // 検索にかかった時間
 		Items          string  `json:"items"`          // 検索対象のすべてのファイル数
-		Response       int     `json:"response"`       // httpレスポンス　成功で200
 	}
 )
-
-// Normalize : SearchWordsとExcludeWordsを合わせる
-// SearchWordsは小文字にする
-// ExcludeWordsは小文字にした上で
-// ソートして、頭に-をつける
-func (l *Locater) Normalize() string {
-	se := l.SearchWords
-	ex := l.ExcludeWords
-
-	// Sort
-	sort.Slice(ex, func(i, j int) bool { return ex[i] < ex[j] })
-	// Add prefix "-"
-	strs := append(se, func() (d []string) {
-		for _, ex := range ex {
-			d = append(d, "-"+ex)
-		}
-		return
-	}()...)
-	return strings.Join(strs, " ")
-}
 
 // Locate excute locate (or gocate) command
 // split from Locater.Cmd()
@@ -66,9 +49,6 @@ func (l *Locater) Locate() (Paths, error) {
 	out, err := pipeline.Output(l.CmdGen()...)
 	outslice := strings.Split(string(out), "\n")
 	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
-	if l.Args.Debug {
-		log.Debugf("gocate result %v", outslice)
-	}
 	return outslice, err
 }
 
@@ -96,8 +76,14 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 		// COMMAND | grep -ivE EXCLUDE1 | grep -ivE EXCLUDE2
 		pipeline = append(pipeline, []string{"grep", "-ivE", ex})
 	}
+
+	// Limit option
+	if l.Query.Limit > 0 {
+		pipeline = append(pipeline, []string{"head", "-n", strconv.Itoa(l.Query.Limit)})
+	}
+
 	if l.Args.Debug {
 		log.Debugf("Execute command %v", pipeline)
 	}
-	return
+	return  // => locate ... | grep -ivE ... | head -n ...
 }

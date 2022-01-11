@@ -22,11 +22,11 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "3.1.0"
+	VERSION = "3.1.0r"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
-	LOGFILE = "/var/lib/mlocate/locate.log"
+	LOGFILE = "/var/lib/plocate/locate.log"
 	// LOCATEDIR : locate (gocate) search db path
-	LOCATEDIR = "/var/lib/mlocate"
+	LOCATEDIR = "/var/lib/plocate"
 	// REQUIRE : required commands. Separate by space.
 	REQUIRE = "locate gocate"
 	// PORT : default open server port
@@ -63,18 +63,18 @@ func main() {
 
 	// Log setting
 	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	defer logfile.Close()
-	setLogger(logfile) // log.XXX()を使うものはここより後に書く
 	if err != nil {
 		log.Panicf("Cannot open logfile %v", err)
 	} else {
 		// DB path flag parse
 		log.Infof("Set dbpath: %s", locater.Dbpath)
 	}
+	defer logfile.Close()
+	setLogger(logfile) // log.XXX()を使うものはここより後に書く
 
 	// Directory check
 	if _, err := os.Stat(LOCATEDIR); os.IsNotExist(err) {
-		log.Panic(err) // /var/lib/mlocateがなければ終了
+		log.Panic(err) // /var/lib/plocateがなければ終了
 	}
 
 	// Command check
@@ -273,7 +273,7 @@ func parseCmdlineOption() (l cmd.Locater) {
 	var (
 		showVersion bool
 		usage       = usageText{
-			dir:                 `Path of locate database directory (default "/var/lib/mlocate")`,
+			dir:                 `Path of locate database directory (default "/var/lib/plocate")`,
 			port:                `Server port number. Default access to http://localhost:8080/ (default 8080)`,
 			root:                `DB insert prefix for directory path`,
 			windowsPathSeparate: `Use path separate Windows backslash`,

@@ -59,11 +59,9 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 		"--database", l.Dbpath, //Add database option
 		"--",            // Inject locate option
 		"--ignore-case", // Ignore case distinctions when matching patterns.
-		"--quiet",       // Report no error messages about reading databases
 		"--existing",    // Print only entries that refer to files existing at the time locate is run.
-		"--nofollow",    // When  checking  whether files exist do not follow trailing symbolic links.
 	}
-	// -> gocate --database -- --ignore-case --quiet --regex hoge.*my.*name
+	// -> gocate --database -- --ignore-case --regex hoge.*my.*name
 
 	// Include PATTERNs
 	// -> locate --ignore-case --quiet --regex hoge.*my.*name
@@ -85,5 +83,5 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 	if l.Args.Debug {
 		log.Debugf("Execute command %v", pipeline)
 	}
-	return  // => locate ... | grep -ivE ... | head -n ...
+	return // => locate ... | grep -ivE ... | head -n ...
 }

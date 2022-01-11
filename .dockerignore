@@ -1,6 +1,7 @@
 README.md
 /app/
 /backup/
+/build/
 /doc/
 /log/
 /var
@@ -12,4 +13,5 @@ locate-server*
 tags
 GPATH
 GRTAGS
-GTAGS
+gTAGS
+*.gz

@@ -127,10 +127,10 @@ URLを送られた人はリンクをクリックするだけで検索バーに�
 
 | 説明 | メソッド | URI | パラメータ | パラメータ例 |
 |----|------|-----|-------|-------|
-| ファイルパスの検索結果をJSONで返す | GET | /json |  q=, logging= | http://localhost:8080/json?q=keyword <br>http://localhost:8080/json?q=keyword&logging=false: loggingの値はboolian, falseのとき、検索キーワードを履歴に残さない |
-| ファイルパスの検索結果をHTMLで表示する | GET | /search |  q=, logging= | http://localhost:8080/json?q=keyword <br>http://localhost:8080/json?q=keyword&logging=false: loggingの値はboolian, falseのとき、検索キーワードを履歴に残さない |
-| 検索履歴を見る | GET | /history |  gt=, lt= |  http://localhost:8080/history?gt=10&lt=1000: 10以上、1000未満のスコアの履歴のみJSONで返す |
-| DBの状態確認 | GET | /status |  なし | http://localhost:8080/status: ステータス表示 |
+| ファイルパスの検索結果をJSONで返す | GET | /json |  q=, logging= | http://localhost:8080/json?q=keyword <br>http://localhost:8080/json?q=keyword&logging=false <br>loggingの値はboolian, falseのとき、検索キーワードを履歴に残さない |
+| ファイルパスの検索結果をHTMLで表示する | GET | /search |  q=, logging= | http://localhost:8080/json?q=keyword <br>http://localhost:8080/json?q=keyword&logging=false <br>loggingの値はboolian, falseのとき、検索キーワードを履歴に残さない |
+| 検索履歴を見る | GET | /history |  gt=, lt= |  http://localhost:8080/history?gt=10&lt=1000 <br>10以上、1000未満のスコアの履歴のみJSONで返す |
+| DBの状態確認 | GET | /status |  なし | http://localhost:8080/status <br>ステータス表示 |
 
 ---
 
@@ -243,8 +243,10 @@ docker run --name personal --volumes-from db\
 
 # Release Note
 
-## v3.1.0: REST API サーバー化
+## v3.1.1: Error status
+* サーバーが用意するレスポンスステータスはすべて200
 
+## v3.1.0: REST API サーバー化
 * ドキュメント作成 doc/Goでファイル検索を行うサーバーを立てる.md
 * ディレクトリの構造、名前改変
 * クライアントサイド　error表示機能

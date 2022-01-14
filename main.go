@@ -163,7 +163,9 @@ func fetchJSON(c *gin.Context) {
 	if err != nil {
 		log.Errorf("error: %s query: %#v", err, query)
 		local.Error = fmt.Sprintf("%s", err)
-		c.JSON(http.StatusOK, local)
+		c.JSON(406, local)
+		// 406 Not Acceptable:
+		// サーバ側が受付不可能な値であり提供できない状態
 		return
 	}
 
@@ -174,7 +176,9 @@ func fetchJSON(c *gin.Context) {
 	if err != nil {
 		log.Errorf("error %v", err)
 		local.Error = fmt.Sprintf("%v", err)
-		c.JSON(http.StatusOK, local)
+		c.JSON(406, local)
+		// 406 Not Acceptable:
+		// サーバ側が受付不可能な値であり提供できない状態
 		return
 	}
 
@@ -190,7 +194,9 @@ func fetchJSON(c *gin.Context) {
 	// Response & Logging
 	if err != nil {
 		log.Errorf("%s [ %-50s ]", err, query.Q)
-		c.JSON(http.StatusOK, local)
+		c.JSON(500, local)
+		// 500 Internal Server Error
+		// 何らかのサーバ内で起きたエラー
 		return
 	}
 	local.Paths = result
@@ -206,17 +212,27 @@ func fetchJSON(c *gin.Context) {
 	if len(local.Paths) == 0 {
 		err = errors.New("no content")
 		local.Error = fmt.Sprintf("%v", err)
-		c.JSON(http.StatusOK, local)
+		c.JSON(200, local)
+		// c.JSON(204, local)
+		//
+		// SyntaxError: Unexpected end of JSON input
+		// がブラウザ側で出る
+		//
+		// 204 No Content
+		// リクエストに対して送信するコンテンツは無いが
+		// ヘッダは有用である
 		return
 	}
 	c.JSON(http.StatusOK, local)
+	// 200 OK
+	// リクエストが正常に処理できた
 }
 
 func fetchHistory(c *gin.Context) {
 	history, err := cmd.Datalist(LOGFILE)
 	if err != nil {
 		log.Error(err)
-		c.JSON(http.StatusOK, history)
+		c.JSON(404, history)
 		return
 	}
 	gt := api.IntQuery(c, "gt") // history?gt=10 => gt==10
@@ -238,10 +254,12 @@ func fetchStatus(c *gin.Context) {
 	ss := strings.Split(string(l), "\n")
 	if err != nil {
 		log.Errorf("error: %s", err)
-		c.JSON(http.StatusOK, gin.H{
+		c.JSON(500, gin.H{
 			"locate-S": ss,
 			"error":    err,
 		})
+		// 500 Internal Server Error
+		// 何らかのサーバ内で起きたエラー
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{

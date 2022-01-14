@@ -6,7 +6,7 @@
 FROM golang:1.17.6-bullseye AS go_builder
 RUN apt update &&\
     apt install -y git &&\
-    go install github.com/u1and0/gocate@v0.3.0
+    go install github.com/u1and0/gocate@v0.3.1
 WORKDIR /go/src/github.com/u1and0/locate-server
 # For go module using go-pipeline
 ENV GO111MODULE=on

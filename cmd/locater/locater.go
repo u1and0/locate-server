@@ -61,10 +61,10 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 		"--ignore-case", // Ignore case distinctions when matching patterns.
 		"--existing",    // Print only entries that refer to files existing at the time locate is run.
 	}
-	// -> gocate --database -- --ignore-case --regex hoge.*my.*name
 
 	// Include PATTERNs
-	// -> locate --ignore-case --quiet --regex hoge.*my.*name
+	// -> gocate --database /var/lib/mlocate -- --ignore-case --regex hoge.*my.*name
+	// -> locate --ignore-case --regex hoge.*my.*name
 	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))
 
 	pipeline = append(pipeline, locate)

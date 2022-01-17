@@ -169,10 +169,12 @@ func fetchJSON(c *gin.Context) {
 		return
 	}
 
+	// Query check
 	local.SearchWords, local.ExcludeWords, err = api.QueryParser(query.Q)
 	if local.Args.Debug {
 		log.Debugf("local locater: %#v", local)
 	}
+	// err <- Query error
 	if err != nil {
 		log.Errorf("error %v", err)
 		local.Error = fmt.Sprintf("%v", err)
@@ -184,7 +186,7 @@ func fetchJSON(c *gin.Context) {
 
 	// Execute locate command
 	start := time.Now()
-	result, ok, err := caches.Traverse(&local) // err <- OS command error
+	result, ok, err := caches.Traverse(&local)
 	if local.Args.Debug {
 		log.Debugf("gocate result %v", result)
 	}
@@ -192,8 +194,9 @@ func fetchJSON(c *gin.Context) {
 	local.Stats.SearchTime = float64(end) / float64(time.Millisecond)
 
 	// Response & Logging
+	// err <- OS command error
 	if err != nil {
-		log.Errorf("%s [ %-50s ]", err, query.Q)
+		log.Errorf("%s %s [ %-50s ]", err, result, query.Q)
 		c.JSON(500, local)
 		// 500 Internal Server Error
 		// 何らかのサーバ内で起きたエラー

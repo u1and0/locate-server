@@ -46,7 +46,7 @@ type (
 // Locate excute locate (or gocate) command
 // split from Locater.Cmd()
 func (l *Locater) Locate() (Paths, error) {
-	out, err := pipeline.Output(l.CmdGen()...)
+	out, err := pipeline.CombinedOutput(l.CmdGen()...)
 	outslice := strings.Split(string(out), "\n")
 	outslice = outslice[:len(outslice)-1] // Pop last element cause \\n
 	return outslice, err

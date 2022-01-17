@@ -3,23 +3,28 @@
 # $ docker run -d --rm --name locs_test u1and0/locate-server [options]
 # ```
 
-FROM golang:1.17.6-bullseye AS go_builder
-RUN apt update &&\
-    apt install -y git &&\
-    go install github.com/u1and0/gocate@v0.3.1
-WORKDIR /go/src/github.com/u1and0/locate-server
-# For go module using go-pipeline
+FROM archlinux:base-devel AS go_builder
+RUN pacman-key --init &&\
+    pacman-key --populate archlinux &&\
+    pacman -Syu --noconfirm go git &&\
+    : "Clear cache" &&\
+    pacman -Qtdq | xargs -r pacman --noconfirm -Rcns
+ENV GOPATH=/go
+RUN go install github.com/u1and0/gocate@v0.3.2
+WORKDIR /work
 ENV GO111MODULE=on
-COPY ./main.go /go/src/github.com/u1and0/locate-server/main.go
-COPY ./go.mod /go/src/github.com/u1and0/locate-server/go.mod
-COPY ./go.sum /go/src/github.com/u1and0/locate-server/go.sum
-COPY ./cmd /go/src/github.com/u1and0/locate-server/cmd
+COPY ./main.go /work/main.go
+COPY ./go.mod /work/go.mod
+COPY ./go.sum /work/go.sum
+COPY ./cmd /work/cmd
 RUN go build -o /go/bin/locate-server
 
-FROM debian:bullseye-slim
-RUN apt update && apt install -y  plocate tzdata &&\
-    apt clean -y &&\
-    rm -rf /var/lib/apt/lists/*
+FROM archlinux:base-devel
+RUN pacman-key --init &&\
+    pacman-key --populate archlinux &&\
+    pacman -Syu --noconfirm plocate tzdata &&\
+    : "Clear cache" &&\
+    pacman -Qtdq | xargs -r pacman --noconfirm -Rcns
 COPY --from=go_builder /go/bin/locate-server /usr/bin/locate-server
 COPY --from=go_builder /go/bin/gocate /usr/bin/gocate
 WORKDIR /var/www

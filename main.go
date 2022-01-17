@@ -24,9 +24,9 @@ const (
 	// VERSION : version
 	VERSION = "3.1.0r"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
-	LOGFILE = "/var/lib/plocate/locate.log"
+	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locate (gocate) search db path
-	LOCATEDIR = "/var/lib/plocate"
+	LOCATEDIR = "/var/lib/mlocate"
 	// REQUIRE : required commands. Separate by space.
 	REQUIRE = "locate gocate"
 	// PORT : default open server port
@@ -45,6 +45,7 @@ var (
 type (
 	usageText struct {
 		dir,
+		gocate,
 		port,
 		root,
 		windowsPathSeparate,
@@ -56,26 +57,26 @@ type (
 
 func main() {
 	// Release mode
-	fmt.Println("locater.Args.Debug", locater.Args.Debug)
 	if !locater.Args.Debug {
 		gin.SetMode(gin.ReleaseMode)
+	}
+
+	// Directory check
+	if _, err := os.Stat(LOCATEDIR); os.IsNotExist(err) {
+		if err := os.Mkdir(LOCATEDIR, 0755); err != nil {
+			log.Panic(err) // /var/lib/mlocateがなければ終了
+		}
 	}
 
 	// Log setting
 	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Panicf("Cannot open logfile %v", err)
-	} else {
-		// DB path flag parse
-		log.Infof("Set dbpath: %s", locater.Dbpath)
 	}
+	// DB path flag parse
+	log.Infof("Set dbpath: %s", locater.Dbpath)
 	defer logfile.Close()
 	setLogger(logfile) // log.XXX()を使うものはここより後に書く
-
-	// Directory check
-	if _, err := os.Stat(LOCATEDIR); os.IsNotExist(err) {
-		log.Panic(err) // /var/lib/plocateがなければ終了
-	}
 
 	// Command check
 	// スペース区切りされたconstをexec.LookPath()で実行可能ファイルであるかを調べる
@@ -128,7 +129,7 @@ func searchPage(c *gin.Context) {
 		// nil map assignment errorを発生させないために必要
 		caches = cache.New() // Reset cache
 		// Count number of search target files
-		var n int64
+		var n int64 // ParseInt の戻り値でint64指定
 		n, err = cmd.LocateStatsSum(locateS)
 		if err != nil {
 			log.Error(err)
@@ -164,6 +165,7 @@ func fetchJSON(c *gin.Context) {
 		log.Errorf("error: %s query: %#v", err, query)
 		local.Error = fmt.Sprintf("%s", err)
 		c.JSON(406, local)
+		// Query Parse Error
 		// 406 Not Acceptable:
 		// サーバ側が受付不可能な値であり提供できない状態
 		return
@@ -174,11 +176,11 @@ func fetchJSON(c *gin.Context) {
 	if local.Args.Debug {
 		log.Debugf("local locater: %#v", local)
 	}
-	// err <- Query error
 	if err != nil {
 		log.Errorf("error %v", err)
 		local.Error = fmt.Sprintf("%v", err)
 		c.JSON(406, local)
+		// Query Parse Error
 		// 406 Not Acceptable:
 		// サーバ側が受付不可能な値であり提供できない状態
 		return
@@ -194,10 +196,10 @@ func fetchJSON(c *gin.Context) {
 	local.Stats.SearchTime = float64(end) / float64(time.Millisecond)
 
 	// Response & Logging
-	// err <- OS command error
 	if err != nil {
 		log.Errorf("%s %s [ %-50s ]", err, result, query.Q)
 		c.JSON(500, local)
+		// OS Command Error
 		// 500 Internal Server Error
 		// 何らかのサーバ内で起きたエラー
 		return
@@ -261,6 +263,7 @@ func fetchStatus(c *gin.Context) {
 			"locate-S": ss,
 			"error":    err,
 		})
+		// OS Command Error
 		// 500 Internal Server Error
 		// 何らかのサーバ内で起きたエラー
 		return
@@ -277,6 +280,7 @@ func parseCmdlineOption() (l cmd.Locater) {
 		showVersion bool
 		usage       = usageText{
 			dir:                 `Path of locate database directory (default "/var/lib/plocate")`,
+			gocate:              `Use gocate instead locate`,
 			port:                `Server port number. Default access to http://localhost:8080/ (default 8080)`,
 			root:                `DB insert prefix for directory path`,
 			windowsPathSeparate: `Use path separate Windows backslash`,
@@ -287,6 +291,8 @@ func parseCmdlineOption() (l cmd.Locater) {
 	)
 	flag.StringVar(&l.Args.Dbpath, "d", LOCATEDIR, usage.dir)
 	flag.StringVar(&l.Args.Dbpath, "dir", LOCATEDIR, usage.dir)
+	flag.BoolVar(&l.Args.Gocate, "g", false, usage.gocate)
+	flag.BoolVar(&l.Args.Gocate, "gocate", false, usage.gocate)
 	flag.BoolVar(&l.Args.PathSplitWin, "s", false, usage.windowsPathSeparate)
 	flag.BoolVar(&l.Args.PathSplitWin, "windows-path-separate", false, usage.windowsPathSeparate)
 	flag.StringVar(&l.Args.Root, "r", "", usage.root)
@@ -305,6 +311,8 @@ Usage of locate-server
 	locate-server [OPTION]...
 -d, -dir
 	%s
+-g, -gocate
+	%s
 -p, -port
 	%s
 -r, -root
@@ -318,6 +326,7 @@ Usage of locate-server
 -v, -version
 	%s`,
 			usage.dir,
+			usage.gocate,
 			usage.port,
 			usage.root,
 			usage.windowsPathSeparate,

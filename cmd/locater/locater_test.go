@@ -8,7 +8,7 @@ func TestLocater_CmdGen(t *testing.T) {
 	l := Locater{
 		SearchWords:  []string{"the", "path", "for", "search"},
 		ExcludeWords: []string{"exclude", "paths"},
-		Args:         Args{Dbpath: "../test"},
+		Args:         Args{Gocate: true, Dbpath: "../ptest"},
 	}
 	actual := l.CmdGen()
 	expected := [][]string{

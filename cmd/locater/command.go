@@ -31,40 +31,62 @@ func DBLastUpdateTime(db string) string {
 	return filestat.ModTime().Format(layout)
 }
 
-// LocateStats : Result of `locate -S`
+// plocate not implement -S option
+// // LocateStats : Result of `locate -S`
+// func LocateStats(s string) ([]byte, error) {
+// 	dbs, err := filepath.Glob(s + "/*.db")
+// 	if err != nil {
+// 		return []byte{}, err
+// 	}
+// 	d := strings.Join(dbs, ":")
+// 	b, err := exec.Command("locate", "-Sd", d).Output()
+// 	// => locate -Sd /var/lib/mlocate/db1.db:/var/lib/mlocate/db2.db:...
+// 	if err != nil {
+// 		return b, err
+// 	}
+// 	return b, err
+// }
+
+// // LocateStatsSum : locateされるファイル数をDB情報から合計する
+// func LocateStatsSum(b []byte) (int64, error) {
+// 	var (
+// 		sum, ni int64
+// 		ns      string
+// 		err     error
+// 	)
+// 	for i, w := range strings.Split(string(b), "\n") { // 改行区切り => 221,453 ファイル
+// 		if i%5 == 2 {
+// 			ns = strings.Fields(w)[0]              // => 221,453
+// 			ns = strings.ReplaceAll(ns, ",", "")   // => 221453
+// 			ni, err = strconv.ParseInt(ns, 10, 64) // as int64
+// 			if err != nil {
+// 				return sum, err
+// 			}
+// 			sum += ni
+// 		}
+// 	}
+// 	return sum, err
+// }
+
+// LocateStats : count all file num on db
 func LocateStats(s string) ([]byte, error) {
 	dbs, err := filepath.Glob(s + "/*.db")
 	if err != nil {
 		return []byte{}, err
 	}
 	d := strings.Join(dbs, ":")
-	b, err := exec.Command("locate", "-Sd", d).Output()
-	// => locate -Sd /var/lib/mlocate/db1.db:/var/lib/mlocate/db2.db:...
+	b, err := exec.Command("locate", "-d", d, "-c", "--regex", ".").CombinedOutput()
+	// => locate -d /var/lib/plocate/db1.db:/var/lib/plocate/db2.db:... -c --regex "."
 	if err != nil {
 		return b, err
 	}
 	return b, err
 }
 
-// LocateStatsSum : locateされるファイル数をDB情報から合計する
 func LocateStatsSum(b []byte) (int64, error) {
-	var (
-		sum, ni int64
-		ns      string
-		err     error
-	)
-	for i, w := range strings.Split(string(b), "\n") { // 改行区切り => 221,453 ファイル
-		if i%5 == 2 {
-			ns = strings.Fields(w)[0]              // => 221,453
-			ns = strings.ReplaceAll(ns, ",", "")   // => 221453
-			ni, err = strconv.ParseInt(ns, 10, 64) // as int64
-			if err != nil {
-				return sum, err
-			}
-			sum += ni
-		}
-	}
-	return sum, err
+	s := strings.Fields(string(b))[0]
+	return strconv.ParseInt(s, 10, 64)
+
 }
 
 // Ambiguous : 数値を切り捨て、おおよその数字をstring型にして返す

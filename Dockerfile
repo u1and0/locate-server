@@ -22,7 +22,7 @@ RUN go build -o /go/bin/locate-server
 FROM archlinux:base-devel
 RUN pacman-key --init &&\
     pacman-key --populate archlinux &&\
-    pacman -Syu --noconfirm plocate tzdata &&\
+    pacman -Syu --noconfirm plocate &&\
     : "Clear cache" &&\
     pacman -Qtdq | xargs -r pacman --noconfirm -Rcns
 COPY --from=go_builder /go/bin/locate-server /usr/bin/locate-server

@@ -25,10 +25,10 @@ const (
 	VERSION = "3.1.0r"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
-	// LOCATEDIR : locate (gocate) search db path
+	// LOCATEDIR : locate search db path
 	LOCATEDIR = "/var/lib/mlocate"
 	// REQUIRE : required commands. Separate by space.
-	REQUIRE = "locate gocate"
+	REQUIRE = "locate"
 	// PORT : default open server port
 	PORT = 8080
 )
@@ -45,7 +45,6 @@ var (
 type (
 	usageText struct {
 		dir,
-		gocate,
 		port,
 		root,
 		windowsPathSeparate,
@@ -190,7 +189,7 @@ func fetchJSON(c *gin.Context) {
 	start := time.Now()
 	result, ok, err := caches.Traverse(&local)
 	if local.Args.Debug {
-		log.Debugf("gocate result %v", result)
+		log.Debugf("locate result %v", result)
 	}
 	end := (time.Since(start)).Nanoseconds()
 	local.Stats.SearchTime = float64(end) / float64(time.Millisecond)
@@ -280,7 +279,6 @@ func parseCmdlineOption() (l cmd.Locater) {
 		showVersion bool
 		usage       = usageText{
 			dir:                 `Path of locate database directory (default "/var/lib/plocate")`,
-			gocate:              `Use gocate instead locate`,
 			port:                `Server port number. Default access to http://localhost:8080/ (default 8080)`,
 			root:                `DB insert prefix for directory path`,
 			windowsPathSeparate: `Use path separate Windows backslash`,
@@ -291,8 +289,6 @@ func parseCmdlineOption() (l cmd.Locater) {
 	)
 	flag.StringVar(&l.Args.Dbpath, "d", LOCATEDIR, usage.dir)
 	flag.StringVar(&l.Args.Dbpath, "dir", LOCATEDIR, usage.dir)
-	flag.BoolVar(&l.Args.Gocate, "g", false, usage.gocate)
-	flag.BoolVar(&l.Args.Gocate, "gocate", false, usage.gocate)
 	flag.BoolVar(&l.Args.PathSplitWin, "s", false, usage.windowsPathSeparate)
 	flag.BoolVar(&l.Args.PathSplitWin, "windows-path-separate", false, usage.windowsPathSeparate)
 	flag.StringVar(&l.Args.Root, "r", "", usage.root)
@@ -311,8 +307,6 @@ Usage of locate-server
 	locate-server [OPTION]...
 -d, -dir
 	%s
--g, -gocate
-	%s
 -p, -port
 	%s
 -r, -root
@@ -326,7 +320,6 @@ Usage of locate-server
 -v, -version
 	%s`,
 			usage.dir,
-			usage.gocate,
 			usage.port,
 			usage.root,
 			usage.windowsPathSeparate,

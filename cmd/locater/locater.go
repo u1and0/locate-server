@@ -26,7 +26,6 @@ type (
 	// Args is command line option
 	Args struct {
 		Dbpath       string `json:"dbpath"`       // 検索対象DBパス /path/to/database:/path/to/another
-		Gocate       bool   `json:"gocate"`       // locateの代わりにgocate を実行する
 		PathSplitWin bool   `json:"pathSplitWin"` // TrueでWindowsパスセパレータを使用する
 		Root         string `json:"root"`         // 追加するドライブパス名
 		Trim         string `json:"trim"`         // 削除するドライブパス名
@@ -44,7 +43,7 @@ type (
 	}
 )
 
-// Locate excute locate (or gocate) command
+// Locate excute locate command
 // split from Locater.Cmd()
 func (l *Locater) Locate() (Paths, error) {
 	out, err := pipeline.CombinedOutput(l.CmdGen()...)
@@ -55,35 +54,23 @@ func (l *Locater) Locate() (Paths, error) {
 
 // CmdGen : shell実行用パイプラインコマンドを発行する
 func (l *Locater) CmdGen() (pipeline [][]string) {
-	locate := []string{}
-	if l.Gocate {
-		locate = []string{
-			"gocate",               // locate command path
-			"--database", l.Dbpath, //Add database option
-			"--", // Inject locate option
-		}
-	} else {
-		locate = []string{
-			"locate",
-			"--database", l.Dbpath,
-		}
+	locate := []string{
+		"locate",
+		"--database", l.Dbpath,
+		"--ignore-case", // Ignore case distinctions when matching patterns.
+		"--existing",    // Print only entries that refer to files existing at the time locate is run.
 	}
 
 	// Include PATTERNs
 	locate = append(locate,
-		"--ignore-case", // Ignore case distinctions when matching patterns.
-		"--existing",    // Print only entries that refer to files existing at the time locate is run.
 		"--regex", strings.Join(l.SearchWords, ".*"))
-	// -> gocate --database /var/lib/mlocate -- --ignore-case --regex hoge.*my.*name
+	// -> locate --database /var/lib/mlocate -- --ignore-case --regex hoge.*my.*name
 	// -> locate --ignore-case --regex hoge.*my.*name
 
 	// Limit option
 	if l.Query.Limit > 0 {
 		locate = append(locate, "--limit", strconv.Itoa(l.Query.Limit))
 	}
-	// !! gocate occor BUGS !!
-	// limit オプションは各locate 実行に掛かるため、
-	// --limit 10を実行した際にdbの数 x 10 の結果が表示される
 
 	pipeline = append(pipeline, locate)
 

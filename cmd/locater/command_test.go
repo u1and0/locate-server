@@ -13,7 +13,7 @@ func TestLocateStatsSum(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LocateStatsSum error occur %s", err)
 	}
-	expected := int64(47224)
+	expected := int64(139260)
 	if actual != expected {
 		t.Fatalf("got: %v want: %v\n$ locate -S\n%v\n",
 			actual, expected, string(b))

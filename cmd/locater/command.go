@@ -83,10 +83,10 @@ func LocateStats(s string) ([]byte, error) {
 	return b, err
 }
 
+// LocateStatsSum : locateされるファイル数をDB情報から数値で出力する
 func LocateStatsSum(b []byte) (int64, error) {
 	s := strings.Fields(string(b))[0]
 	return strconv.ParseInt(s, 10, 64)
-
 }
 
 // Ambiguous : 数値を切り捨て、おおよその数字をstring型にして返す

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -77,13 +76,6 @@ func main() {
 	setLogger(logfile) // log.XXX()を使うものはここより後に書く
 
 	// DB path flag parse
-	locater.Dbpath, err = func() (string, error) {
-		dbs, err := filepath.Glob(locater.Dbpath + "/*.db")
-		return strings.Join(dbs, ":"), err
-	}()
-	if err != nil {
-		log.Panicf("cannot set dbpath: %v", err)
-	}
 	log.Infof("Set dbpath: %s", locater.Dbpath)
 
 	// Command check

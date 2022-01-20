@@ -1,6 +1,7 @@
 package locater
 
 import (
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -54,9 +55,16 @@ func (l *Locater) Locate() (Paths, error) {
 
 // CmdGen : shell実行用パイプラインコマンドを発行する
 func (l *Locater) CmdGen() (pipeline [][]string) {
+	dir, err := func() (string, error) {
+		d, err := filepath.Glob(l.Dbpath + "/*.db")
+		return strings.Join(d, ":"), err
+	}()
+	if err != nil {
+		log.Errorf("cannot set --database: %v, %v", err, dir)
+	}
 	locate := []string{
 		"locate",
-		"--database", l.Dbpath,
+		"--database", dir,
 		"--ignore-case", // Ignore case distinctions when matching patterns.
 		"--existing",    // Print only entries that refer to files existing at the time locate is run.
 	}

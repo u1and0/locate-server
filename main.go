@@ -38,7 +38,7 @@ var (
 	showVersion bool
 	port        int
 	locater     = parseCmdlineOption()
-	locateS     []byte
+	locateS     int64
 	caches      = cache.New()
 )
 
@@ -118,7 +118,7 @@ func searchPage(c *gin.Context) {
 	/* LocateStats()の結果が前と異なっていたら
 	locateS更新
 	cacheを初期化 */
-	if l, err := cmd.LocateStats(locater.Dbpath); string(l) != string(locateS) {
+	if l, err := cmd.LocateStats(locater.Dbpath); l != locateS {
 		// DB更新されていたら
 		if err != nil {
 			log.Error(err)
@@ -127,13 +127,7 @@ func searchPage(c *gin.Context) {
 		// Initialize cache
 		// nil map assignment errorを発生させないために必要
 		caches = cache.New() // Reset cache
-		// Count number of search target files
-		var n int64
-		n, err = cmd.LocateStatsSum(locateS)
-		if err != nil {
-			log.Error(err)
-		}
-		locater.Stats.Items = cmd.Ambiguous(n)
+		locater.Stats.Items = cmd.Ambiguous(locateS)
 		// Update LastUpdateTime for database
 		locater.Stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
 	}
@@ -251,11 +245,10 @@ func fetchHistory(c *gin.Context) {
 
 func fetchStatus(c *gin.Context) {
 	l, err := cmd.LocateStats(locater.Args.Dbpath) // err <- OS command error
-	ss := strings.Split(string(l), "\n")
 	if err != nil {
 		log.Errorf("error: %s", err)
 		c.JSON(500, gin.H{
-			"locate-S": ss,
+			"locate-S": l,
 			"error":    err,
 		})
 		// 500 Internal Server Error
@@ -263,7 +256,7 @@ func fetchStatus(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"locate-S": ss,
+		"locate-S": l,
 		"error":    err,
 	})
 }

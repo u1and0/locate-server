@@ -15,9 +15,9 @@ RUN pacman -Syu --noconfirm go &&\
 RUN ln -s /root/go/bin/gocate /usr/bin
 
 CMD : "Write crontab" &&\
-    echo "${CRON_CYCLE} updatedb -U ${UPDATEDB_PATH} ${OPTION}" | crontab - &&\
+    echo "${CRON_CYCLE} gocate -init -U ${UPDATEDB_PATH} -o /var/lib/plocate " | crontab - &&\
     : "Execute updatedb at first time" &&\
-    gocate -init ${UPDATEDB_PATH} ${OPTION} &&\
+    gocate -init -U ${UPDATEDB_PATH} &&\
     : "Up cron daemon" &&\
     crond &&\
     : "Wait for some command (NOT exit container)" &&\

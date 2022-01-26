@@ -8,22 +8,30 @@ services:
           - 8081:8080
         volumes:
             - db:/var/lib/mlocate
+            - db:/var/lib/plocate
         environment:
             - TZ=Asia/Tokyo
         working_dir: /var/www
         entrypoint: /usr/bin/locate-server
-        # command: ["-debug"]
+        command: ["-debug", "-d", "/var/lib/plocate"]
 
     db:
         image: busybox
         volumes:
             - /var/lib/mlocate:/var/lib/mlocate
+            - /var/lib/plocate:/var/lib/plocate
 
-    app:
+    updatedb:
         build:
              context: ./app
+        environment:
+            - TZ=Asia/Tokyo
+            - CRON_CYCLE='*/20 * * * *'
+            - UPDATEDB_PATH="/home/u1and0/home/go"
         volumes:
             - db:/var/lib/mlocate
+            - db:/var/lib/plocate
+            - /home/u1and0/home/go:/home/u1and0/home/go
       ## app関連その他ディレクトリ
       # personal:
       #     build:

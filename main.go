@@ -65,11 +65,11 @@ func main() {
 
 	// Log setting
 	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	defer logfile.Close()
-	setLogger(logfile) // log.XXX()を使うものはここより後に書く
 	if err != nil {
 		log.Panicf("Cannot open logfile %v", err)
 	}
+	defer logfile.Close()
+	setLogger(logfile) // log.XXX()を使うものはここより後に書く
 
 	// DB path flag parse
 	log.Infof("Set dbpath: %s", dbpath)
@@ -241,7 +241,11 @@ func htmlClause(title string) string {
 		return strings.Join(ss, "")
 	}(), "ul")
 	return fmt.Sprintf(`<html>
-					<head><title>Locate Server %s</title></head>
+					<head>
+						<title>Locate Server %s</title>
+						<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css">
+						<link rel="icon" href="/static/icons8-検索-50.png">
+					</head>
 					<body>
 						<form method="get" action="/searching">
 							<!-- 検索窓 -->
@@ -251,15 +255,12 @@ func htmlClause(title string) string {
  							<datalist id="searched-words"> %s </datalist>
 
 							<!-- 検索ボタン -->
-							<input type="submit" name="submit" value="検索">
-							<a href=https://github.com/u1and0/locate-server/blob/master/README.md>Help</a>
-						</form>
+							<input type="submit" id="submit" value="&#xf002;" class="fas">
 
-						<!-- 折りたたみ展開ボタン -->
-						<div onclick="obj=document.getElementById('hidden-explain').style; obj.display=(obj.display=='none')?'block':'none';">
-						<a style="cursor:pointer;">▼ 検索ヘルプを表示</a>
-						</div>
-						<!--// 折りたたみ展開ボタン -->
+							<!-- 折りたたみ展開ボタン -->
+							<input type="button" onclick="obj=document.getElementById('hidden-explain').style; obj.display=(obj.display=='none')?'block':'none';" value="&#xf05a;" class=fas title="Help">
+							</div>
+							<!--// 折りたたみ展開ボタン -->
 
 						<!-- ここから先を折りたたむ -->
 						<div id="hidden-explain" style="display:none;clear:both;">
@@ -267,6 +268,8 @@ func htmlClause(title string) string {
 						<small> %s </small>
 						</div>
 						<!-- 折りたたみここまで -->
+						</form>
+
 
 						<h4>
 							<a href=/status>DB</a> last update: %s<br>
@@ -296,7 +299,7 @@ func DBLastUpdateTime() string {
 
 // Top page
 func showInit(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, htmlClause(""))
+	fmt.Fprint(w, htmlClause(""))
 }
 
 // `locate -S` page

@@ -42,7 +42,7 @@ func TestLocateStatsSum(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LocateStatsSum error occur %s", err)
 	}
-	expected := uint64(76637)
+	expected := int64(76637)
 	if actual != expected {
 		t.Fatalf("got: %v want: %v\n$ locate -S\n%v\n",
 			actual, expected, string(b))
@@ -50,8 +50,8 @@ func TestLocateStatsSum(t *testing.T) {
 }
 
 func Test_Ambiguous(t *testing.T) {
-	actual := []uint64{1000000000, 100000000, 1999999, 2345678, 30001, 4021, 56}
-	expected := []string{"10億", "1億", "199万", "234万", "3万", "4千", "56"}
+	actual := []int64{1_000_000_000, 100_000_000, 1_999_999, 2_345_678, 30_001, 4_021, 56}
+	expected := []string{"1,000,000,000+", "100,000,000+", "1,000,000+", "2,000,000+", "30,000+", "4,000+", "56"}
 	for i, a := range actual {
 		ag := Ambiguous(a)
 		if ag != expected[i] {

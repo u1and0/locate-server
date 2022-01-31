@@ -94,7 +94,7 @@ func main() {
 		log.Error(err)
 	}
 	// 検索対象ファイル数の合計値を算出
-	var n uint64
+	var n int64
 	n, err = cmd.LocateStatsSum(locateS) // 検索ファイル数の初期値
 	if err != nil {
 		log.Error(err)
@@ -357,7 +357,7 @@ func addResult(w http.ResponseWriter, r *http.Request) {
 				log.Error(err)
 			}
 			locateS = l // 保持するDB情報の更新
-			var n uint64
+			var n int64
 			n, err = cmd.LocateStatsSum(l) // 検索ファイル数の更新
 			if err != nil {
 				log.Error(err)

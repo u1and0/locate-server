@@ -25,48 +25,52 @@ services:
     info:
         build:
             context: ./app
-        # environment:
-        #     - CRON_CYCLE=@midnight
-        #     - UPDATEDB_PATH=/mnt
-        #     - OPTION=--verbose
-        #     - TZ=Asia/Tokyo
+        environment:
+            - UPDATEDB_PATH=/mnt/1_Information
         volumes:
             - db:/var/lib/mlocate
             - db:/var/lib/plocate
             - /mnt:/mnt:ro
-        command: >
-            /bin/sh -c
-              ": 'Write crontab' &&\
-              echo @midnight gocate -init -U /mnt/1_Information -o /var/lib/plocate | crontab - &&\
-              : 'Execute updatedb at first time' &&\
-              gocate -init  -U /mnt/1_Information -o /var/lib/plocate &&\
-              : 'Up cron daemon' &&\
-              crond &&\
-              : 'Wait for some command (NOT exit container)' &&\
-              tail -f /dev/null"
 
-    comm:
+    common:
         build:
             context: ./app
-        # environment:
-        #     - CRON_CYCLE=@midnight
-        #     - UPDATEDB_PATH=/mnt
-        #     - OPTION=--verbose
-        #     - TZ=Asia/Tokyo
+        environment:
+            - UPDATEDB_PATH=/mnt/2_Common
         volumes:
             - db:/var/lib/mlocate
             - db:/var/lib/plocate
             - /mnt:/mnt:ro
-        command: >
-            /bin/sh -c
-              ": 'Write crontab' &&\
-              echo @midnight gocate -init -U /mnt/5_UserCommunication -o /var/lib/plocate &&\
-              : 'Execute updatedb at first time' &&\
-              gocate -init  -U /mnt/5_UserCommunication -o /var/lib/plocate &&\
-              : 'Up cron daemon' &&\
-              crond &&\
-              : 'Wait for some command (NOT exit container)' &&\
-              tail -f /dev/null"
+
+    personal:
+        build:
+            context: ./app
+        environment:
+            - UPDATEDB_PATH=/mnt/3_Personal
+        volumes:
+            - db:/var/lib/mlocate
+            - db:/var/lib/plocate
+            - /mnt:/mnt:ro
+
+    rest:
+        build:
+            context: ./app
+        environment:
+            - UPDATEDB_PATH=/mnt/4_Restriction
+        volumes:
+            - db:/var/lib/mlocate
+            - db:/var/lib/plocate
+            - /mnt:/mnt:ro
+
+    user:
+        build:
+            context: ./app
+        environment:
+            - UPDATEDB_PATH=/mnt/5_UserCommunication
+        volumes:
+            - db:/var/lib/mlocate
+            - db:/var/lib/plocate
+            - /mnt:/mnt:ro
 
       ## app関連その他ディレクトリ
       # personal:

@@ -15,15 +15,16 @@ RUN pacman -Syu --noconfirm go &&\
 RUN ln -s /root/go/bin/gocate /usr/bin
 
 ENV OPTION="--verbose" \
-    TZ="Asia/Tokyo"
-# CMD /bin/sh -c ": 'Write crontab' &&\
-#         echo ${OPTION} gocate -init -U ${UPDATEDB_PATH} -o /var/lib/plocate &&\
-#         : 'Execute updatedb at first time' &&\
-#         gocate -init  -U ${UPDATEDB_PATH} -o /var/lib/plocate &&\
-#         : 'Up cron daemon' &&\
-#         crond &&\
-#         : 'Wait for some command (NOT exit container)' &&\
-#         tail -f /dev/null"
+    TZ="Asia/Tokyo" \
+    CRON_CYCLE="@midnight"
+CMD /bin/sh -c ": 'Write crontab' &&\
+        echo ${CRON_CYCLE} gocate -init -U ${UPDATEDB_PATH} -o /var/lib/plocate -- ${OPTION} | crontab - &&\
+        : 'Execute updatedb at first time' &&\
+        gocate -init  -U ${UPDATEDB_PATH} -o /var/lib/plocate -- ${OPTION} &&\
+        : 'Up cron daemon' &&\
+        crond &&\
+        : 'Wait for some command (NOT exit container)' &&\
+        tail -f /dev/null"
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
       description="make database regularly by `updatedb` command"\

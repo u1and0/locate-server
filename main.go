@@ -24,7 +24,7 @@ const (
 	// VERSION : version
 	VERSION = "3.1.0r"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
-	LOGFILE = "/var/lib/plocate/locate.log"
+	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locate (gocate) search db path
 	LOCATEDIR = "/var/lib/plocate"
 	// REQUIRE : required commands. Separate by space.

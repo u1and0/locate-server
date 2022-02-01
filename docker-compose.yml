@@ -9,6 +9,7 @@ services:
         volumes:
             - db:/var/lib/mlocate
             - db:/var/lib/plocate
+            - /mnt:/mnt:ro
         environment:
             - TZ=Asia/Tokyo
         working_dir: /var/www
@@ -21,17 +22,52 @@ services:
             - /var/lib/mlocate:/var/lib/mlocate
             - /var/lib/plocate:/var/lib/plocate
 
-    updatedb:
+    info:
         build:
-             context: ./app
-        environment:
-            - TZ=Asia/Tokyo
-            - CRON_CYCLE='*/20 * * * *'
-            - UPDATEDB_PATH="/home/u1and0/home/go"
+            context: ./app
+        # environment:
+        #     - CRON_CYCLE=@midnight
+        #     - UPDATEDB_PATH=/mnt
+        #     - OPTION=--verbose
+        #     - TZ=Asia/Tokyo
         volumes:
             - db:/var/lib/mlocate
             - db:/var/lib/plocate
-            - /home/u1and0/home/go:/home/u1and0/home/go
+            - /mnt:/mnt:ro
+        command: >
+            /bin/sh -c
+              ": 'Write crontab' &&\
+              echo @midnight gocate -init -U /mnt/1_Information -o /var/lib/plocate | crontab - &&\
+              : 'Execute updatedb at first time' &&\
+              gocate -init  -U /mnt/1_Information -o /var/lib/plocate &&\
+              : 'Up cron daemon' &&\
+              crond &&\
+              : 'Wait for some command (NOT exit container)' &&\
+              tail -f /dev/null"
+
+    comm:
+        build:
+            context: ./app
+        # environment:
+        #     - CRON_CYCLE=@midnight
+        #     - UPDATEDB_PATH=/mnt
+        #     - OPTION=--verbose
+        #     - TZ=Asia/Tokyo
+        volumes:
+            - db:/var/lib/mlocate
+            - db:/var/lib/plocate
+            - /mnt:/mnt:ro
+        command: >
+            /bin/sh -c
+              ": 'Write crontab' &&\
+              echo @midnight gocate -init -U /mnt/5_UserCommunication -o /var/lib/plocate &&\
+              : 'Execute updatedb at first time' &&\
+              gocate -init  -U /mnt/5_UserCommunication -o /var/lib/plocate &&\
+              : 'Up cron daemon' &&\
+              crond &&\
+              : 'Wait for some command (NOT exit container)' &&\
+              tail -f /dev/null"
+
       ## app関連その他ディレクトリ
       # personal:
       #     build:

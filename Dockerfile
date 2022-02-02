@@ -3,9 +3,9 @@
 # $ docker run -d --rm --name locs_test u1and0/locate-server [options]
 # ```
 
-FROM golang:1.17.0-alpine3.14 AS go_official
+FROM golang:1.17.6-alpine3.15 AS go_official
 RUN apk --update --no-cache add git &&\
-    go install github.com/u1and0/gocate@v0.3.0
+    go install github.com/u1and0/gocate@v0.3.3
 WORKDIR /go/src/github.com/u1and0/locate-server
 # For go module using go-pipeline
 ENV GO111MODULE=on
@@ -15,7 +15,7 @@ COPY ./go.sum /go/src/github.com/u1and0/locate-server/go.sum
 COPY ./cmd /go/src/github.com/u1and0/locate-server/cmd
 RUN go build -o /go/bin/locate-server
 
-FROM frolvlad/alpine-glibc:alpine-3.14_glibc-2.33
+FROM frolvlad/alpine-glibc:alpine-3.15_glibc-2.34
 COPY --from=go_official /go/bin/locate-server /usr/bin/locate-server
 COPY --from=go_official /go/bin/gocate /usr/bin/gocate
 COPY ./js /usr/bin/js
@@ -24,4 +24,4 @@ ENTRYPOINT ["/usr/bin/locate-server"]
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
       description="Running locate-server"\
-      version="v2.3.1"
+      version="v2.3.3"

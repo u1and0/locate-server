@@ -3,8 +3,6 @@ services:
     web:
         build:
             context: .
-            # deploy:
-            # replicas: 2
         ports:
             - 8082:8080
         depends_on:
@@ -13,23 +11,10 @@ services:
             - db:/var/lib/mlocate
             - /home/u1and0:/home/u1and0
         environment:
-            # - LOCATE_PATH=/var/lib/mlocate/mlocate.db
             - TZ=Asia/Tokyo
+            # - LOCATE_PATH=/var/lib/mlocate/mlocate.db
         entrypoint: /usr/bin/locate-server
         # command: [-s, -r, \\gr.jp\DFS]
-        #
-        # restart_policy:
-        #     condition: on-failure
-        #     delay: 5s
-        #     max_attempts: 3
-        #     window: 120s
-        # resources:
-        #     limits:
-        #         cpus: '0.5'
-        #         memory: 100M
-        #     reservations:
-        #         cpus: '0.25'
-        #         memory: 50M
 
     db:
         image: busybox
@@ -38,7 +23,7 @@ services:
             - /var/lib/mlocate:/var/lib/mlocate
               # - /home/u1and0:/home/u1and0
 
-    app: 
+    app:
         build:
              context: ./app
         depends_on:

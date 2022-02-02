@@ -251,6 +251,7 @@ func htmlClause(title string) string {
 					<body>
 						<form method="get" action="/searching">
 							<!-- 検索窓 -->
+							<a href=/ class="fas fa-home" title="Locate Server Home"></a>
 							<input type="text" name="query" value="%s" size="50" list="searched-words" >
 
 							<!-- 検索履歴 Frecency リスト -->

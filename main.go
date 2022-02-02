@@ -240,6 +240,8 @@ func htmlClause(title string) string {
 		}
 		return strings.Join(ss, "")
 	}(), "ul")
+	url := "https://github.com/u1and0/locate-server/tree/v" + VERSION
+	url = fmt.Sprintf("<a href=%s>%s</a>", url, url)
 	return fmt.Sprintf(`<html>
 					<head>
 						<title>Locate Server %s</title>
@@ -266,6 +268,7 @@ func htmlClause(title string) string {
 						<div id="hidden-explain" style="display:none;clear:both;">
 						<!-- 検索ヘルプ -->
 						<small> %s </small>
+						%s 
 						</div>
 						<!-- 折りたたみここまで -->
 						</form>
@@ -278,6 +281,7 @@ func htmlClause(title string) string {
 		title,
 		wordList.Datalist(),
 		explain,
+		url,
 		stats.LastUpdateTime,
 	)
 }

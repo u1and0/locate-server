@@ -8,22 +8,70 @@ services:
           - 8081:8080
         volumes:
             - db:/var/lib/mlocate
+            - db:/var/lib/plocate
+            - /mnt:/mnt:ro
         environment:
             - TZ=Asia/Tokyo
         working_dir: /var/www
         entrypoint: /usr/bin/locate-server
-        # command: ["-debug"]
+        command: ["-debug", "-d", "/var/lib/plocate"]
 
     db:
         image: busybox
         volumes:
             - /var/lib/mlocate:/var/lib/mlocate
+            - /var/lib/plocate:/var/lib/plocate
 
-    app:
+    info:
         build:
-             context: ./app
+            context: ./app
+        environment:
+            - UPDATEDB_PATH=/mnt/1_Information
         volumes:
             - db:/var/lib/mlocate
+            - db:/var/lib/plocate
+            - /mnt:/mnt:ro
+
+    common:
+        build:
+            context: ./app
+        environment:
+            - UPDATEDB_PATH=/mnt/2_Common
+        volumes:
+            - db:/var/lib/mlocate
+            - db:/var/lib/plocate
+            - /mnt:/mnt:ro
+
+    personal:
+        build:
+            context: ./app
+        environment:
+            - UPDATEDB_PATH=/mnt/3_Personal
+        volumes:
+            - db:/var/lib/mlocate
+            - db:/var/lib/plocate
+            - /mnt:/mnt:ro
+
+    rest:
+        build:
+            context: ./app
+        environment:
+            - UPDATEDB_PATH=/mnt/4_Restriction
+        volumes:
+            - db:/var/lib/mlocate
+            - db:/var/lib/plocate
+            - /mnt:/mnt:ro
+
+    user:
+        build:
+            context: ./app
+        environment:
+            - UPDATEDB_PATH=/mnt/5_UserCommunication
+        volumes:
+            - db:/var/lib/mlocate
+            - db:/var/lib/plocate
+            - /mnt:/mnt:ro
+
       ## app関連その他ディレクトリ
       # personal:
       #     build:

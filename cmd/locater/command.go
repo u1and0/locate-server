@@ -2,10 +2,8 @@ package locater
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/dustin/go-humanize"
@@ -31,38 +29,22 @@ func DBLastUpdateTime(db string) string {
 	return filestat.ModTime().Format(layout)
 }
 
-// LocateStats : Result of `locate -S`
-func LocateStats(s string) ([]byte, error) {
+// LocateStats : Sum db size
+func LocateStats(s string) (int64, error) {
+	var sum int64
 	dbs, err := filepath.Glob(s + "/*.db")
 	if err != nil {
-		return []byte{}, err
+		return sum, err
 	}
-	d := strings.Join(dbs, ":")
-	b, err := exec.Command("locate", "-Sd", d).Output()
-	// => locate -Sd /var/lib/mlocate/db1.db:/var/lib/mlocate/db2.db:...
-	if err != nil {
-		return b, err
-	}
-	return b, err
-}
-
-// LocateStatsSum : locateされるファイル数をDB情報から合計する
-func LocateStatsSum(b []byte) (int64, error) {
-	var (
-		sum, ni int64
-		ns      string
-		err     error
-	)
-	for i, w := range strings.Split(string(b), "\n") { // 改行区切り => 221,453 ファイル
-		if i%5 == 2 {
-			ns = strings.Fields(w)[0]              // => 221,453
-			ns = strings.ReplaceAll(ns, ",", "")   // => 221453
-			ni, err = strconv.ParseInt(ns, 10, 64) // as int64
-			if err != nil {
-				return sum, err
-			}
-			sum += ni
+	for _, d := range dbs {
+		file, err := os.Open(d)
+		defer file.Close()
+		i, err := file.Stat()
+		s := i.Size()
+		if err != nil {
+			return s, err
 		}
+		sum += s
 	}
 	return sum, err
 }

@@ -14,13 +14,9 @@ RUN pacman -Syu --noconfirm go &&\
     go install github.com/u1and0/gocate@latest
 RUN ln -s /root/go/bin/gocate /usr/bin
 
-ENV OPTION="--verbose" \
-    TZ="Asia/Tokyo" \
-    CRON_CYCLE="@midnight"
+ENV TZ="Asia/Tokyo"
 CMD /bin/sh -c ": 'Write crontab' &&\
         echo ${CRON_CYCLE} gocate -init -U ${UPDATEDB_PATH} -o /var/lib/plocate -- ${OPTION} | crontab - &&\
-        : 'Execute updatedb at first time' &&\
-        gocate -init  -U ${UPDATEDB_PATH} -o /var/lib/plocate -- ${OPTION} &&\
         : 'Up cron daemon' &&\
         crond &&\
         : 'Wait for some command (NOT exit container)' &&\

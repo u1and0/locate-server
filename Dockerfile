@@ -26,4 +26,4 @@ ENTRYPOINT ["/usr/bin/locate-server"]
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
       description="Run locate-server"\
-      version="v3.0.0r"
+      version="v3.2.0"

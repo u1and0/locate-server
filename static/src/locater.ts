@@ -1,4 +1,3 @@
-
 type Args = {
   dbpath: string; // 検索対象DBパス /path/to/database:/path/to/another
   pathSplitWin: boolean; // TrueでWindowsパスセパレータを使用する
@@ -31,11 +30,13 @@ export class Locater {
   }
 
   static displayStats(str: string): void {
-    const divElem: HTMLElement|null = document.getElementById("search-status");
-    const newElem: HTMLElement|null = document.createElement("b");
+    const divElem: HTMLElement | null = document.getElementById(
+      "search-status",
+    );
+    const newElem: HTMLElement | null = document.createElement("b");
     newElem.textContent = str;
     divElem.appendChild(newElem);
-    const br: HTMLElement|null = document.createElement("br");
+    const br: HTMLElement | null = document.createElement("br");
     divElem.appendChild(br);
   }
 
@@ -51,8 +52,13 @@ export class Locater {
       const dir: string = Locater.dirname(modified, sep);
       let result = `<a href="file://${modified}">${highlight}</a>`;
       result += `<a href="file://${dir}"> ${folderIcon} </a>`;
-      const resultElement: HTMLElement|null = document.getElementById("result");
-      resultElement.append("<tr><td>" + result + "</td></tr>");
+      const resultElement: HTMLElement | null = document.getElementById(
+        "result",
+      );
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.innerHTML = result;
+      resultElement.appendChild(tr).appendChild(td);
     });
   }
 

@@ -12,3 +12,4 @@ TODO.md
 *.tar.gz
 G*
 /locate-server*
+/static/node_modules/

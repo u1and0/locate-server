@@ -1,5 +1,4 @@
-import { Locater } from "../dist/locater.js";
-import { $ } from "../node_modules/@types/jquery";
+import { Locater } from "./locater.js";
 
 const url = new URL(window.location.href);
 await fetchSearchHistory(url.origin + "/history");
@@ -9,7 +8,7 @@ if (query) { // queryがなければ終了,あればサーバーからJSON呼び
 }
 
 // fetchの返り値のPromiseを返す
-async function fetchPath(url: string): Promise<any> {
+async function fetchPath(url: string): Promise<unknown> {
   return await fetch(url)
     .then((response) => {
       // if (!response.ok) {
@@ -41,7 +40,7 @@ async function fetchSearchHistory(url: string): Promise<void> {
 async function fetchJSONPath(url: string) {
   try {
     const locaterJSON: Promise<Locater> = await fetchPath(url);
-    const locater: Locater = new Locater(locaterJSON);
+    const locater = new Locater(locaterJSON);
     if (locater.args.debug) {
       console.dir(locater);
     }
@@ -58,7 +57,7 @@ async function fetchJSONPath(url: string) {
       $(window).on("scroll", function () { // scrollで下限近くまで来ると次をロード
         const inner = $(window).innerHeight();
         const outer = $(window).outerHeight();
-        const bottom = inner - outer;
+        const bottom: number = inner - outer;
         const tp = $(window).scrollTop();
         if (tp * 1.05 >= bottom) {
           //スクロールの位置が下部5%の範囲に来た場合

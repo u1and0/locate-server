@@ -32,9 +32,6 @@ export class Locater {
             const modified = this.pathModify(p);
             const highlight = this.highlightRegex(modified);
             const dir = Locater.dirname(modified, sep);
-            // let result = document.createElement("a");
-            // result.href = `file://${modified}`;
-            // result.append(`${highlight}`);
             let result = `<a href="file://${modified}">${highlight}</a>`;
             result += `<a href="file://${dir}"> ${folderIcon} </a>`;
             const resultElement = document.getElementById("result");

@@ -16,7 +16,10 @@
         <!-- 検索ボタン -->
         <input type="submit" id="submit" value="&#xf002;" class="fas">
         <input type="button" onclick="toggleMenu('hidden-explain')" value="&#xf05a;" class=fas title="Help"> <!--// Help折りたたみ展開ボタン -->
+        <br>
+        <input type="text" id="search-form">
       </form>
+
 
       <!-- ここから先を折りたたむ -->
       <div id="hidden-explain" style="display:none;clear:both;">
@@ -76,10 +79,9 @@
         <div class="loader">Loading...</div>
       </div>
       <table id="result"></table>
-      <div id="error-view"><div>
+      <div id="error-view"></div>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script type="module" src="/static/dist/locater.js"></script>
     <script type="module" src="/static/dist/main.js"></script>
     <script type="text/javascript" src="/static/dist/tooltips.js"></script>
     <script type="text/javascript" src="/static/dist/datalist.js"></script>

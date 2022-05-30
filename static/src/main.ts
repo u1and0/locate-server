@@ -22,7 +22,14 @@ async function main() {
     $("#search-form").keyup(function () {
       const value = document.getElementById("search-form").value;
       const result = fzfSearch(locater.paths, value);
-      console.log(result.length);
+      const locaterClone: Locater = Object.assign(
+        Object.create(Object.getPrototypeOf(locater)),
+        locater,
+      );
+      locaterClone.paths = result;
+      locaterClone.lazyLoad(0, 100);
+      console.log(locater);
+      console.log(locaterClone);
       // for (const r of result) {
       //   $("#search-result").append($("tr td").html(r))
       // }
@@ -75,19 +82,5 @@ function displayResult(locater: Locater): void {
   const searchTime = `${locater.stats.searchTime.toFixed(3)}msec で\
                         約${locater.stats.items}件を検索しました。`;
   Locater.displayStats(searchTime);
-  // Rolling next data
-  let n = 0;
-  const shift = 100;
-  locater.lazyLoad(n, shift);
-  $(window).on("scroll", function () { // scrollで下限近くまで来ると次をロード
-    const inner = $(window).innerHeight();
-    const outer = $(window).outerHeight();
-    const bottom: number = inner - outer;
-    const tp = $(window).scrollTop();
-    if (tp * 1.05 >= bottom) {
-      //スクロールの位置が下部5%の範囲に来た場合
-      n += shift;
-      locater.lazyLoad(n, shift);
-    }
-  });
+  locater.rollingNextData();
 }

@@ -1,3 +1,5 @@
+declare const $: any;
+
 type Args = {
   dbpath: string; // 検索対象DBパス /path/to/database:/path/to/another
   pathSplitWin: boolean; // TrueでWindowsパスセパレータを使用する
@@ -43,6 +45,11 @@ export class Locater {
 
   // 検索パス遅延表示
   lazyLoad(n: number, shift: number): void {
+    // Clear child node
+    $("#result tr").remove();
+    // let clone = resultElement.cloneNode(false);
+    // resultElement.parentNode.replaceChild(clone, resultElement);
+
     const folderIcon =
       '<i class="far fa-folder-open" title="クリックでフォルダを開く"></i>';
     const sep: string = this.args.pathSplitWin ? "\\" : "/";
@@ -56,10 +63,26 @@ export class Locater {
       const resultElement: HTMLElement | null = document.getElementById(
         "result",
       );
+      // Insert result in element
       const tr = document.createElement("tr");
       const td = document.createElement("td");
       td.innerHTML = result;
       resultElement.appendChild(tr).appendChild(td);
+    });
+  }
+
+  rollingNextData(n = 0, shift = 100) {
+    this.lazyLoad(n, shift);
+    $(window).on("scroll", function () { // scrollで下限近くまで来ると次をロード
+      const inner = $(window).innerHeight();
+      const outer = $(window).outerHeight();
+      const bottom: number = inner - outer;
+      const tp = $(window).scrollTop();
+      if (tp * 1.05 >= bottom) {
+        //スクロールの位置が下部5%の範囲に来た場合
+        n += shift;
+        this.lazyLoad(n, shift);
+      }
     });
   }
 

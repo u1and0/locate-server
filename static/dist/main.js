@@ -10,28 +10,27 @@ async function main() {
     }
     const locaterJSON = await fetchPath(url.href.replace("search", "json"));
     const locater = new Locater(locaterJSON);
-    // locater = await fetchJSONPath(url.href.replace("search", "json"));
     displayResult(locater);
     // FZF on keyboard
-    $(document).ready($(function () {
+    $(function () {
         $("#search-form").keyup(function () {
             const value = document.getElementById("search-form").value;
             const result = fzfSearch(locater.paths, value);
-            console.log(result);
+            console.log(result.length);
             // for (const r of result) {
             //   $("#search-result").append($("tr td").html(r))
             // }
         });
-    }));
+    });
 }
 // fetchの返り値のPromiseを返す
 async function fetchPath(url) {
     return await fetch(url)
         .then((response) => {
-        // if (!response.ok) {
-        // return Promise.reject(new Error(`{${response.status}: ${response.statusText}`));
-        // } else{
         return response.json();
+    })
+        .catch((response) => {
+        return Promise.reject(new Error(`{${response.status}: ${response.statusText}`));
     });
 }
 async function fetchSearchHistory(url) {
@@ -49,22 +48,12 @@ async function fetchSearchHistory(url) {
         console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
     }
 }
-// async function fetchJSONPath(url: string): Locater {
-//   try {
-//     const locaterJSON: Promise<Locater> = await fetchPath(url);
-//     const locater = new Locater(locaterJSON);
-//     if (locater.args.debug) {
-//       console.dir(locater);
-//     }
-//     return locater;
-//   } catch (error) {
-//     console.error(`Error occured (${error})`); // Promiseチェーンの中で発生したエラーを受け取る
-//   }
-// }
 function displayResult(locater) {
     if (locater.error) {
         console.error("error: ", locater.error);
         const err = document.getElementById("error-view");
+        if (err === null)
+            return;
         err.innerHTML = "<p>" + locater.error + "</p>";
         return;
     }

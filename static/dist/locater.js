@@ -17,6 +17,8 @@ export class Locater {
     }
     static displayStats(str) {
         const divElem = document.getElementById("search-status");
+        if (divElem === null)
+            return;
         const newElem = document.createElement("b");
         newElem.textContent = str;
         divElem.appendChild(newElem);

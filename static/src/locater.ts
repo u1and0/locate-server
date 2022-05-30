@@ -33,6 +33,7 @@ export class Locater {
     const divElem: HTMLElement | null = document.getElementById(
       "search-status",
     );
+    if (divElem === null) return;
     const newElem: HTMLElement | null = document.createElement("b");
     newElem.textContent = str;
     divElem.appendChild(newElem);

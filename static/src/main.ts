@@ -1,4 +1,4 @@
-import { Locater } from "./locater.js";
+import { Locater, rollingNextData } from "./locater.js";
 import { fzfSearch } from "./fzf.js";
 declare const $: any;
 
@@ -27,7 +27,8 @@ async function main() {
         locater,
       );
       locaterClone.paths = result;
-      locaterClone.lazyLoad(0, 100);
+      $("#result tr").remove(); // Clear child node
+      rollingNextData(locaterClone);
       console.log(locater);
       console.log(locaterClone);
       // for (const r of result) {
@@ -82,5 +83,6 @@ function displayResult(locater: Locater): void {
   const searchTime = `${locater.stats.searchTime.toFixed(3)}msec で\
                         約${locater.stats.items}件を検索しました。`;
   Locater.displayStats(searchTime);
-  locater.rollingNextData();
+  $("#result tr").remove(); // Clear child node
+  rollingNextData(locater);
 }

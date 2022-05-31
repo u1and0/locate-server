@@ -16,17 +16,17 @@ async function main() {
         $("#search-form").keyup(function () {
             const value = document.getElementById("search-form").value;
             const result = fzfSearch(locater.paths, value);
-            const locaterClone = Object.assign(Object.create(Object.getPrototypeOf(locater)), locater);
+            const locaterClone = objCopy(locater);
             locaterClone.paths = result;
             $("#result tr").remove(); // Clear child node
             rollingNextData(locaterClone);
             console.log(locater);
             console.log(locaterClone);
-            // for (const r of result) {
-            //   $("#search-result").append($("tr td").html(r))
-            // }
         });
     });
+}
+function objCopy(obj) {
+    return Object.assign(Object.create(Object.getPrototypeOf(obj)), obj);
 }
 // fetchの返り値のPromiseを返す
 async function fetchPath(url) {

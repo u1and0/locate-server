@@ -4,6 +4,13 @@ declare const $: any;
 
 main();
 
+const objCopy = (obj: unknown) => {
+  return Object.assign(
+    Object.create(Object.getPrototypeOf(obj)),
+    obj,
+  );
+};
+
 async function main() {
   const url = new URL(window.location.href);
   await fetchSearchHistory(url.origin + "/history");
@@ -22,18 +29,12 @@ async function main() {
     $("#search-form").keyup(function () {
       const value = document.getElementById("search-form").value;
       const result = fzfSearch(locater.paths, value);
-      const locaterClone: Locater = Object.assign(
-        Object.create(Object.getPrototypeOf(locater)),
-        locater,
-      );
+      const locaterClone: Locater = objCopy(locater);
       locaterClone.paths = result;
       $("#result tr").remove(); // Clear child node
       rollingNextData(locaterClone);
       console.log(locater);
       console.log(locaterClone);
-      // for (const r of result) {
-      //   $("#search-result").append($("tr td").html(r))
-      // }
     });
   });
 }

@@ -44,6 +44,23 @@ export class Locater {
   }
 
   // 検索パス遅延表示
+  [Symbol.iterator]() { //(n: number, shift: number): void {
+    let index = 0;
+    const arry = this.paths;
+    return {
+      next() {
+        if (index > arry.length) {
+          return { done: true };
+        } else {
+          return {
+            done: false,
+            value: arry[index++],
+          };
+        }
+      },
+    };
+  }
+
   lazyLoad(n: number, shift: number): void {
     const folderIcon =
       '<i class="far fa-folder-open" title="クリックでフォルダを開く"></i>';
@@ -98,6 +115,12 @@ export class Locater {
 }
 
 export function rollingNextData(locater: Locater, n = 0, shift = 100) {
+  let i = 0;
+  for (const l of locater) {
+    i++;
+    if (i > 10) break;
+    console.log(l);
+  }
   locater.lazyLoad(n, shift);
   $(window).on("scroll", function () { // scrollで下限近くまで来ると次をロード
     const inner = $(window).innerHeight();

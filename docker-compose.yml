@@ -23,21 +23,7 @@
 #   docker create -v /var/lib/mlocate --name db busybox
 #   ```
 
-version: "3"
 services:
-    web: # 検索webインターフェイスの構築
-        image: u1and0/locate-server:v2.3.3
-        ports:
-            - 8081:8080
-        volumes:
-            # - "db:/var/lib/mlocate"
-            - "db:/var/lib/mlocate"
-            - "/mnt:/mnt:ro"
-        environment:
-            - TZ=Asia/Tokyo
-        command: [ "-s", "-r", "\\\\ns5\\Tokki", "-t", "/mnt"]
-        restart: "unless-stopped"
-
     web3: # 検索webインターフェイスの構築 locater-server3
         image: u1and0/locate-server:v3.1.0
         ports:
@@ -51,10 +37,10 @@ services:
         command: [ "-s", "-r", "\\\\ns5\\Tokki", "-t", "/mnt"]
         restart: "unless-stopped"
 
-    webtest: # 検索webインターフェイスの構築 locater-server3.X plocate test
-        image: u1and0/locate-server:v3.2.0
+    web4: # 検索webインターフェイスの構築 locater-server3.X plocate test
+        image: u1and0/locate-server:latest
         ports:
-            - 8085:8080
+            - 8083:8080
         volumes:
             - "db:/var/lib/mlocate"
             - "db_plocate:/var/lib/plocate"
@@ -78,7 +64,7 @@ services:
         build:
              context: ./app
         depends_on:
-            - web
+            - web3
         volumes:
             - "db:/var/lib/mlocate"
             - "/mnt:/mnt:ro"

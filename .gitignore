@@ -13,3 +13,4 @@ TODO.md
 G*
 /locate-server*
 docker-compose.yml
+/static/*.js

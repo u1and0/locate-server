@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "Bash(bash /home/u1and0/.claude/hooks/go-format.sh)",
+      "Bash(cp /home/u1and0/.claude/projects/-home-u1and0-home-go-src-github-com-u1and0-locate-server/memory/project_overview.md /home/u1and0/home/go/src/github.com/u1and0/locate-server/.claude/memory/)",
+      "Bash(cp /home/u1and0/.claude/projects/-home-u1and0-home-go-src-github-com-u1and0-locate-server/memory/MEMORY.md /home/u1and0/home/go/src/github.com/u1and0/locate-server/.claude/memory/)",
+      "Bash(deno task:*)",
+      "Bash(ls static/*.js)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "gemini-cli"
+  ]
+}

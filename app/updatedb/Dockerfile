@@ -8,11 +8,12 @@
 #   -e UPDATEDB_PATH=/path/to/work\
 #   -e OUTPUT=mlocatework.db\
 #   u1and0/updatedb
+FROM golang:1.17.6-alpine3.15 AS go_builder
+RUN apk --update --no-cache add git &&\
+    go install github.com/u1and0/gocate@latest
 
 FROM u1and0/plocate:latest
-RUN pacman -Syu --noconfirm go &&\
-    go install github.com/u1and0/gocate@latest
-RUN ln -s /root/go/bin/gocate /usr/bin
+COPY --from=go_builder /go/bin/gocate /usr/bin/gocate
 
 ENV TZ="Asia/Tokyo"
 CMD /bin/sh -c ": 'Write crontab' &&\
@@ -24,4 +25,4 @@ CMD /bin/sh -c ": 'Write crontab' &&\
 
 LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
       description="make database regularly by `updatedb` command"\
-      version="u1and0/updatedb:v1.1.0r"
+      version="u1and0/updatedb:v3.2.0"

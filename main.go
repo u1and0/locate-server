@@ -22,11 +22,11 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "3.1.0"
+	VERSION = "3.1.0r"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
 	LOGFILE = "/var/lib/mlocate/locate.log"
 	// LOCATEDIR : locate (gocate) search db path
-	LOCATEDIR = "/var/lib/mlocate"
+	LOCATEDIR = "/var/lib/plocate"
 	// REQUIRE : required commands. Separate by space.
 	REQUIRE = "locate gocate"
 	// PORT : default open server port
@@ -38,7 +38,7 @@ var (
 	showVersion bool
 	port        int
 	locater     = parseCmdlineOption()
-	locateS     []byte
+	locateS     int64
 	caches      = cache.New()
 )
 
@@ -63,18 +63,18 @@ func main() {
 
 	// Log setting
 	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	defer logfile.Close()
-	setLogger(logfile) // log.XXX()を使うものはここより後に書く
 	if err != nil {
 		log.Panicf("Cannot open logfile %v", err)
 	} else {
 		// DB path flag parse
 		log.Infof("Set dbpath: %s", locater.Dbpath)
 	}
+	defer logfile.Close()
+	setLogger(logfile) // log.XXX()を使うものはここより後に書く
 
 	// Directory check
 	if _, err := os.Stat(LOCATEDIR); os.IsNotExist(err) {
-		log.Panic(err) // /var/lib/mlocateがなければ終了
+		log.Panic(err) // /var/lib/plocateがなければ終了
 	}
 
 	// Command check
@@ -118,7 +118,7 @@ func searchPage(c *gin.Context) {
 	/* LocateStats()の結果が前と異なっていたら
 	locateS更新
 	cacheを初期化 */
-	if l, err := cmd.LocateStats(locater.Dbpath); string(l) != string(locateS) {
+	if l, err := cmd.LocateStats(locater.Dbpath); l != locateS {
 		// DB更新されていたら
 		if err != nil {
 			log.Error(err)
@@ -127,13 +127,7 @@ func searchPage(c *gin.Context) {
 		// Initialize cache
 		// nil map assignment errorを発生させないために必要
 		caches = cache.New() // Reset cache
-		// Count number of search target files
-		var n int64
-		n, err = cmd.LocateStatsSum(locateS)
-		if err != nil {
-			log.Error(err)
-		}
-		locater.Stats.Items = cmd.Ambiguous(n)
+		locater.Stats.Items = cmd.Ambiguous(locateS)
 		// Update LastUpdateTime for database
 		locater.Stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
 	}
@@ -163,7 +157,9 @@ func fetchJSON(c *gin.Context) {
 	if err != nil {
 		log.Errorf("error: %s query: %#v", err, query)
 		local.Error = fmt.Sprintf("%s", err)
-		c.JSON(http.StatusOK, local)
+		c.JSON(406, local)
+		// 406 Not Acceptable:
+		// サーバ側が受付不可能な値であり提供できない状態
 		return
 	}
 
@@ -174,7 +170,9 @@ func fetchJSON(c *gin.Context) {
 	if err != nil {
 		log.Errorf("error %v", err)
 		local.Error = fmt.Sprintf("%v", err)
-		c.JSON(http.StatusOK, local)
+		c.JSON(406, local)
+		// 406 Not Acceptable:
+		// サーバ側が受付不可能な値であり提供できない状態
 		return
 	}
 
@@ -190,7 +188,9 @@ func fetchJSON(c *gin.Context) {
 	// Response & Logging
 	if err != nil {
 		log.Errorf("%s [ %-50s ]", err, query.Q)
-		c.JSON(http.StatusOK, local)
+		c.JSON(500, local)
+		// 500 Internal Server Error
+		// 何らかのサーバ内で起きたエラー
 		return
 	}
 	local.Paths = result
@@ -206,17 +206,27 @@ func fetchJSON(c *gin.Context) {
 	if len(local.Paths) == 0 {
 		err = errors.New("no content")
 		local.Error = fmt.Sprintf("%v", err)
-		c.JSON(http.StatusOK, local)
+		c.JSON(200, local)
+		// c.JSON(204, local)
+		//
+		// SyntaxError: Unexpected end of JSON input
+		// がブラウザ側で出る
+		//
+		// 204 No Content
+		// リクエストに対して送信するコンテンツは無いが
+		// ヘッダは有用である
 		return
 	}
 	c.JSON(http.StatusOK, local)
+	// 200 OK
+	// リクエストが正常に処理できた
 }
 
 func fetchHistory(c *gin.Context) {
 	history, err := cmd.Datalist(LOGFILE)
 	if err != nil {
 		log.Error(err)
-		c.JSON(http.StatusOK, history)
+		c.JSON(404, history)
 		return
 	}
 	gt := api.IntQuery(c, "gt") // history?gt=10 => gt==10
@@ -235,17 +245,18 @@ func fetchHistory(c *gin.Context) {
 
 func fetchStatus(c *gin.Context) {
 	l, err := cmd.LocateStats(locater.Args.Dbpath) // err <- OS command error
-	ss := strings.Split(string(l), "\n")
 	if err != nil {
 		log.Errorf("error: %s", err)
-		c.JSON(http.StatusOK, gin.H{
-			"locate-S": ss,
+		c.JSON(500, gin.H{
+			"locate-S": l,
 			"error":    err,
 		})
+		// 500 Internal Server Error
+		// 何らかのサーバ内で起きたエラー
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"locate-S": ss,
+		"locate-S": l,
 		"error":    err,
 	})
 }
@@ -255,7 +266,7 @@ func parseCmdlineOption() (l cmd.Locater) {
 	var (
 		showVersion bool
 		usage       = usageText{
-			dir:                 `Path of locate database directory (default "/var/lib/mlocate")`,
+			dir:                 `Path of locate database directory (default "/var/lib/plocate")`,
 			port:                `Server port number. Default access to http://localhost:8080/ (default 8080)`,
 			root:                `DB insert prefix for directory path`,
 			windowsPathSeparate: `Use path separate Windows backslash`,

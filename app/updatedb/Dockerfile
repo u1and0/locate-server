@@ -1,0 +1,28 @@
+# n時間ごとにupdatedbによってディレクトリデータベースを更新する
+# app(このファイルで作成したイメージによるコンテナ)はtail -fでcrondの結果を標準出力に出力し続ける
+#
+# Usage:
+# docker run --name app -t --rm\
+#   -v `pwd`:/work\
+#   -e TZ='Asia/Tokyo'\
+#   -e UPDATEDB_PATH=/path/to/work\
+#   -e OUTPUT=mlocatework.db\
+#   u1and0/updatedb
+FROM golang:1.17.6-alpine3.15 AS go_builder
+RUN apk --update --no-cache add git &&\
+    go install github.com/u1and0/gocate@latest
+
+FROM u1and0/plocate:latest
+COPY --from=go_builder /go/bin/gocate /usr/bin/gocate
+
+ENV TZ="Asia/Tokyo"
+CMD /bin/sh -c ": 'Write crontab' &&\
+        echo ${CRON_CYCLE} gocate -init -U ${UPDATEDB_PATH} -o /var/lib/plocate -- ${OPTION} | crontab - &&\
+        : 'Up cron daemon' &&\
+        crond &&\
+        : 'Wait for some command (NOT exit container)' &&\
+        tail -f /dev/null"
+
+LABEL maintainer="u1and0 <e01.ando60@gmail.com>"\
+      description="make database regularly by `updatedb` command"\
+      version="u1and0/updatedb:v3.2.0"

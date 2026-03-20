@@ -1,59 +1,202 @@
-version: "3"
+# ** locate-server docker-compose file **
+#
+# usage:
+#    docker-compose up -d
+#    then connect to localhost:8080 in your browser.
+#
+# * web, web2: locate-serverを立てるweb2はミラー
+# * personal, communication, common: updatedb用のコンテナapp
+# * locateS: cronでlocate -Sコマンドを送ってファイル数を保存する
+# * stalker: webのログファイルを`tail -f`する
+#   ```docker
+#   docker run -d --name stalker --volumes-from=db busybox tail -f /var/lib/mlocate/locate.log
+#   ```
+# * observer: /var/lib/mlocateの更新時間と容量を`watch ls -l`で確認する。
+# * updatedbコンテナ使うのはTZ環境変数を使いたいので、
+# * tzdataパッケージがインストールされている必要がある
+#   ```docker
+#   docker run -t --name observer -e TZ='Asia/Tokyo' --volumes-from=db u1and0/updatedb watch -n10 ls -ltrAh /var/lib/mlocate
+#   ```
+# * backup: cronで`/var/lib/mlocate/*.log`, `/var/lib/mlocate/*.db`をtarしてローカルに保存
+# * db: /var/lib/mlocateを作成する
+#   ```docker
+#   docker create -v /var/lib/mlocate --name db busybox
+#   ```
+
 services:
-    web:
-        # image: u1and0/locate-server:latest
-        build:
-            context: .
+    web3: # 検索webインターフェイスの構築 locater-server3
+        image: u1and0/locate-server:v3.1.0
         ports:
-          - 8081:8080
+            - 8083:8080
         volumes:
-            - db:/var/lib/mlocate
+            # - "db:/var/lib/mlocate"
+            - "db:/var/lib/mlocate"
+            - "/mnt:/mnt:ro"
         environment:
             - TZ=Asia/Tokyo
-        working_dir: /var/www
-        entrypoint: /usr/bin/locate-server
-        # command: ["-debug"]
+        command: [ "-s", "-r", "\\\\ns5\\Tokki", "-t", "/mnt"]
+        restart: "unless-stopped"
+
+    web4: # 検索webインターフェイスの構築 locater-server3.X plocate test
+        image: u1and0/locate-server:latest
+        ports:
+            - 8083:8080
+        volumes:
+            - "db:/var/lib/mlocate"
+            - "db_plocate:/var/lib/plocate"
+            - "/mnt:/mnt:ro"
+        environment:
+            - TZ=Asia/Tokyo
+        command: [ "-s", "-r", "\\\\ns5\\Tokki", "-t", "/mnt", "-d", "/var/lib/plocate"]
+        restart: "unless-stopped"
 
     db:
         image: busybox
         volumes:
             - /var/lib/mlocate:/var/lib/mlocate
 
-    app:
+    db_plocate:
+        image: busybox
+        volumes:
+            - /var/lib/plocate:/var/lib/plocate
+
+    updatedb: # cron for locate
         build:
              context: ./app
+        depends_on:
+            - web3
+        volumes:
+            - "db:/var/lib/mlocate"
+            - "/mnt:/mnt:ro"
+        environment:
+            - TZ='Asia/Tokyo'
+        restart: "unless-stopped"
+
+    info:
+        build:
+            context: ./app/updatedb
+        environment:
+            - UPDATEDB_PATH=/mnt/1_Information
+            - CRON_CYCLE="0 11 * * *"
+            - OPTION=--verbose
         volumes:
             - db:/var/lib/mlocate
-      ## app関連その他ディレクトリ
-      # personal:
-      #     build:
-      #         context: ./app
-      # common:
-      #     build:
-      #         context: ./app
-      # communication:
-      #     build:
-      #         context: ./app
+            - db_plocate:/var/lib/plocate
+            - /mnt:/mnt:ro
 
-      ## バックアップ　監視関連
-      #     backup:
-      #         build:
-      #             context: ./backup
+    common:
+        build:
+            context: ./app/updatedb
+        environment:
+            - UPDATEDB_PATH=/mnt/2_Common
+            - CRON_CYCLE="10 11 * * *"
+            - OPTION=--verbose
+        volumes:
+            - db:/var/lib/mlocate
+            - db_plocate:/var/lib/plocate
+            - /mnt:/mnt:ro
 
-    # stalker: # locate-serverのログ監視
+    personal:
+        build:
+            context: ./app/updatedb
+        environment:
+            - UPDATEDB_PATH=/mnt/3_Personal
+            - CRON_CYCLE="40 11 * * *"
+            - OPTION=--verbose
+        volumes:
+            - db:/var/lib/mlocate
+            - db_plocate:/var/lib/plocate
+            - /mnt:/mnt:ro
+
+    rest:
+        build:
+            context: ./app/updatedb
+        environment:
+            - UPDATEDB_PATH=/mnt/4_Restriction
+            - CRON_CYCLE="0 13 * * *"
+            - OPTION=--verbose
+        volumes:
+            - db:/var/lib/mlocate
+            - db_plocate:/var/lib/plocate
+            - /mnt:/mnt:ro
+
+    user:
+        build:
+            context: ./app/updatedb
+        environment:
+            - UPDATEDB_PATH=/mnt/5_UserCommunication
+            - CRON_CYCLE="20 13 * * *"
+            - OPTION=--verbose
+        volumes:
+            - db:/var/lib/mlocate
+            - db_plocate:/var/lib/plocate
+            - /mnt:/mnt:ro
+
+    # # locate-serverが吐き出すログ監視
+    # # Usage:
+    # #   stalkerのlogを見る
+    # #   docker attach --no-stdin locateserver_stalker_1
+    # stalker:
     #     image: busybox:latest
+    #     depends_on:
+    #         - updatedb
     #     volumes:
     #         - db:/var/lib/mlocate
+    #     restart: "unless-stopped"
+    #     deploy:
+    #         restart_policy:
+    #             delay: 5s
     #     command: [tail, -f, /var/lib/mlocate/locate.log]
     #
+    # # mlocate*.dbの更新チェック
+    # # Usage:
+    # #   observerのlogを見る
+    # #   docker attach --no-stdin locateserver_observer_1
     # observer:
     #     build:
     #          context: ./app
     #     environment:
     #         - TZ=Asia/Tokyo
+    #     depends_on:
+    #         - updatedb
     #     volumes:
     #         - db:/var/lib/mlocate
+    #     restart: "unless-stopped"
+    #     deploy:
+    #         restart_policy:
+    #             delay: 5s
     #     command: [watch, -n10, ls, -ltrAh, /var/lib/mlocate]
+
+    # mlocate*.dbのファイル数をログ取りする
+    # 日時を記録
+    # watch -n 144000 "\rg '\d\dT\d\d:\d\d' log/locate-S.log | tac"
+    # 奇数行を記録
+    # watch -n 144000 "\rg files log/locate-S.log | sed '1d;n;d' | tac"
+    # 偶数行を記録
+    # watch -n 144000 "\rg files log/locate-S.log | awk 'NR%2!=0' | tac"
+    locates:
+        build:
+             context: ./log
+        depends_on:
+            - updatedb
+        volumes:
+            - db:/var/lib/mlocate
+            - ./log/:/work
+        restart: "unless-stopped"
+
+    # locate-serverが関係する/var/lib/mlocate内の
+    # バックアップをtar.gzで送る
+    backup:
+        build:
+            context: ./backup
+        depends_on:
+            - updatedb
+        volumes:
+            - db:/var/lib/mlocate
+            - db_plocate:/var/lib/plocate
+            - ./backup:/work
+        restart: "unless-stopped"
 
 volumes:
     db:
+    db_plocate:

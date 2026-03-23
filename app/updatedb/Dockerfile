@@ -6,7 +6,7 @@
 #   -v `pwd`:/work\
 #   -e TZ='Asia/Tokyo'\
 #   -e UPDATEDB_PATH=/path/to/work\
-#   -e OUTPUT=mlocatework.db\
+#   -e OUTPUT=plocatework.db\
 #   u1and0/updatedb
 FROM golang:1.17.6-alpine3.15 AS go_builder
 RUN apk --update --no-cache add git &&\

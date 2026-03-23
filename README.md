@@ -8,7 +8,7 @@
 ウェブブラウザからの入力で指定ディレクトリ下にあるファイル内の文字列に対してlocateコマンドを使用した正規表現検索を行い、結果をhtmlにしてウェブブラウザに表示します。
 
 ## Requirement
-* mlocate
+* plocate
 * [gocate](https://github.com/u1and0/gocate)
 
 Windows, Linux OK
@@ -20,11 +20,11 @@ MacOS 未テスト
 ```
 Usage of ./locate-server:
   -d string
-      Path of locate database directory (default "/var/lib/mlocate")
+      Path of locate database directory (default "/var/lib/plocate")
   -debug
     Debug mode
   -dir string
-    Path of locate database directory (default "/var/lib/mlocate")
+    Path of locate database directory (default "/var/lib/plocate")
   -p string
     Server port number. Default access to http://localhost:8080/ (default "8080")
   -port string
@@ -47,7 +47,7 @@ Usage of ./locate-server:
 
 ```
 $ locate-server \
-  -d /home/mydir/mlocate \
+  -d /home/mydir/plocate \
   -windows-path-separate \
   -trim '\\gr.jp\share' \
 ```
@@ -163,10 +163,10 @@ Dockerコンテナによるシステム構成
 
 ## data volume用のコンテナdbを作る
 ```
-docker create --name db -v /var/lib/mlocate -v /ShareUsers:/ShareUsers:ro busybox
+docker create --name db -v /var/lib/plocate -v /ShareUsers:/ShareUsers:ro busybox
 ```
 
-このコマンドではdbコンテナの`/varlib/mlocate`を外部に晒して、
+このコマンドではdbコンテナの`/varlib/plocate`を外部に晒して、
 ホストのShareUsersをdbコンテナにマウントする。
 ShareUsersが`locate`コマンドをかける対象のディレクトリ。
 
@@ -177,7 +177,7 @@ ShareUsersが`locate`コマンドをかける対象のディレクトリ。
 docker run --name app\
     --volumes-from db\
     -e UPDATEDB_PATH=/ShareUsers/<path to the db root>\
-    -e OUTPUT=mlocatepersonal.db\
+    -e OUTPUT=plocatepersonal.db\
     u1and0/upadtedb
 ```
 
@@ -185,7 +185,7 @@ docker run --name app\
 `updatedb`をかけるパスを`UPDATEDB_PATH`で指定している。
 dbでマウントしているのでこのコンテナで再度マウントする必要はない。
 環境変数`OUTPUT`は出力するファイル名を指定する。
-ディレクトリは`/var/lib/mlocate`に固定される。
+ディレクトリは`/var/lib/plocate`に固定される。
 
 
 ## locateコマンドでファイル検索するコンテナwebを作る
@@ -196,7 +196,7 @@ dbでマウントしているのでこのコンテナで再度マウントする
 docker run --name web --rm -t\
    --volumes-from db\
    -e TZ='Asia/Tokyo'\
-   -e LOCATE_PATH='/var/lib/mlocate/mlocatepersonal.db:/var/lib/mlocate/mlocatecommon.db'\
+   -e LOCATE_PATH='/var/lib/plocate/plocatepersonal.db:/var/lib/plocate/plocatecommon.db'\
    -p 8081:8080\
    u1and0/locate-server -s -r '\\DFS' # オプションのみ
 ```
@@ -211,7 +211,7 @@ u1and0/locate-serverコンテナはENTRYPOINTで動くのでコンテナの指�
 ``` shell-session
 $ docker inspect --format='{{range .Config.Env}}{{println .}}{{end}}' web
 TZ=Asia/Tokyo
-LOCATE_PATH=/var/lib/mlocate/mlocatepersonal.db:/var/lib/mlocate/mlocatecommon.db:/var/lib/mlocate/mlocatecommunication.db
+LOCATE_PATH=/var/lib/plocate/plocatepersonal.db:/var/lib/plocate/plocatecommon.db:/var/lib/plocate/plocatecommunication.db
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 LANG=C.UTF-8
 ```
@@ -223,7 +223,7 @@ LANG=C.UTF-8
 docker run --name personal --volumes-from db\
   -e TZ='Asia/Tokyo'\
   -e UPDATEDB_PATH=/ShareUsers/UserTokki/Personal\
-  -e OUTPUT=mlocatepersonal.db\
+  -e OUTPUT=plocatepersonal.db\
   -d u1and0/updatedb
 ```
 

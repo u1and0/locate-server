@@ -22,9 +22,9 @@ import (
 
 const (
 	// VERSION : version
-	VERSION = "3.1.0r"
+	VERSION = "4.0.0"
 	// LOGFILE : 検索条件 / 検索結果 / 検索時間を記録するファイル
-	LOGFILE = "/var/lib/mlocate/locate.log"
+	LOGFILE = "/var/lib/plocate/locate.log"
 	// LOCATEDIR : locate (gocate) search db path
 	LOCATEDIR = "/var/lib/plocate"
 	// REQUIRE : required commands. Separate by space.

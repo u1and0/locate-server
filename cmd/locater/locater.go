@@ -63,7 +63,7 @@ func (l *Locater) CmdGen() (pipeline [][]string) {
 	}
 
 	// Include PATTERNs
-	// -> gocate --database /var/lib/mlocate -- --ignore-case --regex hoge.*my.*name
+	// -> gocate --database /var/lib/plocate -- --ignore-case --regex hoge.*my.*name
 	// -> locate --ignore-case --regex hoge.*my.*name
 	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))
 

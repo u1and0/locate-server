@@ -39,8 +39,7 @@ async function fetchJSONPath(url: string): Promise<void> {
     if (!locater.error) {
       Locater.displayStats(`ヒット数: ${locater.paths.length}件`);
       Locater.displayStats(
-        `${locater.stats.searchTime.toFixed(3)}msec で` +
-          `約${locater.stats.items}件を検索しました。`,
+        `${locater.stats.searchTime.toFixed(3)}msec で検索しました。`,
       );
 
       let n = 0;

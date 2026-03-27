@@ -15,7 +15,6 @@ interface LocaterQuery {
 interface LocaterStats {
   lastUpdateTime: string;
   searchTime: number;
-  items: string;
 }
 
 export interface LocaterJSON {

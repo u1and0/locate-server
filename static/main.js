@@ -103,7 +103,7 @@
       if (!locater.error) {
         Locater.displayStats(`\u30D2\u30C3\u30C8\u6570: ${locater.paths.length}\u4EF6`);
         Locater.displayStats(
-          `${locater.stats.searchTime.toFixed(3)}msec \u3067\u7D04${locater.stats.items}\u4EF6\u3092\u691C\u7D22\u3057\u307E\u3057\u305F\u3002`
+          `${locater.stats.searchTime.toFixed(3)}msec \u3067\u691C\u7D22\u3057\u307E\u3057\u305F\u3002`
         );
         let n = 0;
         const shift = 100;

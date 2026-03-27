@@ -24,25 +24,11 @@
 #   ```
 
 services:
-    web3: # 検索webインターフェイスの構築 locater-server3
-        image: u1and0/locate-server:v3.1.0
-        ports:
-            - 8083:8080
-        volumes:
-            # - "db:/var/lib/mlocate"
-            - "db:/var/lib/mlocate"
-            - "/mnt:/mnt:ro"
-        environment:
-            - TZ=Asia/Tokyo
-        command: [ "-s", "-r", "\\\\ns5\\Tokki", "-t", "/mnt"]
-        restart: "unless-stopped"
-
-    web4: # 検索webインターフェイスの構築 locater-server3.X plocate test
+    web: # 検索webインターフェイス
         image: u1and0/locate-server:latest
         ports:
             - 8083:8080
         volumes:
-            - "db:/var/lib/mlocate"
             - "db_plocate:/var/lib/plocate"
             - "/mnt:/mnt:ro"
         environment:
@@ -64,7 +50,7 @@ services:
         build:
              context: ./app
         depends_on:
-            - web3
+            - web
         volumes:
             - "db:/var/lib/mlocate"
             - "/mnt:/mnt:ro"

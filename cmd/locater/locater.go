@@ -1,6 +1,8 @@
 package locater
 
 import (
+	"log/slog"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -30,6 +32,7 @@ type (
 		Root         string `json:"root"`         // 追加するドライブパス名
 		Trim         string `json:"trim"`         // 削除するドライブパス名
 		Debug        bool   `json:"debug"`        // Debugフラグ
+		LocateCmd    string `json:"locateCmd"`    // locateコマンドパス
 	}
 
 	// Paths locate command result
@@ -39,7 +42,6 @@ type (
 	Stats struct {
 		LastUpdateTime string  `json:"lastUpdateTime"` // 最後のDBアップデート時刻
 		SearchTime     float64 `json:"searchTime"`     // 検索にかかった時間
-		Items          string  `json:"items"`          // 検索対象のすべてのファイル数
 	}
 )
 
@@ -53,35 +55,44 @@ func (l *Locater) Locate() (Paths, error) {
 }
 
 // CmdGen : shell実行用パイプラインコマンドを発行する
-func (l *Locater) CmdGen() (pipeline [][]string) {
-	locate := []string{
-		"gocate",               // locate command path
-		"--database", l.Dbpath, //Add database option
-		"--",            // Inject locate option
-		"--ignore-case", // Ignore case distinctions when matching patterns.
-		"--existing",    // Print only entries that refer to files existing at the time locate is run.
+func (l *Locater) CmdGen() (cmds [][]string) {
+	isGocate := filepath.Base(l.Args.LocateCmd) == "gocate"
+
+	var locate []string
+	if isGocate {
+		// gocate: -d はディレクトリ、locate オプションは -- の後
+		locate = []string{
+			l.Args.LocateCmd,
+			"--database", l.Args.Dbpath,
+			"--",
+			"--ignore-case",
+			"--regex", strings.Join(l.SearchWords, ".*"),
+		}
+	} else {
+		// plocate / mlocate: -d はファイルパス
+		locate = []string{
+			l.Args.LocateCmd,
+			"--database", l.Args.Dbpath,
+			"--ignore-case",
+			"--regex", strings.Join(l.SearchWords, ".*"),
+		}
 	}
 
-	// Include PATTERNs
-	// -> gocate --database /var/lib/plocate -- --ignore-case --regex hoge.*my.*name
-	// -> locate --ignore-case --regex hoge.*my.*name
-	locate = append(locate, "--regex", strings.Join(l.SearchWords, ".*"))
-
-	pipeline = append(pipeline, locate)
+	cmds = append(cmds, locate)
 
 	// Exclude PATTERNs
 	for _, ex := range l.ExcludeWords {
 		// COMMAND | grep -ivE EXCLUDE1 | grep -ivE EXCLUDE2
-		pipeline = append(pipeline, []string{"grep", "-ivE", ex})
+		cmds = append(cmds, []string{"grep", "-ivE", ex})
 	}
 
 	// Limit option
 	if l.Query.Limit > 0 {
-		pipeline = append(pipeline, []string{"head", "-n", strconv.Itoa(l.Query.Limit)})
+		cmds = append(cmds, []string{"head", "-n", strconv.Itoa(l.Query.Limit)})
 	}
 
 	if l.Args.Debug {
-		log.Debugf("Execute command %v", pipeline)
+		slog.Debug("Execute command", "pipeline", cmds)
 	}
 	return // => locate ... | grep -ivE ... | head -n ...
 }

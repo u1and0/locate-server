@@ -3,7 +3,6 @@ package locater
 import (
 	"math"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 )
@@ -43,11 +42,9 @@ func Test_LogWord(t *testing.T) {
 }
 
 func Test_ExtractDatetime(t *testing.T) {
-	s := `
-[32m[NOTICE] ▶ 2020-07-07 06:57:27.667 main.go:233        0files 4.607msec PUSH result to cache [ usr                                                ] [0m
-	`
-	layout := "2006-01-02 15:04:05"
-	expected, err := time.Parse(layout, "2020-07-07 06:57:27")
+	s := `time=2020-07-07T06:57:27Z level=INFO msg=search files=0 msec=4.607 cache=PUSH query=usr`
+	layout := "2006-01-02T15:04:05"
+	expected, _ := time.Parse(layout, "2020-07-07T06:57:27")
 	actual, err := ExtractDatetime(s)
 	if err != nil {
 		t.Errorf("error: %v", err)
@@ -59,9 +56,7 @@ func Test_ExtractDatetime(t *testing.T) {
 
 func Test_ExtractKeyword(t *testing.T) {
 	expected := "usr pac"
-	actual := strings.TrimSpace(ExtractKeyword(`
-[32m[NOTICE] ▶ 2020-09-27 07:46:54.418 main.go:263     2666files 144.478msec PUSH result to cache [ usr pac                                            ] [0m
-`))
+	actual := ExtractKeyword(`time=2020-09-27T07:46:54Z level=INFO msg=search files=2666 msec=144.478 cache=PUSH query="usr pac"`)
 	if actual != expected {
 		t.Fatalf("got: %v want: %v", actual, expected)
 	}

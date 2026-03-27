@@ -1,11 +1,10 @@
-2020-06-28 20:59:13       17files 958.629msec PUSH result to cache [ load bash                                          ]
-2020-06-28 21:35:15        3files 1105.576msec PUSH result to cache [ etc pacman new                                     ]
-2020-06-28 21:41:25        3files 1096.790msec PUSH result to cache [ etc pacman new                                     ]
-2020-06-28 21:42:36        7files 2409.477msec PUSH result to cache [ etc pacman new                                     ]
-2020-06-28 22:28:16        7files 2157.514msec PUSH result to cache [ etc pacman new                                     ]
-[32m[NOTICE] ▶ 2020-09-27 07:39:46.905 main.go:265     2666files 163.398msec PUSH result to cache [ usr pac                                            ] [0m
-[31m[ERROR] ▶ 2020-09-27 07:39:46.905 main.go:145 read /var/lib/mlocate/locate.log: bad file descriptor [0m
-[31m[ERROR] ▶ 2020-09-27 07:39:47.291 main.go:145 read /var/lib/mlocate/locate.log: bad file descriptor [0m
-[INFO] ▶ 2020-09-27 07:46:52.870 main.go:87 Set dbpath: test/etc.db:test/root.db:test/usr.db [0m
-[32m[NOTICE] ▶ 2020-09-27 07:46:54.418 main.go:263     2666files 144.478msec PUSH result to cache [ usr pac                                            ] [0m
-[32m[NOTICE] ▶ 2020-09-27 07:47:05.659 main.go:263     2666files 0.003msec GET result from cache [ usr pac                                            ] [0m
+time=2020-06-28T20:59:13Z level=INFO msg=search files=17 msec=958.629 cache=PUSH query="load bash"
+time=2020-06-28T21:35:15Z level=INFO msg=search files=3 msec=1105.576 cache=PUSH query="etc pacman new"
+time=2020-06-28T21:41:25Z level=INFO msg=search files=3 msec=1096.790 cache=PUSH query="etc pacman new"
+time=2020-06-28T21:42:36Z level=INFO msg=search files=7 msec=2409.477 cache=PUSH query="etc pacman new"
+time=2020-06-28T22:28:16Z level=INFO msg=search files=7 msec=2157.514 cache=PUSH query="etc pacman new"
+time=2020-09-27T07:39:46Z level=INFO msg=search files=2666 msec=163.398 cache=PUSH query="usr pac"
+level=ERROR msg="read /var/lib/mlocate/locate.log: bad file descriptor"
+level=ERROR msg="read /var/lib/mlocate/locate.log: bad file descriptor"
+time=2020-09-27T07:46:54Z level=INFO msg=search files=2666 msec=144.478 cache=PUSH query="usr pac"
+time=2020-09-27T07:47:05Z level=INFO msg=search files=2666 msec=0.003 cache=GET query="usr pac"

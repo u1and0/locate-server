@@ -9,7 +9,10 @@ func TestLocater_CmdGen(t *testing.T) {
 	l := Locater{
 		SearchWords:  []string{"the", "path", "for", "search"},
 		ExcludeWords: []string{"exclude", "paths"},
-		Args:         Args{Dbpath: "../test"},
+		Args: Args{
+			Dbpath:    "../test",
+			LocateCmd: "gocate",
+		},
 	}
 
 	actual := l.CmdGen()
@@ -21,7 +24,6 @@ func TestLocater_CmdGen(t *testing.T) {
 			"../test",
 			"--",
 			"--ignore-case",
-			"--existing",
 			"--regex",
 			"the.*path.*for.*search",
 		},

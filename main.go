@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"log/slog"
 	"math"
 	"net/http"
 	"os"
-	"os/exec"
+	"os/signal"
 	"strconv"
-	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	api "github.com/u1and0/locate-server/cmd/api"
@@ -17,7 +21,6 @@ import (
 	cmd "github.com/u1and0/locate-server/cmd/locater"
 
 	"github.com/gin-gonic/gin"
-	"github.com/op/go-logging"
 )
 
 const (
@@ -27,19 +30,8 @@ const (
 	LOGFILE = "/var/lib/plocate/locate.log"
 	// LOCATEDIR : locate (gocate) search db path
 	LOCATEDIR = "/var/lib/plocate"
-	// REQUIRE : required commands. Separate by space.
-	REQUIRE = "locate gocate"
 	// PORT : default open server port
 	PORT = 8080
-)
-
-var (
-	log         = logging.MustGetLogger("main")
-	showVersion bool
-	port        int
-	locater     = parseCmdlineOption()
-	locateS     int64
-	caches      = cache.New()
 )
 
 type (
@@ -50,102 +42,121 @@ type (
 		windowsPathSeparate,
 		trim,
 		debug,
+		locateCmd,
 		showVersion string
+	}
+
+	// App holds server state
+	App struct {
+		locater cmd.Locater
+		caches  *cache.Map
+		mu      sync.RWMutex
+		locateS int64
+		port    int
 	}
 )
 
+// NewApp creates a new App instance
+func NewApp(locater cmd.Locater, port int) *App {
+	return &App{
+		locater: locater,
+		caches:  cache.New(),
+		port:    port,
+	}
+}
+
 func main() {
-	// Release mode
-	fmt.Println("locater.Args.Debug", locater.Args.Debug)
+	locater, port := parseCmdlineOption()
+
 	if !locater.Args.Debug {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Log setting
 	logfile, err := os.OpenFile(LOGFILE, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		log.Panicf("Cannot open logfile %v", err)
-	} else {
-		// DB path flag parse
-		log.Infof("Set dbpath: %s", locater.Dbpath)
+		slog.Error("Cannot open logfile", "err", err)
+		panic("Cannot open logfile")
 	}
 	defer logfile.Close()
-	setLogger(logfile) // log.XXX()を使うものはここより後に書く
+	setLogger(logfile)
 
-	// Directory check
-	if _, err := os.Stat(LOCATEDIR); os.IsNotExist(err) {
-		log.Panic(err) // /var/lib/plocateがなければ終了
+	slog.Info("Set dbpath", "path", locater.Args.Dbpath)
+	slog.Info("locate command", "cmd", locater.Args.LocateCmd)
+
+	app := NewApp(locater, port)
+	if err := app.run(); err != nil {
+		slog.Error("shutdown error", "err", err)
+		os.Exit(1)
 	}
+}
 
-	// Command check
-	// スペース区切りされたconstをexec.LookPath()で実行可能ファイルであるかを調べる
-	for _, r := range strings.Fields(REQUIRE) {
-		if _, err := exec.LookPath(r); err != nil {
-			log.Panicf("%s", err.Error())
-		}
-	}
-
-	// Open server
+func (a *App) run() error {
 	route := gin.Default()
 	route.Static("/static", "./static")
 	route.LoadHTMLGlob("templates/*")
 
-	// Top page
-	route.GET("/", topPage)
+	route.GET("/", a.topPage)
+	route.GET("/search", a.searchPage)
+	route.GET("/history", a.fetchHistory)
+	route.GET("/json", a.fetchJSON)
+	route.GET("/status", a.fetchStatus)
 
-	// Result view
-	route.GET("/search", searchPage)
+	srv := &http.Server{
+		Addr:    ":" + strconv.Itoa(a.port),
+		Handler: route,
+	}
 
-	// API
-	route.GET("/history", fetchHistory)
-	route.GET("/json", fetchJSON)
-	route.GET("/status", fetchStatus)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	// Listen and serve on 0.0.0.0:8080
-	route.Run(":" + strconv.Itoa(port)) // => :8080
+	go func() {
+		slog.Info("server starting", "port", a.port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("ListenAndServe", "err", err)
+		}
+	}()
+
+	<-ctx.Done()
+	slog.Info("shutting down...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return srv.Shutdown(shutdownCtx)
 }
 
-func topPage(c *gin.Context) {
+func (a *App) topPage(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.tmpl", gin.H{
 		"title":          "",
-		"lastUpdateTime": locater.Stats.LastUpdateTime,
+		"lastUpdateTime": a.locater.Stats.LastUpdateTime,
 		"query":          "",
 	})
 }
 
-func searchPage(c *gin.Context) {
-	// 検索文字数チェックOK
+func (a *App) searchPage(c *gin.Context) {
 	/* LocateStats()の結果が前と異なっていたら
 	locateS更新
 	cacheを初期化 */
-	if l, err := cmd.LocateStats(locater.Dbpath); l != locateS {
-		// DB更新されていたら
+	if l, err := cmd.DBSize(a.locater.Dbpath); l != a.locateS {
+		a.mu.Lock()
+		a.locateS = l
+		a.caches = cache.New()
+		a.locater.Stats.LastUpdateTime = cmd.DBLastUpdateTime(a.locater.Dbpath)
+		a.mu.Unlock()
 		if err != nil {
-			log.Error(err)
+			slog.Error("DBSize", "err", err)
 		}
-		locateS = l // 保持するDB情報の更新
-		// Initialize cache
-		// nil map assignment errorを発生させないために必要
-		caches = cache.New() // Reset cache
-		locater.Stats.Items = cmd.Ambiguous(locateS)
-		// Update LastUpdateTime for database
-		locater.Stats.LastUpdateTime = cmd.DBLastUpdateTime(locater.Dbpath)
 	}
-	// Response
 	q := c.Query("q")
 	c.HTML(http.StatusOK, "index.tmpl", gin.H{
 		"title":          q,
-		"lastUpdateTime": locater.Stats.LastUpdateTime,
+		"lastUpdateTime": a.locater.Stats.LastUpdateTime,
 		"query":          q,
 	})
 }
 
-func fetchJSON(c *gin.Context) {
-	// locater.Query initialize
-	// Shallow copy locater to local
-	// for blocking to rewrite
-	// locater{} struct while searching
-	local := locater
+func (a *App) fetchJSON(c *gin.Context) {
+	// Shallow copy locater to local for blocking rewrite while searching
+	local := a.locater
 
 	// Parse query
 	query, err := api.New(c)
@@ -155,104 +166,89 @@ func fetchJSON(c *gin.Context) {
 		Limit:   query.Limit,
 	}
 	if err != nil {
-		log.Errorf("error: %s query: %#v", err, query)
+		slog.Error("query parse error", "err", err, "query", fmt.Sprintf("%#v", query))
 		local.Error = fmt.Sprintf("%s", err)
 		c.JSON(406, local)
-		// 406 Not Acceptable:
-		// サーバ側が受付不可能な値であり提供できない状態
 		return
 	}
 
 	local.SearchWords, local.ExcludeWords, err = api.QueryParser(query.Q)
 	if local.Args.Debug {
-		log.Debugf("local locater: %#v", local)
+		slog.Debug("local locater", "locater", fmt.Sprintf("%#v", local))
 	}
 	if err != nil {
-		log.Errorf("error %v", err)
+		slog.Error("QueryParser error", "err", err)
 		local.Error = fmt.Sprintf("%v", err)
 		c.JSON(406, local)
-		// 406 Not Acceptable:
-		// サーバ側が受付不可能な値であり提供できない状態
 		return
 	}
 
 	// Execute locate command
 	start := time.Now()
-	result, ok, err := caches.Traverse(&local) // err <- OS command error
+	a.mu.Lock()
+	result, ok, err := a.caches.Traverse(&local)
+	a.mu.Unlock()
 	if local.Args.Debug {
-		log.Debugf("gocate result %v", result)
+		slog.Debug("locate result", "result", result)
 	}
 	end := (time.Since(start)).Nanoseconds()
 	local.Stats.SearchTime = float64(end) / float64(time.Millisecond)
 
 	// Response & Logging
 	if err != nil {
-		log.Errorf("%s [ %-50s ]", err, query.Q)
+		slog.Error("locate command error", "err", err, "query", query.Q)
 		c.JSON(500, local)
-		// 500 Internal Server Error
-		// 何らかのサーバ内で起きたエラー
 		return
 	}
 	local.Paths = result
-	getpushLog := "PUSH result to cache"
+	cacheLog := "PUSH"
 	if ok {
-		getpushLog = "GET result from cache"
+		cacheLog = "GET"
 	}
 	if !query.Logging {
-		getpushLog = "NO LOGGING result"
+		cacheLog = "NO LOGGING"
 	}
-	l := []interface{}{len(local.Paths), local.Stats.SearchTime, getpushLog, query.Q}
-	log.Noticef("%8dfiles %3.3fmsec %s [ %-50s ]", l...)
+	slog.Info("search",
+		"files", len(local.Paths),
+		"msec", local.Stats.SearchTime,
+		"cache", cacheLog,
+		"query", query.Q,
+	)
 	if len(local.Paths) == 0 {
 		err = errors.New("no content")
 		local.Error = fmt.Sprintf("%v", err)
 		c.JSON(200, local)
-		// c.JSON(204, local)
-		//
-		// SyntaxError: Unexpected end of JSON input
-		// がブラウザ側で出る
-		//
-		// 204 No Content
-		// リクエストに対して送信するコンテンツは無いが
-		// ヘッダは有用である
 		return
 	}
 	c.JSON(http.StatusOK, local)
-	// 200 OK
-	// リクエストが正常に処理できた
 }
 
-func fetchHistory(c *gin.Context) {
+func (a *App) fetchHistory(c *gin.Context) {
 	history, err := cmd.Datalist(LOGFILE)
 	if err != nil {
-		log.Error(err)
+		slog.Error("fetchHistory", "err", err)
 		c.JSON(404, history)
 		return
 	}
-	gt := api.IntQuery(c, "gt") // history?gt=10 => gt==10
-	lt := api.IntQuery(c, "lt") // history?lt=100 => lt==100
-	// lt default value is infinity
+	gt := api.IntQuery(c, "gt")
+	lt := api.IntQuery(c, "lt")
 	if lt == 0 {
 		lt = math.MaxInt64
 	}
-	// if designated query gt & lt then filter the history
-	// No query gt nor lt then nothing to do
 	if gt != 0 || lt != math.MaxInt64 {
 		history = history.Filter(gt, lt)
 	}
 	c.JSON(http.StatusOK, history)
 }
 
-func fetchStatus(c *gin.Context) {
-	l, err := cmd.LocateStats(locater.Args.Dbpath) // err <- OS command error
+func (a *App) fetchStatus(c *gin.Context) {
+	l, err := cmd.DBSize(a.locater.Args.Dbpath)
 	if err != nil {
-		log.Errorf("error: %s", err)
+		slog.Error("DBSize", "err", err)
 		c.JSON(500, gin.H{
 			"locate-S": l,
 			"error":    err,
 		})
-		// 500 Internal Server Error
-		// 何らかのサーバ内で起きたエラー
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -261,8 +257,8 @@ func fetchStatus(c *gin.Context) {
 	})
 }
 
-// Parse command line option
-func parseCmdlineOption() (l cmd.Locater) {
+// parseCmdlineOption parses command line flags and returns Locater and port
+func parseCmdlineOption() (l cmd.Locater, port int) {
 	var (
 		showVersion bool
 		usage       = usageText{
@@ -272,6 +268,7 @@ func parseCmdlineOption() (l cmd.Locater) {
 			windowsPathSeparate: `Use path separate Windows backslash`,
 			trim:                `DB trim prefix for directory path`,
 			debug:               `Run debug mode`,
+			locateCmd:           `locate command path (default: auto-detect gocate or locate)`,
 			showVersion:         `Show version`,
 		}
 	)
@@ -284,6 +281,7 @@ func parseCmdlineOption() (l cmd.Locater) {
 	flag.StringVar(&l.Args.Trim, "t", "", usage.trim)
 	flag.StringVar(&l.Args.Trim, "trim", "", usage.trim)
 	flag.BoolVar(&l.Args.Debug, "debug", false, usage.debug)
+	flag.StringVar(&l.Args.LocateCmd, "locate-cmd", "", usage.locateCmd)
 	flag.IntVar(&port, "p", PORT, usage.port)
 	flag.IntVar(&port, "port", PORT, usage.port)
 	flag.BoolVar(&showVersion, "v", false, usage.showVersion)
@@ -305,6 +303,8 @@ Usage of locate-server
 	%s
 -debug
 	%s
+-locate-cmd
+	%s
 -v, -version
 	%s`,
 			usage.dir,
@@ -313,6 +313,7 @@ Usage of locate-server
 			usage.windowsPathSeparate,
 			usage.trim,
 			usage.debug,
+			usage.locateCmd,
 			usage.showVersion,
 		)
 		fmt.Fprintf(os.Stderr, "%s\n", usageTxt)
@@ -320,19 +321,27 @@ Usage of locate-server
 	flag.Parse()
 	if showVersion {
 		fmt.Println("locate-server version", VERSION)
-		os.Exit(0) // Exit with version info
+		os.Exit(0)
 	}
-	return l
+
+	// 環境変数フォールバック
+	if l.Args.LocateCmd == "" {
+		if envCmd := os.Getenv("LOCATE_CMD"); envCmd != "" {
+			l.Args.LocateCmd = envCmd
+		}
+	}
+	resolved, err := cmd.ResolveLocateCmd(l.Args.LocateCmd)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	l.Args.LocateCmd = resolved
+	return
 }
 
 // setLogger is printing out log message to STDOUT and LOGFILE
 func setLogger(f *os.File) {
-	var format = logging.MustStringFormatter(
-		`%{color}[%{level:.6s}] ▶ %{time:2006-01-02 15:04:05} %{shortfile} %{message} %{color:reset}`,
-	)
-	backend1 := logging.NewLogBackend(os.Stdout, "", 0)
-	backend2 := logging.NewLogBackend(f, "", 0)
-	backend1Formatter := logging.NewBackendFormatter(backend1, format)
-	backend2Formatter := logging.NewBackendFormatter(backend2, format)
-	logging.SetBackend(backend1Formatter, backend2Formatter)
+	mw := io.MultiWriter(f, os.Stdout)
+	h := slog.NewTextHandler(mw, &slog.HandlerOptions{Level: slog.LevelDebug})
+	slog.SetDefault(slog.New(h))
 }

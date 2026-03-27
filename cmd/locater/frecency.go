@@ -49,8 +49,12 @@ func logWord(logfile string) (historyMap, error) {
 		}
 		// 検索履歴の抽出・加工
 		lines := string(line)
-		if !strings.Contains(lines, "PUSH") && !strings.Contains(lines, "GET") {
-			continue // ERROR行 INFO行を無視
+		// slog text形式: msg=search かつ cache=PUSH or cache=GET の行のみ処理
+		if !strings.Contains(lines, `msg=search`) {
+			continue
+		}
+		if !strings.Contains(lines, `cache=PUSH`) && !strings.Contains(lines, `cache=GET`) {
+			continue
 		}
 		// 検索エラーのない文字列だけfrecencyに追加する
 		sw, ew, err := api.QueryParser(ExtractKeyword(lines))
@@ -68,23 +72,30 @@ func logWord(logfile string) (historyMap, error) {
 	return history, err
 }
 
-// ExtractDatetime extract search datetime from a line of `locate.log` format
-//		Log		[NOTICE] 2020-07-07 06:57:27
+// ExtractDatetime extract search datetime from a line of slog text format
+// Log: time=2024-01-15T10:30:00Z level=INFO msg=search ...
 func ExtractDatetime(s string) (time.Time, error) {
-	re := regexp.MustCompile(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}`)
-	layout := "2006-01-02 15:04:05"
-	s = re.FindString(s)
-	return time.Parse(layout, s)
+	re := regexp.MustCompile(`time=(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})`)
+	layout := "2006-01-02T15:04:05"
+	m := re.FindStringSubmatch(s)
+	if m == nil {
+		return time.Time{}, &time.ParseError{}
+	}
+	return time.Parse(layout, m[1])
 }
 
-// ExtractKeyword extract search keyword from a line of `locate.log` format
+// ExtractKeyword extract search keyword from a line of slog text format
+// Log: ... query="usr pac" or query=usr
 func ExtractKeyword(s string) string {
-	start := strings.Index(s, "[ ")
-	end := strings.Index(s, " ]")
-	if start < 0 || end < 0 { // Not Found "[ ]"
+	re := regexp.MustCompile(`query=("([^"]+)"|(\S+))`)
+	m := re.FindStringSubmatch(s)
+	if m == nil {
 		return s
 	}
-	return s[start+1 : end-1]
+	if m[2] != "" {
+		return m[2] // quoted value
+	}
+	return m[3] // unquoted value
 }
 
 // Scoring : 日時から頻出度を算出する
@@ -106,7 +117,7 @@ func Scoring(t time.Time) int {
 	}
 }
 
-//ScoreSum : 履歴マップの検索日時リストからスコア合計を算出する
+// ScoreSum : 履歴マップの検索日時リストからスコア合計を算出する
 func ScoreSum(tl []time.Time) (score int) {
 	for _, t := range tl {
 		score += Scoring(t)

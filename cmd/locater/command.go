@@ -1,36 +1,28 @@
 package locater
 
 import (
+	"fmt"
+	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
-
-	"github.com/dustin/go-humanize"
-	"github.com/op/go-logging"
 )
-
-var log = logging.MustGetLogger("locater")
-
-// PathMap is pairs of fullpath:dirpath
-type PathMap struct {
-	File      string
-	Dir       string
-	Highlight string
-}
 
 // DBLastUpdateTime returns date time string for directory update time
 func DBLastUpdateTime(db string) string {
 	filestat, err := os.Stat(db)
 	if err != nil {
-		log.Error(err)
+		slog.Error("DBLastUpdateTime", "err", err)
 	}
 	layout := "2006-01-02 15:05"
 	return filestat.ModTime().Format(layout)
 }
 
-// LocateStats : Sum db size
-func LocateStats(s string) (int64, error) {
+// DBSize returns total byte size of locate database files.
+// Used only for cache invalidation detection.
+func DBSize(s string) (int64, error) {
 	var sum int64
 	dbs, err := filepath.Glob(s + "/*.db")
 	if err != nil {
@@ -49,26 +41,6 @@ func LocateStats(s string) (int64, error) {
 	return sum, err
 }
 
-// Ambiguous : 数値を切り捨て、おおよその数字をstring型にして返す
-// 684,345(int) => 680,000+(string)
-func Ambiguous(n int64) (s string) {
-	switch {
-	case n >= 1e9:
-		s = humanize.Comma(dropDigit(n, 1_000_000_000)) + "+"
-	case n >= 1e6:
-		s = humanize.Comma(dropDigit(n, 1_000_000)) + "+"
-	case n >= 1e3:
-		s = humanize.Comma(dropDigit(n, 1_000)) + "+"
-	default:
-		s = humanize.Comma(n)
-	}
-	return
-}
-
-func dropDigit(n, m int64) int64 {
-	return n / m * m
-}
-
 // Normalize : SearchWordsとExcludeWordsを合わせる
 // SearchWordsは小文字にする
 // ExcludeWordsは小文字にした上で
@@ -84,4 +56,24 @@ func Normalize(se, ex []string) string {
 		return
 	}()...)
 	return strings.Join(strs, " ")
+}
+
+// ResolveLocateCmd は使用するlocateコマンドのパスを解決する。
+// 優先順位:
+//  1. 引数 explicit (フラグ or 環境変数 LOCATE_CMD で明示指定)
+//  2. PATH上の gocate
+//  3. PATH上の locate
+func ResolveLocateCmd(explicit string) (string, error) {
+	if explicit != "" {
+		if _, err := exec.LookPath(explicit); err != nil {
+			return "", fmt.Errorf("LOCATE_CMD %q not found: %w", explicit, err)
+		}
+		return explicit, nil
+	}
+	for _, candidate := range []string{"gocate", "locate"} {
+		if path, err := exec.LookPath(candidate); err == nil {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("no locate command found (tried: gocate, locate)")
 }
